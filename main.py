@@ -62,7 +62,7 @@ def init_database():
             expediteur TEXT,
             sujet TEXT,
             contenu TEXT,
-            analyse TEXT,
+            analyse_email TEXT,
             traite BOOLEAN DEFAULT FALSE,
             date_traitement TIMESTAMP
         )
