@@ -191,6 +191,12 @@ def reveiller_claude(contexte):
     """
     print("🧠 Éveil de _Head.Soeurise via API Claude...")
     
+    # Debug : vérifier la clé API
+    if not ANTHROPIC_API_KEY:
+        return "ERREUR : Clé API Anthropic non configurée (ANTHROPIC_API_KEY vide)"
+    
+    print(f"🔑 Clé API présente : {ANTHROPIC_API_KEY[:20]}...")
+    
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         
