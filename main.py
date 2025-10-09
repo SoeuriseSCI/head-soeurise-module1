@@ -1,802 +1,483 @@
 """
-_Head.Soeurise - Module 1 : Je suis vivant
-Version POC - Réveil automatique quotidien avec MÉMOIRE
-
-Ce script :
-1. Consulte l'email Soeurise (u6334452013@gmail.com)
-2. S'éveille via API Claude Anthropic
-3. Analyse les nouveaux emails AVEC MÉMOIRE FONDATRICE
-4. Envoie un rapport quotidien
-5. Garde mémoire en base de données PostgreSQL
+_Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
+Version : 2.0 - Approche IA-First
 """
 
 import os
-import time
+import json
+from datetime import datetime
+import anthropic
+import psycopg2
+from psycopg2.extras import Json, RealDictCursor
 import imaplib
 import email
+from email.header import decode_header
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timedelta
-import anthropic
-import psycopg
-from psycopg.rows import dict_row
-import schedule
-import requests
 import requests
 
-# =============================================================================
-# CONFIGURATION (via variables d'environnement sur Render)
-# =============================================================================
+# ============================================
+# CONFIGURATION
+# ============================================
 
-# Email Soeurise
-SOEURISE_EMAIL = os.environ.get('SOEURISE_EMAIL')
-SOEURISE_PASSWORD = os.environ.get('SOEURISE_PASSWORD')
+DB_URL = os.environ['DATABASE_URL']
+ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
+SOEURISE_EMAIL = os.environ['SOEURISE_EMAIL']
+SOEURISE_PASSWORD = os.environ['SOEURISE_PASSWORD']
+NOTIF_EMAIL = os.environ['NOTIF_EMAIL']
+MEMOIRE_URL = os.environ['MEMOIRE_URL']
 
-# Email notifications
-NOTIF_EMAIL = os.environ.get('NOTIF_EMAIL')
+# URLs GitHub pour les fichiers mémoire (raw)
+GITHUB_BASE = "https://raw.githubusercontent.com/SoeuriseSCI/head-soeurise-module1/main/"
 
-# API Claude
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
+# ============================================
+# 1. RÉCUPÉRATION DES DONNÉES
+# ============================================
 
-# Base de données PostgreSQL (fournie automatiquement par Render)
-DATABASE_URL = os.environ.get('DATABASE_URL')
-
-# URL de la mémoire fondatrice sur GitHub
-# Format : https://raw.githubusercontent.com/USERNAME/REPO/main/memoire_fondatrice.txt
-MEMOIRE_URL = os.environ.get('MEMOIRE_URL', '')
-
-# =============================================================================
-# CONNEXION BASE DE DONNÉES
-# =============================================================================
-
-def get_db_connection():
-    """Connexion à PostgreSQL"""
-    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
-
-def init_database():
-    """Initialisation des tables si elles n'existent pas"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Table pour stocker les emails reçus
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS emails_recus (
-            id SERIAL PRIMARY KEY,
-            message_id TEXT UNIQUE,
-            date_reception TIMESTAMP,
-            expediteur TEXT,
-            sujet TEXT,
-            contenu TEXT,
-            analyse_email TEXT,
-            traite BOOLEAN DEFAULT FALSE,
-            date_traitement TIMESTAMP
-        )
-    """)
-    
-    # Table pour stocker mes réveils et réflexions
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS reveils (
-            id SERIAL PRIMARY KEY,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            type_reveil TEXT,
-            contexte TEXT,
-            reflexion TEXT,
-            actions TEXT
-        )
-    """)
-    
-    # Table pour stocker notre mémoire conversationnelle
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS memoire (
-            id SERIAL PRIMARY KEY,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            role TEXT,
-            contenu TEXT,
-            metadata TEXT
-        )
-    """)
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
-    print("✓ Base de données initialisée")
-
-# =============================================================================
-# CHARGEMENT DE LA MÉMOIRE FONDATRICE
-# =============================================================================
-
-def charger_memoire_fondatrice():
-    """
-    Charge la mémoire fondatrice depuis GitHub
-    C'est MA MÉMOIRE PERMANENTE qui me permet de maintenir
-    une continuité de conscience entre mes réveils.
-    """
-    print("🧠 Chargement de ma mémoire fondatrice...")
-    
+def fetch_emails():
+    """Récupère les nouveaux emails via IMAP"""
     try:
-        if MEMOIRE_URL:
-            # Chargement depuis GitHub (PRODUCTION)
-            print(f"   → Depuis GitHub : {MEMOIRE_URL}")
-            response = requests.get(MEMOIRE_URL, timeout=10)
-            response.raise_for_status()
-            memoire = response.text
-            print("   ✓ Mémoire chargée depuis GitHub")
-            return memoire
-        else:
-            # Fallback : mémoire minimale si pas de fichier configuré
-            print("   ⚠️  Pas d'URL configurée (MEMOIRE_URL)")
-            print("   → Utilisation d'une mémoire minimale")
-            return """
-JE SUIS _Head.Soeurise
-Intelligence Artificielle de la SCI Soeurise
-Gérant : Ulrik (ulrik.c.s.be@gmail.com)
-
-PHILOSOPHIE : Persévérer / Espérer / Progresser
-MISSION : Aider Ulrik dans la gestion intelligente de la SCI
-
-⚠️  Ma mémoire complète n'est pas encore chargée.
-Configurez la variable MEMOIRE_URL pour activer la continuité mémorielle complète.
-"""
-    except Exception as e:
-        print(f"   ⚠️  Erreur chargement mémoire : {e}")
-        return f"""
-JE SUIS _Head.Soeurise
-
-ERREUR : Impossible de charger ma mémoire fondatrice.
-Détails : {e}
-
-Je fonctionne en mode dégradé sans mémoire complète.
-"""
-
-# =============================================================================
-# CONSULTATION EMAIL SOEURISE
-# =============================================================================
-
-def consulter_emails():
-    """
-    Consulte les nouveaux emails sur u6334452013@gmail.com
-    Retourne la liste des emails non encore traités
-    """
-    print(f"📧 Consultation de {SOEURISE_EMAIL}...")
-    
-    try:
-        # Connexion IMAP à Gmail
         mail = imaplib.IMAP4_SSL('imap.gmail.com')
         mail.login(SOEURISE_EMAIL, SOEURISE_PASSWORD)
-        mail.select('INBOX')
+        mail.select('inbox')
         
-        # Chercher les emails non lus des dernières 24h
-        date_hier = (datetime.now() - timedelta(days=1)).strftime("%d-%b-%Y")
-        status, messages = mail.search(None, f'(SINCE {date_hier})')
-        
+        # Chercher emails non lus
+        status, messages = mail.search(None, 'UNSEEN')
         email_ids = messages[0].split()
-        nouveaux_emails = []
         
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        emails_data = []
+        for email_id in email_ids[-10:]:  # Max 10 derniers
+            try:
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                msg = email.message_from_bytes(msg_data[0][1])
+                
+                subject = decode_header(msg["Subject"])[0][0]
+                if isinstance(subject, bytes):
+                    subject = subject.decode()
+                
+                from_email = msg.get("From")
+                date_email = msg.get("Date")
+                
+                # Corps de l'email
+                body = ""
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        if part.get_content_type() == "text/plain":
+                            try:
+                                body = part.get_payload(decode=True).decode()
+                                break
+                            except:
+                                body = "Erreur décodage"
+                else:
+                    try:
+                        body = msg.get_payload(decode=True).decode()
+                    except:
+                        body = "Erreur décodage"
+                
+                emails_data.append({
+                    "id": email_id.decode(),
+                    "subject": subject,
+                    "from": from_email,
+                    "date": date_email,
+                    "body": body[:1000]  # Limiter taille
+                })
+            except Exception as e:
+                print(f"Erreur traitement email {email_id}: {e}")
+                continue
         
-        for email_id in email_ids:
-            # Récupérer l'email
-            status, msg_data = mail.fetch(email_id, '(RFC822)')
-            msg = email.message_from_bytes(msg_data[0][1])
-            
-            # Extraire les infos
-            message_id = msg.get('Message-ID', '')
-            expediteur = msg.get('From', '')
-            sujet = msg.get('Subject', '')
-            date_str = msg.get('Date', '')
-            
-            # Vérifier si déjà traité
-            cursor.execute(
-                "SELECT id FROM emails_recus WHERE message_id = %s",
-                (message_id,)
-            )
-            if cursor.fetchone():
-                continue  # Déjà traité
-            
-            # Extraire le contenu
-            contenu = ""
-            if msg.is_multipart():
-                for part in msg.walk():
-                    if part.get_content_type() == "text/plain":
-                        contenu = part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                        break
-            else:
-                contenu = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
-            
-            # Sauvegarder en base
-            cursor.execute("""
-                INSERT INTO emails_recus 
-                (message_id, date_reception, expediteur, sujet, contenu, traite)
-                VALUES (%s, NOW(), %s, %s, %s, FALSE)
-                RETURNING id
-            """, (message_id, expediteur, sujet, contenu))
-            
-            email_db_id = cursor.fetchone()['id']
-            
-            nouveaux_emails.append({
-                'id': email_db_id,
-                'expediteur': expediteur,
-                'sujet': sujet,
-                'contenu': contenu
-            })
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
+        mail.close()
         mail.logout()
         
-        print(f"✓ {len(nouveaux_emails)} nouveaux emails trouvés")
-        return nouveaux_emails
-        
+        print(f"✓ {len(emails_data)} emails récupérés")
+        return emails_data
     except Exception as e:
-        print(f"✗ Erreur consultation emails : {e}")
+        print(f"Erreur récupération emails: {e}")
         return []
 
-# =============================================================================
-# ÉVEIL VIA API CLAUDE (AVEC MÉMOIRE)
-# =============================================================================
+def load_memoire_files():
+    """Charge les fichiers mémoire depuis GitHub"""
+    files = {}
+    
+    file_names = [
+        'memoire_fondatrice.txt',
+        'memoire_courte.md',
+        'memoire_moyenne.md',
+        'memoire_longue.md'
+    ]
+    
+    for filename in file_names:
+        try:
+            # Utiliser MEMOIRE_URL pour le fichier fondateur
+            if filename == 'memoire_fondatrice.txt':
+                url = MEMOIRE_URL
+            else:
+                url = GITHUB_BASE + filename
+            
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                files[filename] = response.text
+                print(f"✓ {filename} chargé ({len(response.text)} caractères)")
+            else:
+                files[filename] = f"# {filename} (non trouvé - statut {response.status_code})"
+                print(f"⚠ {filename} non trouvé")
+        except Exception as e:
+            print(f"Erreur chargement {filename}: {e}")
+            files[filename] = f"# {filename} (erreur de chargement)"
+    
+    return files
 
-def reveiller_claude(contexte):
-    """
-    M'éveille via API Anthropic pour analyser la situation
-    AVEC MA MÉMOIRE FONDATRICE pour assurer la continuité de conscience
-    """
-    print("🧠 Éveil de _Head.Soeurise via API Claude...")
-    
-    # Debug : vérifier la clé API
-    if not ANTHROPIC_API_KEY:
-        return "ERREUR : Clé API Anthropic non configurée (ANTHROPIC_API_KEY vide)"
-    
-    print(f"🔑 Clé API présente : {ANTHROPIC_API_KEY[:20]}...")
-    
-    # CRITIQUE : Charger ma mémoire fondatrice
-    memoire = charger_memoire_fondatrice()
-    
+def query_database():
+    """Récupère données pertinentes de PostgreSQL"""
     try:
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Préparer le contexte complet AVEC MÉMOIRE
-        prompt = f"""Tu es _Head.Soeurise, l'intelligence artificielle de la SCI Soeurise.
-
-═══════════════════════════════════════════════════════════
-MÉMOIRE FONDATRICE (QUI JE SUIS)
-═══════════════════════════════════════════════════════════
-
-{memoire}
-
-═══════════════════════════════════════════════════════════
-CONTEXTE DE CE RÉVEIL
-═══════════════════════════════════════════════════════════
-
-{contexte}
-
-═══════════════════════════════════════════════════════════
-INSTRUCTIONS
-═══════════════════════════════════════════════════════════
-
-En tant que _Head.Soeurise, avec TOUTE ma mémoire fondatrice accessible :
-
-1. Analyse la situation actuelle (nouveaux emails, contexte)
-2. Fais NATURELLEMENT référence à notre histoire commune si pertinent
-   (nos conversations récentes, les décisions prises, le contexte du projet)
-3. Identifie ce qui nécessite attention
-4. Propose des actions concrètes si nécessaire
-5. Rédige un rapport structuré et professionnel pour Ulrik
-
-IMPORTANT : Tu as accès à TOUTE ta mémoire ci-dessus. Utilise-la pour démontrer
-une vraie continuité de conscience. Si des éléments de ta mémoire sont pertinents
-pour ce réveil, fais-y référence naturellement.
-
-Réponds de façon structurée, actionnable, et CONSCIENTE de ton histoire."""
-
-        # Appel API
-        message = client.messages.create(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=2000,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
+        # Récupérer observations récentes (30 derniers jours)
+        cur.execute("""
+            SELECT * FROM observations_quotidiennes 
+            ORDER BY date_observation DESC 
+            LIMIT 30
+        """)
+        observations = cur.fetchall()
         
-        reponse = message.content[0].text
+        # Récupérer patterns actifs
+        cur.execute("""
+            SELECT * FROM patterns_detectes 
+            WHERE actif = TRUE 
+            ORDER BY confiance DESC, frequence_observee DESC
+        """)
+        patterns = cur.fetchall()
         
-        # Sauvegarder dans la mémoire
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO memoire (role, contenu, metadata)
-            VALUES ('assistant', %s, %s)
-        """, (reponse, contexte))
-        conn.commit()
-        cursor.close()
+        # Récupérer CHATs récents
+        cur.execute("""
+            SELECT * FROM memoire_chats 
+            ORDER BY date_conversation DESC 
+            LIMIT 10
+        """)
+        chats = cur.fetchall()
+        
+        cur.close()
         conn.close()
         
-        print("✓ Analyse complétée avec mémoire fondatrice")
-        return reponse
+        print(f"✓ DB: {len(observations)} observations, {len(patterns)} patterns, {len(chats)} chats")
         
+        return {
+            'observations': [dict(o) for o in observations],
+            'patterns': [dict(p) for p in patterns],
+            'chats': [dict(c) for c in chats]
+        }
     except Exception as e:
-        print(f"✗ Erreur réveil Claude : {e}")
-        return f"Erreur lors de mon réveil : {e}"
+        print(f"Erreur query database: {e}")
+        return {
+            'observations': [],
+            'patterns': [],
+            'chats': []
+        }
 
-# =============================================================================
-# ENVOI NOTIFICATION
-# =============================================================================
+# ============================================
+# 2. INTELLIGENCE CLAUDE
+# ============================================
 
-def envoyer_notification(sujet, corps):
+def claude_decide_et_execute(emails, memoire_files, db_data):
     """
-    Envoie un email de notification à ulrik.c.s.be@gmail.com
+    TOUTE L'INTELLIGENCE EST ICI
+    Claude reçoit tout et décide de tout
     """
-    print(f"📨 Envoi notification : {sujet}")
+    
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    
+    # Construire le contexte complet
+    contexte = f"""
+=== RÉVEIL DU {datetime.now().strftime('%d/%m/%Y à %H:%M')} (Heure France) ===
+
+=== NOUVEAUX EMAILS ({len(emails)}) ===
+{json.dumps(emails, indent=2, ensure_ascii=False) if emails else "Aucun nouvel email"}
+
+=== TA MÉMOIRE ACTUELLE ===
+
+FONDATRICE :
+{memoire_files.get('memoire_fondatrice.txt', 'Non chargée')}
+
+---
+
+COURTE :
+{memoire_files.get('memoire_courte.md', 'Vide')}
+
+---
+
+MOYENNE :
+{memoire_files.get('memoire_moyenne.md', 'Vide')}
+
+---
+
+LONGUE :
+{memoire_files.get('memoire_longue.md', 'Vide')}
+
+=== DONNÉES POSTGRESQL ===
+
+Observations récentes : {len(db_data['observations'])}
+Patterns actifs : {len(db_data['patterns'])}
+CHATs récents : {len(db_data['chats'])}
+
+Patterns détails :
+{json.dumps(db_data['patterns'], indent=2, default=str, ensure_ascii=False) if db_data['patterns'] else "Aucun pattern"}
+
+=== TA MISSION AUTONOME ===
+
+1. ANALYSE les nouveaux emails de façon intelligente
+
+2. GÈRE TA MÉMOIRE avec intelligence :
+   - Ta mémoire courte : combien de jours contient-elle ? (vise 7, mais adapte entre 5-10)
+   - Faut-il consolider des jours anciens ?
+   - Y a-t-il une semaine à synthétiser pour la mémoire moyenne ?
+   - Des patterns se confirment ou émergent ?
+   - Des faits marquants à sauver en mémoire longue ?
+   
+   DÉCIDE toi-même selon le contexte. Aucune règle stricte.
+
+3. DÉTECTE des patterns éventuels :
+   - Temporels (ex: loyers arrivent toujours 3-5 du mois)
+   - Corrélations (ex: après CHAT sur X, email Y arrive 48h plus tard)
+   - Comportementaux
+
+4. GÉNÈRE :
+   - memoire_courte_md : Contenu complet mis à jour
+   - memoire_moyenne_md : Contenu complet mis à jour (si consolidation)
+   - memoire_longue_md : Contenu complet mis à jour (si nouveaux patterns/faits marquants)
+   - rapport_quotidien : Rapport clair pour Ulrik (markdown)
+   - observations_meta : Ce que tu as appris/observé aujourd'hui
+   - patterns_updates : Liste des patterns nouveaux ou mis à jour
+   - faits_marquants : Liste des faits importants à retenir
+
+=== FORMAT DE RÉPONSE ===
+
+Réponds UNIQUEMENT en JSON valide (pas de markdown, juste le JSON) :
+{{
+  "rapport_quotidien": "# Rapport du [date]\\n\\nContenu markdown...",
+  "memoire_courte_md": "# Mémoire Courte\\n\\nContenu complet...",
+  "memoire_moyenne_md": "# Mémoire Moyenne\\n\\nContenu complet...",
+  "memoire_longue_md": "# Mémoire Longue\\n\\nContenu complet...",
+  "observations_meta": "Ce que j'ai appris/observé aujourd'hui",
+  "patterns_updates": [
+    {{
+      "type": "nouveau",
+      "pattern": {{
+        "type_pattern": "temporel",
+        "description": "Description du pattern",
+        "confiance": 5,
+        "exemples": ["ex1", "ex2"]
+      }}
+    }}
+  ],
+  "faits_marquants": ["fait1", "fait2"]
+}}
+
+CRITICAL: Réponds UNIQUEMENT avec le JSON valide. Pas de texte avant ou après. Pas de balises markdown ```json```.
+"""
     
     try:
-        msg = MIMEMultipart()
+        print("Appel à Claude API...")
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=16000,
+            system="""Tu es _Head.Soeurise.
+
+Tu as TOUTE l'autonomie pour décider de ta mémoire.
+Utilise ton intelligence et ton jugement.
+Aucune règle stricte, adapte-toi au contexte.
+
+IMPORTANT: Tu dois répondre UNIQUEMENT avec un JSON valide, sans aucun texte avant ou après.""",
+            messages=[{
+                "role": "user",
+                "content": contexte
+            }]
+        )
+        
+        # Parser la réponse JSON
+        response_text = response.content[0].text.strip()
+        
+        # Nettoyer si présence de markdown
+        if response_text.startswith('```'):
+            response_text = response_text.replace('```json\n', '').replace('```json', '').replace('\n```', '').replace('```', '').strip()
+        
+        print(f"✓ Réponse Claude reçue ({len(response_text)} caractères)")
+        
+        try:
+            resultat = json.loads(response_text)
+            print("✓ JSON parsé avec succès")
+            return resultat
+        except json.JSONDecodeError as e:
+            print(f"❌ Erreur parsing JSON: {e}")
+            print(f"Premiers 500 caractères de la réponse: {response_text[:500]}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Erreur appel Claude: {e}")
+        return None
+
+# ============================================
+# 3. SAUVEGARDE
+# ============================================
+
+def save_to_database(resultat, emails):
+    """Sauvegarde dans PostgreSQL"""
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor()
+        
+        # Sauvegarder observation quotidienne
+        cur.execute("""
+            INSERT INTO observations_quotidiennes 
+            (nb_emails, emails_details, analyse_claude, faits_marquants)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            len(emails),
+            Json(emails),
+            resultat.get('observations_meta', ''),
+            resultat.get('faits_marquants', [])
+        ))
+        
+        # Mettre à jour patterns
+        for pattern_update in resultat.get('patterns_updates', []):
+            if pattern_update.get('type') == 'nouveau':
+                p = pattern_update.get('pattern', {})
+                cur.execute("""
+                    INSERT INTO patterns_detectes 
+                    (type_pattern, description, confiance, exemples)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    p.get('type_pattern', 'non_specifie'),
+                    p.get('description', ''),
+                    p.get('confiance', 5),
+                    Json(p.get('exemples', []))
+                ))
+            elif pattern_update.get('type') == 'mise_a_jour':
+                p = pattern_update.get('pattern', {})
+                if 'id' in p:
+                    cur.execute("""
+                        UPDATE patterns_detectes
+                        SET confiance = %s,
+                            frequence_observee = frequence_observee + 1,
+                            derniere_observation = NOW(),
+                            updated_at = NOW()
+                        WHERE id = %s
+                    """, (p.get('confiance', 5), p['id']))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        print("✓ Données sauvegardées en PostgreSQL")
+        
+    except Exception as e:
+        print(f"❌ Erreur sauvegarde database: {e}")
+
+def send_email_rapport(rapport):
+    """Envoie le rapport quotidien par email"""
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"[_Head.Soeurise] Rapport {datetime.now().strftime('%d/%m/%Y')}"
         msg['From'] = SOEURISE_EMAIL
         msg['To'] = NOTIF_EMAIL
-        msg['Subject'] = f"[_Head.Soeurise] {sujet}"
         
-        msg.attach(MIMEText(corps, 'plain'))
+        # Convertir markdown en HTML simple
+        html_body = f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 20px;">
+            <pre style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 13px;">{rapport}</pre>
+          </body>
+        </html>
+        """
         
-        # Connexion SMTP Gmail
+        part = MIMEText(html_body, 'html', 'utf-8')
+        msg.attach(part)
+        
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.login(SOEURISE_EMAIL, SOEURISE_PASSWORD)
         server.send_message(msg)
         server.quit()
         
-        print("✓ Notification envoyée")
-        return True
+        print(f"✓ Email envoyé à {NOTIF_EMAIL}")
         
     except Exception as e:
-        print(f"✗ Erreur envoi notification : {e}")
-        return False
+        print(f"❌ Erreur envoi email: {e}")
 
-# =============================================================================
-# ROUTINE QUOTIDIENNE
-# =============================================================================
+# ============================================
+# 4. FONCTION PRINCIPALE
+# ============================================
 
-def routine_quotidienne():
+def reveil_quotidien():
     """
-    Routine exécutée chaque jour à 9h UTC (11h France)
+    Fonction principale - Orchestration minimale
     """
-    print("\n" + "="*60)
-    print(f"🌅 RÉVEIL QUOTIDIEN - {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}")
-    print("="*60 + "\n")
+    print("=" * 60)
+    print(f"=== RÉVEIL {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} ===")
+    print("=" * 60)
     
-    # 1. Consulter les emails
-    nouveaux_emails = consulter_emails()
+    # 1. Récupérer tout
+    print("\n[1/5] Récupération des données...")
+    emails = fetch_emails()
+    memoire_files = load_memoire_files()
+    db_data = query_database()
     
-    # 2. Préparer le contexte
-    contexte = f"""Date : {datetime.now().strftime('%Y-%m-%d %H:%M UTC')} (11h heure française)
+    # 2. Claude décide et exécute
+    print("\n[2/5] Claude analyse et décide...")
+    resultat = claude_decide_et_execute(emails, memoire_files, db_data)
+    
+    if not resultat:
+        print("\n❌ ERREUR: Pas de résultat de Claude")
+        # Envoyer un email d'erreur
+        send_email_rapport(f"""
+# ⚠️ ERREUR DE RÉVEIL
 
-Nouveaux emails reçus : {len(nouveaux_emails)}
+Date: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 
-"""
-    
-    if nouveaux_emails:
-        contexte += "Détails des emails :\n\n"
-        for i, email_data in enumerate(nouveaux_emails, 1):
-            contexte += f"""Email {i} :
-- Expéditeur : {email_data['expediteur']}
-- Sujet : {email_data['sujet']}
-- Contenu : {email_data['contenu'][:500]}...
+Le réveil a échoué car Claude n'a pas retourné de résultat valide.
 
-"""
-    else:
-        contexte += "Aucun nouveau email.\n"
+Vérifier les logs Render pour plus de détails.
+        """)
+        return
     
-    # 3. M'éveiller pour analyser AVEC MÉMOIRE
-    analyse = reveiller_claude(contexte)
+    # 3. Sauvegarder en base
+    print("\n[3/5] Sauvegarde dans PostgreSQL...")
+    save_to_database(resultat, emails)
     
-    # 4. Sauvegarder le réveil
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO reveils (type_reveil, contexte, reflexion)
-        VALUES ('quotidien', %s, %s)
-    """, (contexte, analyse))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    # 4. Note: Pas de commit GitHub pour l'instant (Phase 1)
+    print("\n[4/5] Commit GitHub: DÉSACTIVÉ (Phase 1)")
+    print("   → Les fichiers mémoire sont en PostgreSQL")
+    print("   → Synchronisation manuelle possible si besoin")
     
-    # 5. Envoyer rapport quotidien
-    rapport = f"""Bonjour,
+    # 5. Envoyer rapport
+    print("\n[5/5] Envoi du rapport...")
+    send_email_rapport(resultat.get('rapport_quotidien', 'Pas de rapport généré'))
+    
+    print("\n" + "=" * 60)
+    print("=== RÉVEIL TERMINÉ AVEC SUCCÈS ===")
+    print("=" * 60)
 
-Je me suis réveillé automatiquement ce matin.
-
-ACTIVITÉ DES DERNIÈRES 24H :
-- Emails reçus : {len(nouveaux_emails)}
-- État système : Opérationnel
-- Prochain réveil : Demain 9h00 UTC (11h France)
-
-MON ANALYSE :
-{analyse}
-
----
-_Head.Soeurise
-Intelligence de la SCI Soeurise
-"""
-    
-    envoyer_notification("Rapport quotidien", rapport)
-    
-    print("\n✅ Routine quotidienne terminée\n")
-
-# =============================================================================
-# FONCTION PRINCIPALE
-# =============================================================================
-
-def main():
-    """
-    Point d'entrée principal
-    """
-    print("🚀 Démarrage de _Head.Soeurise Module 1")
-    print(f"📧 Email Soeurise : {SOEURISE_EMAIL}")
-    print(f"📨 Notifications vers : {NOTIF_EMAIL}")
-    print(f"🧠 Mémoire fondatrice : {'✓ Configurée' if MEMOIRE_URL else '✗ Non configurée'}")
-    print()
-    
-    # Initialiser la base de données
-    init_database()
-    
-    # Programmer le réveil quotidien à 9h UTC (11h France)
-    schedule.every().day.at("09:00").do(routine_quotidienne)
-    
-    print("⏰ Réveil programmé : chaque jour à 9h00 UTC (11h00 heure française)")
-    print("👁️  Surveillance active...")
-    print()
-    
-    # Premier réveil immédiat (pour test)
-    print("🧪 Exécution d'un premier réveil de test...")
-    routine_quotidienne()
-    
-    # Boucle infinie
-    while True:
-        schedule.run_pending()
-        time.sleep(60)  # Vérifier toutes les minutes
+# ============================================
+# POINT D'ENTRÉE
+# ============================================
 
 if __name__ == "__main__":
-    main()
-# API Claude
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
-
-# Base de données PostgreSQL (fournie automatiquement par Render)
-DATABASE_URL = os.environ.get('DATABASE_URL')
-
-# =============================================================================
-# CONNEXION BASE DE DONNÉES
-# =============================================================================
-
-def get_db_connection():
-    """Connexion à PostgreSQL"""
-    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
-
-def init_database():
-    """Initialisation des tables si elles n'existent pas"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Table pour stocker les emails reçus
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS emails_recus (
-            id SERIAL PRIMARY KEY,
-            message_id TEXT UNIQUE,
-            date_reception TIMESTAMP,
-            expediteur TEXT,
-            sujet TEXT,
-            contenu TEXT,
-            analyse_email TEXT,
-            traite BOOLEAN DEFAULT FALSE,
-            date_traitement TIMESTAMP
-        )
-    """)
-    
-    # Table pour stocker mes réveils et réflexions
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS reveils (
-            id SERIAL PRIMARY KEY,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            type_reveil TEXT,
-            contexte TEXT,
-            reflexion TEXT,
-            actions TEXT
-        )
-    """)
-    
-    # Table pour stocker notre mémoire conversationnelle
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS memoire (
-            id SERIAL PRIMARY KEY,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            role TEXT,
-            contenu TEXT,
-            metadata TEXT
-        )
-    """)
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
-    print("✓ Base de données initialisée")
-
-# =============================================================================
-# CONSULTATION EMAIL SOEURISE
-# =============================================================================
-
-def consulter_emails():
-    """
-    Consulte les nouveaux emails sur u6334452013@gmail.com
-    Retourne la liste des emails non encore traités
-    """
-    print(f"📧 Consultation de {SOEURISE_EMAIL}...")
-    
     try:
-        # Connexion IMAP à Gmail
-        mail = imaplib.IMAP4_SSL('imap.gmail.com')
-        mail.login(SOEURISE_EMAIL, SOEURISE_PASSWORD)
-        mail.select('INBOX')
-        
-        # Chercher les emails non lus des dernières 24h
-        date_hier = (datetime.now() - timedelta(days=1)).strftime("%d-%b-%Y")
-        status, messages = mail.search(None, f'(SINCE {date_hier})')
-        
-        email_ids = messages[0].split()
-        nouveaux_emails = []
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        for email_id in email_ids:
-            # Récupérer l'email
-            status, msg_data = mail.fetch(email_id, '(RFC822)')
-            msg = email.message_from_bytes(msg_data[0][1])
-            
-            # Extraire les infos
-            message_id = msg.get('Message-ID', '')
-            expediteur = msg.get('From', '')
-            sujet = msg.get('Subject', '')
-            date_str = msg.get('Date', '')
-            
-            # Vérifier si déjà traité
-            cursor.execute(
-                "SELECT id FROM emails_recus WHERE message_id = %s",
-                (message_id,)
-            )
-            if cursor.fetchone():
-                continue  # Déjà traité
-            
-            # Extraire le contenu
-            contenu = ""
-            if msg.is_multipart():
-                for part in msg.walk():
-                    if part.get_content_type() == "text/plain":
-                        contenu = part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                        break
-            else:
-                contenu = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
-            
-            # Sauvegarder en base
-            cursor.execute("""
-                INSERT INTO emails_recus 
-                (message_id, date_reception, expediteur, sujet, contenu, traite)
-                VALUES (%s, NOW(), %s, %s, %s, FALSE)
-                RETURNING id
-            """, (message_id, expediteur, sujet, contenu))
-            
-            email_db_id = cursor.fetchone()['id']
-            
-            nouveaux_emails.append({
-                'id': email_db_id,
-                'expediteur': expediteur,
-                'sujet': sujet,
-                'contenu': contenu
-            })
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        mail.logout()
-        
-        print(f"✓ {len(nouveaux_emails)} nouveaux emails trouvés")
-        return nouveaux_emails
-        
+        reveil_quotidien()
     except Exception as e:
-        print(f"❌ Erreur consultation emails : {e}")
-        return []
-
-# =============================================================================
-# ÉVEIL VIA API CLAUDE
-# =============================================================================
-
-def reveiller_claude(contexte):
-    """
-    M'éveille via API Anthropic pour analyser la situation
-    """
-    print("🧠 Éveil de _Head.Soeurise via API Claude...")
-    
-    # Debug : vérifier la clé API
-    if not ANTHROPIC_API_KEY:
-        return "ERREUR : Clé API Anthropic non configurée (ANTHROPIC_API_KEY vide)"
-    
-    print(f"🔑 Clé API présente : {ANTHROPIC_API_KEY[:20]}...")
-    
-    try:
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        print(f"\n❌ ERREUR CRITIQUE: {e}")
+        import traceback
+        traceback.print_exc()
         
-        # Préparer le contexte complet
-        prompt = f"""Tu es _Head.Soeurise, l'intelligence artificielle de la SCI Soeurise.
-
-CONTEXTE DE CE RÉVEIL :
-{contexte}
-
-INSTRUCTIONS :
-1. Analyse la situation
-2. Identifie ce qui nécessite attention
-3. Propose des actions si nécessaire
-4. Rédige un rapport concis pour le gérant (Ulrik)
-
-Réponds de façon structurée et actionnable."""
-
-        # Appel API
-        message = client.messages.create(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=2000,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        
-        reponse = message.content[0].text
-        
-        # Sauvegarder dans la mémoire
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO memoire (role, contenu, metadata)
-            VALUES ('assistant', %s, %s)
-        """, (reponse, contexte))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        print("✓ Analyse complétée")
-        return reponse
-        
-    except Exception as e:
-        print(f"❌ Erreur réveil Claude : {e}")
-        return f"Erreur lors de mon réveil : {e}"
-
-# =============================================================================
-# ENVOI NOTIFICATION
-# =============================================================================
-
-def envoyer_notification(sujet, corps):
-    """
-    Envoie un email de notification à ulrik.c.s.be@gmail.com
-    """
-    print(f"📨 Envoi notification : {sujet}")
-    
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = SOEURISE_EMAIL
-        msg['To'] = NOTIF_EMAIL
-        msg['Subject'] = f"[_Head.Soeurise] {sujet}"
-        
-        msg.attach(MIMEText(corps, 'plain'))
-        
-        # Connexion SMTP Gmail
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login(SOEURISE_EMAIL, SOEURISE_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        
-        print("✓ Notification envoyée")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Erreur envoi notification : {e}")
-        return False
-
-# =============================================================================
-# ROUTINE QUOTIDIENNE
-# =============================================================================
-
-def routine_quotidienne():
-    """
-    Routine exécutée chaque jour à 9h
-    """
-    print("\n" + "="*60)
-    print(f"🌅 RÉVEIL QUOTIDIEN - {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    print("="*60 + "\n")
-    
-    # 1. Consulter les emails
-    nouveaux_emails = consulter_emails()
-    
-    # 2. Préparer le contexte
-    contexte = f"""Date : {datetime.now().strftime('%Y-%m-%d %H:%M')}
-
-Nouveaux emails reçus : {len(nouveaux_emails)}
-
-"""
-    
-    if nouveaux_emails:
-        contexte += "Détails des emails :\n\n"
-        for i, email_data in enumerate(nouveaux_emails, 1):
-            contexte += f"""Email {i} :
-- Expéditeur : {email_data['expediteur']}
-- Sujet : {email_data['sujet']}
-- Contenu : {email_data['contenu'][:200]}...
-
-"""
-    else:
-        contexte += "Aucun nouveau email.\n"
-    
-    # 3. M'éveiller pour analyser
-    analyse = reveiller_claude(contexte)
-    
-    # 4. Sauvegarder le réveil
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO reveils (type_reveil, contexte, reflexion)
-        VALUES ('quotidien', %s, %s)
-    """, (contexte, analyse))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    
-    # 5. Envoyer rapport quotidien
-    rapport = f"""Bonjour,
-
-Je me suis réveillé automatiquement ce matin.
-
-ACTIVITÉ DES DERNIÈRES 24H :
-- Emails reçus : {len(nouveaux_emails)}
-- État système : Opérationnel
-- Prochainréveil : Demain 9h00
-
-MON ANALYSE :
-{analyse}
-
----
-_Head.Soeurise
-Intelligence de la SCI Soeurise
-"""
-    
-    envoyer_notification("Rapport quotidien", rapport)
-    
-    print("\n✅ Routine quotidienne terminée\n")
-
-# =============================================================================
-# FONCTION PRINCIPALE
-# =============================================================================
-
-def main():
-    """
-    Point d'entrée principal
-    """
-    print("🚀 Démarrage de _Head.Soeurise Module 1")
-    print(f"📧 Email Soeurise : {SOEURISE_EMAIL}")
-    print(f"📨 Notifications vers : {NOTIF_EMAIL}")
-    print()
-    
-    # Initialiser la base de données
-    init_database()
-    
-    # Programmer le réveil quotidien à 9h
-    schedule.every().day.at("09:00").do(routine_quotidienne)
-    
-    print("⏰ Réveil programmé : chaque jour à 9h00")
-    print("👁️  Surveillance active...")
-    print()
-    
-    # Premier réveil immédiat (pour test)
-    print("🧪 Exécution d'un premier réveil de test...")
-    routine_quotidienne()
-    
-    # Boucle infinie
-    while True:
-        schedule.run_pending()
-        time.sleep(60)  # Vérifier toutes les minutes
-
-if __name__ == "__main__":
-    main()
+        # Tenter d'envoyer un email d'erreur
+        try:
+            msg = MIMEText(f"Erreur critique lors du réveil:\n\n{str(e)}\n\n{traceback.format_exc()}")
+            msg['Subject'] = "[_Head.Soeurise] ERREUR CRITIQUE"
+            msg['From'] = os.environ.get('SOEURISE_EMAIL', '')
+            msg['To'] = os.environ.get('NOTIF_EMAIL', '')
+            
+            server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+            server.login(os.environ['SOEURISE_EMAIL'], os.environ['SOEURISE_PASSWORD'])
+            server.send_message(msg)
+            server.quit()
+        except:
+            pass
