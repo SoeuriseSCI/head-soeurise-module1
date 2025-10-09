@@ -476,13 +476,26 @@ if __name__ == "__main__":
     print("🤖 _Head.Soeurise - Module 1")
     print("Architecture : Scheduler intégré (tout-en-un)")
     print("=" * 60)
+    print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    
+    # RÉVEIL DE TEST AU DÉMARRAGE
+    print("\n" + "=" * 60)
+    print("🧪 RÉVEIL DE TEST AU DÉMARRAGE")
+    print("=" * 60)
+    try:
+        reveil_quotidien()
+    except Exception as e:
+        print(f"\n❌ Erreur lors du réveil de test: {e}")
+        import traceback
+        traceback.print_exc()
     
     # Programmer le réveil quotidien à 11h (heure France)
+    print("\n" + "=" * 60)
     schedule.every().day.at("11:00").do(reveil_quotidien)
     
-    print(f"\n✓ Réveil programmé tous les jours à 11:00 (heure France)")
-    print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
-    print(f"\n→ En attente du prochain réveil...\n")
+    print(f"✓ Réveil quotidien programmé tous les jours à 11:00 (heure France)")
+    print(f"→ En attente du prochain réveil...\n")
+    print("=" * 60)
     
     # Boucle infinie pour garder le service actif
     while True:
