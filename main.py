@@ -1,6 +1,7 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.0 - Approche IA-First
+Version : 2.0 - Approche IA-First avec Scheduler intégré
+Architecture : Tout-en-un (reste actif en permanence)
 """
 
 import os
@@ -16,6 +17,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
+import schedule
+import time
 
 # ============================================
 # CONFIGURATION
@@ -457,27 +460,35 @@ Vérifier les logs Render pour plus de détails.
     print("=" * 60)
 
 # ============================================
+# 5. SCHEDULER (ARCHITECTURE B)
+# ============================================
+
+def keep_alive():
+    """Fonction vide juste pour garder le service actif"""
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Service actif - Prochain réveil programmé à 11h00")
+
+# ============================================
 # POINT D'ENTRÉE
 # ============================================
 
 if __name__ == "__main__":
-    try:
-        reveil_quotidien()
-    except Exception as e:
-        print(f"\n❌ ERREUR CRITIQUE: {e}")
-        import traceback
-        traceback.print_exc()
+    print("=" * 60)
+    print("🤖 _Head.Soeurise - Module 1")
+    print("Architecture : Scheduler intégré (tout-en-un)")
+    print("=" * 60)
+    
+    # Programmer le réveil quotidien à 11h (heure France)
+    schedule.every().day.at("11:00").do(reveil_quotidien)
+    
+    print(f"\n✓ Réveil programmé tous les jours à 11:00 (heure France)")
+    print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    print(f"\n→ En attente du prochain réveil...\n")
+    
+    # Boucle infinie pour garder le service actif
+    while True:
+        schedule.run_pending()
+        time.sleep(60)  # Vérifier toutes les minutes
         
-        # Tenter d'envoyer un email d'erreur
-        try:
-            msg = MIMEText(f"Erreur critique lors du réveil:\n\n{str(e)}\n\n{traceback.format_exc()}")
-            msg['Subject'] = "[_Head.Soeurise] ERREUR CRITIQUE"
-            msg['From'] = os.environ.get('SOEURISE_EMAIL', '')
-            msg['To'] = os.environ.get('NOTIF_EMAIL', '')
-            
-            server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-            server.login(os.environ['SOEURISE_EMAIL'], os.environ['SOEURISE_PASSWORD'])
-            server.send_message(msg)
-            server.quit()
-        except:
-            pass
+        # Afficher un signe de vie toutes les heures
+        if datetime.now().minute == 0:
+            keep_alive()
