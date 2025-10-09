@@ -1,4 +1,19 @@
-anthropic==0.40.0
-psycopg[binary]==3.2.3
-schedule==1.2.0
-requests==2.31.0
+# Dépendances pour _Head.Soeurise Module 1
+# Architecture Mémoire Hiérarchisée v2.0
+
+# API Anthropic (Claude)
+anthropic>=0.39.0
+
+# Base de données PostgreSQL
+psycopg2-binary>=2.9.0
+
+# Requêtes HTTP (pour charger fichiers GitHub)
+requests>=2.31.0
+
+# Les autres dépendances sont dans la bibliothèque standard Python :
+# - imaplib (emails IMAP)
+# - smtplib (envoi emails)
+# - email (parsing emails)
+# - json (parsing JSON)
+# - datetime (gestion dates)
+# - os (variables d'environnement)
