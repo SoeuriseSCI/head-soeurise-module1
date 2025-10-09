@@ -10,6 +10,9 @@ psycopg2-binary>=2.9.0
 # Requêtes HTTP (pour charger fichiers GitHub)
 requests>=2.31.0
 
+# Serveur web (pour garder le service actif)
+flask>=3.0.0
+
 # Les autres dépendances sont dans la bibliothèque standard Python :
 # - imaplib (emails IMAP)
 # - smtplib (envoi emails)
