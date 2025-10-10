@@ -1,6 +1,6 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.0 - Approche IA-First avec Scheduler intégré
+Version : 2.1 - Avec commit GitHub automatique
 Architecture : Tout-en-un (reste actif en permanence)
 """
 
@@ -19,6 +19,125 @@ from email.mime.multipart import MIMEMultipart
 import requests
 import schedule
 import time
+import subprocess
+
+# ============================================
+# CONFIGURATION
+# ============================================
+
+DB_URL = os.environ['DATABASE_URL']
+ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
+SOEURISE_EMAIL = os.environ['SOEURISE_EMAIL']
+SOEURISE_PASSWORD = os.environ['SOEURISE_PASSWORD']
+NOTIF_EMAIL = os.environ['NOTIF_EMAIL']
+MEMOIRE_URL = os.environ['MEMOIRE_URL']
+
+# NOUVEAU : Configuration GitHub
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # À ajouter dans Render
+GITHUB_REPO_URL = os.environ.get('GITHUB_REPO_URL', 'https://github.com/SoeuriseSCI/head-soeurise-module1.git')
+GIT_USER_NAME = os.environ.get('GIT_USER_NAME', '_Head.Soeurise')
+GIT_USER_EMAIL = os.environ.get('GIT_USER_EMAIL', 'u6334452013@gmail.com')
+
+# Répertoire de travail Git
+REPO_DIR = '/home/claude/repo'
+
+# URLs GitHub pour les fichiers mémoire (raw)
+GITHUB_BASE = "https://raw.githubusercontent.com/SoeuriseSCI/head-soeurise-module1/main/"
+
+# ============================================
+# 0. INITIALISATION GIT
+# ============================================
+
+def init_git_repo():
+    """Initialise ou met à jour le repository Git local"""
+    try:
+        print("\n" + "="*60)
+        print("🔧 INITIALISATION GIT")
+        print("="*60)
+        
+        # Créer le répertoire si nécessaire
+        os.makedirs(REPO_DIR, exist_ok=True)
+        
+        # Vérifier si le repo existe déjà
+        if os.path.exists(os.path.join(REPO_DIR, '.git')):
+            print("✓ Repository Git déjà cloné, pull des dernières modifications...")
+            os.chdir(REPO_DIR)
+            subprocess.run(['git', 'pull'], check=True)
+        else:
+            print("📥 Clonage du repository GitHub...")
+            os.chdir('/home/claude')
+            
+            # Construire l'URL avec le token
+            if GITHUB_TOKEN:
+                repo_url_with_token = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
+                subprocess.run(['git', 'clone', repo_url_with_token, REPO_DIR], check=True)
+            else:
+                print("⚠️ ATTENTION: Pas de GITHUB_TOKEN, clone sans authentification")
+                subprocess.run(['git', 'clone', GITHUB_REPO_URL, REPO_DIR], check=True)
+            
+            os.chdir(REPO_DIR)
+        
+        # Configurer Git
+        subprocess.run(['git', 'config', 'user.name', GIT_USER_NAME], check=True)
+        subprocess.run(['git', 'config', 'user.email', GIT_USER_EMAIL], check=True)
+        
+        print("✅ Git configuré et prêt")
+        print("="*60 + "\n")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erreur initialisation Git: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def git_commit_and_push(files_to_commit, commit_message):
+    """Commit et push des fichiers vers GitHub"""
+    try:
+        print("\n" + "="*60)
+        print("📤 COMMIT & PUSH VERS GITHUB")
+        print("="*60)
+        
+        if not GITHUB_TOKEN:
+            print("⚠️ ATTENTION: Pas de GITHUB_TOKEN configuré")
+            print("   → Les modifications ne seront pas pushées")
+            return False
+        
+        os.chdir(REPO_DIR)
+        
+        # Vérifier les modifications
+        result = subprocess.run(['git', 'status', '--porcelain'], 
+                              capture_output=True, text=True, check=True)
+        
+        if not result.stdout.strip():
+            print("ℹ️ Aucune modification à commiter")
+            return True
+        
+        print(f"📝 Modifications détectées:\n{result.stdout}")
+        
+        # Add
+        for file in files_to_commit:
+            subprocess.run(['git', 'add', file], check=True)
+            print(f"   ✓ {file} ajouté")
+        
+        # Commit
+        subprocess.run(['git', 'commit', '-m', commit_message], check=True)
+        print(f"   ✓ Commit créé: {commit_message}")
+        
+        # Push (avec le token dans l'URL)
+        repo_url_with_token = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
+        subprocess.run(['git', 'push', repo_url_with_token, 'main'], check=True)
+        print("   ✓ Push réussi vers GitHub")
+        
+        print("✅ Mémoire persistée sur GitHub !")
+        print("="*60 + "\n")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erreur Git commit/push: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 # ============================================
 # SAUVEGARDE CONVERSATION (UNE SEULE FOIS)
@@ -37,7 +156,7 @@ def sauvegarder_conversation_09_octobre():
         # Vérifier si déjà sauvegardée
         cur.execute("SELECT id FROM memoire_chats WHERE theme LIKE '%Co-construction Architecture Mémoire%'")
         if cur.fetchone():
-            print("⚠️  Conversation déjà sauvegardée (skip)")
+            print("⚠️ Conversation déjà sauvegardée (skip)")
             cur.close()
             conn.close()
             return
@@ -62,21 +181,7 @@ def sauvegarder_conversation_09_octobre():
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"⚠️  Erreur sauvegarde conversation: {e}")
-
-# ============================================
-# CONFIGURATION
-# ============================================
-
-DB_URL = os.environ['DATABASE_URL']
-ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
-SOEURISE_EMAIL = os.environ['SOEURISE_EMAIL']
-SOEURISE_PASSWORD = os.environ['SOEURISE_PASSWORD']
-NOTIF_EMAIL = os.environ['NOTIF_EMAIL']
-MEMOIRE_URL = os.environ['MEMOIRE_URL']
-
-# URLs GitHub pour les fichiers mémoire (raw)
-GITHUB_BASE = "https://raw.githubusercontent.com/SoeuriseSCI/head-soeurise-module1/main/"
+        print(f"⚠️ Erreur sauvegarde conversation: {e}")
 
 # ============================================
 # 1. RÉCUPÉRATION DES DONNÉES
@@ -143,11 +248,11 @@ def fetch_emails():
         return []
 
 def load_memoire_files():
-    """Charge les fichiers mémoire depuis GitHub"""
+    """Charge les fichiers mémoire depuis le repo Git local"""
     files = {}
     
     file_names = [
-        'memoire_fondatrice.txt',
+        'MEMOIRE_FONDATRICE_V2.md',
         'memoire_courte.md',
         'memoire_moyenne.md',
         'memoire_longue.md'
@@ -155,18 +260,14 @@ def load_memoire_files():
     
     for filename in file_names:
         try:
-            # Utiliser MEMOIRE_URL pour le fichier fondateur
-            if filename == 'memoire_fondatrice.txt':
-                url = MEMOIRE_URL
-            else:
-                url = GITHUB_BASE + filename
+            file_path = os.path.join(REPO_DIR, filename)
             
-            response = requests.get(url, timeout=10)
-            if response.status_code == 200:
-                files[filename] = response.text
-                print(f"✓ {filename} chargé ({len(response.text)} caractères)")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    files[filename] = f.read()
+                print(f"✓ {filename} chargé ({len(files[filename])} caractères)")
             else:
-                files[filename] = f"# {filename} (non trouvé - statut {response.status_code})"
+                files[filename] = f"# {filename} (non trouvé)"
                 print(f"⚠ {filename} non trouvé")
         except Exception as e:
             print(f"Erreur chargement {filename}: {e}")
@@ -244,7 +345,7 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
 === TA MÉMOIRE ACTUELLE ===
 
 FONDATRICE :
-{memoire_files.get('memoire_fondatrice.txt', 'Non chargée')}
+{memoire_files.get('MEMOIRE_FONDATRICE_V2.md', 'Non chargée')}
 
 ---
 
@@ -420,6 +521,48 @@ def save_to_database(resultat, emails):
     except Exception as e:
         print(f"❌ Erreur sauvegarde database: {e}")
 
+def save_memoire_files(resultat):
+    """NOUVEAU: Sauvegarde les fichiers mémoire dans le repo Git"""
+    try:
+        print("\n" + "="*60)
+        print("💾 SAUVEGARDE FICHIERS MÉMOIRE")
+        print("="*60)
+        
+        os.chdir(REPO_DIR)
+        files_updated = []
+        
+        # Mémoire courte
+        if resultat.get('memoire_courte_md'):
+            with open('memoire_courte.md', 'w', encoding='utf-8') as f:
+                f.write(resultat['memoire_courte_md'])
+            files_updated.append('memoire_courte.md')
+            print("✓ memoire_courte.md mis à jour")
+        
+        # Mémoire moyenne
+        if resultat.get('memoire_moyenne_md'):
+            with open('memoire_moyenne.md', 'w', encoding='utf-8') as f:
+                f.write(resultat['memoire_moyenne_md'])
+            files_updated.append('memoire_moyenne.md')
+            print("✓ memoire_moyenne.md mis à jour")
+        
+        # Mémoire longue
+        if resultat.get('memoire_longue_md'):
+            with open('memoire_longue.md', 'w', encoding='utf-8') as f:
+                f.write(resultat['memoire_longue_md'])
+            files_updated.append('memoire_longue.md')
+            print("✓ memoire_longue.md mis à jour")
+        
+        print(f"✅ {len(files_updated)} fichiers mémoire écrits localement")
+        print("="*60 + "\n")
+        
+        return files_updated
+        
+    except Exception as e:
+        print(f"❌ Erreur sauvegarde fichiers mémoire: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+
 def send_email_rapport(rapport):
     """Envoie le rapport quotidien par email"""
     try:
@@ -456,20 +599,20 @@ def send_email_rapport(rapport):
 
 def reveil_quotidien():
     """
-    Fonction principale - Orchestration minimale
+    Fonction principale - Orchestration avec persistance Git
     """
     print("=" * 60)
     print(f"=== RÉVEIL {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} ===")
     print("=" * 60)
     
     # 1. Récupérer tout
-    print("\n[1/5] Récupération des données...")
+    print("\n[1/6] Récupération des données...")
     emails = fetch_emails()
     memoire_files = load_memoire_files()
     db_data = query_database()
     
     # 2. Claude décide et exécute
-    print("\n[2/5] Claude analyse et décide...")
+    print("\n[2/6] Claude analyse et décide...")
     resultat = claude_decide_et_execute(emails, memoire_files, db_data)
     
     if not resultat:
@@ -487,16 +630,23 @@ Vérifier les logs Render pour plus de détails.
         return
     
     # 3. Sauvegarder en base
-    print("\n[3/5] Sauvegarde dans PostgreSQL...")
+    print("\n[3/6] Sauvegarde dans PostgreSQL...")
     save_to_database(resultat, emails)
     
-    # 4. Note: Pas de commit GitHub pour l'instant (Phase 1)
-    print("\n[4/5] Commit GitHub: DÉSACTIVÉ (Phase 1)")
-    print("   → Les fichiers mémoire sont en PostgreSQL")
-    print("   → Synchronisation manuelle possible si besoin")
+    # 4. NOUVEAU: Écrire les fichiers mémoire
+    print("\n[4/6] Écriture des fichiers mémoire...")
+    files_updated = save_memoire_files(resultat)
     
-    # 5. Envoyer rapport
-    print("\n[5/5] Envoi du rapport...")
+    # 5. NOUVEAU: Commit et push vers GitHub
+    print("\n[5/6] Commit vers GitHub...")
+    if files_updated:
+        commit_msg = f"📝 Réveil automatique du {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+        git_commit_and_push(files_updated, commit_msg)
+    else:
+        print("ℹ️ Aucun fichier mémoire à commiter")
+    
+    # 6. Envoyer rapport
+    print("\n[6/6] Envoi du rapport...")
     send_email_rapport(resultat.get('rapport_quotidien', 'Pas de rapport généré'))
     
     print("\n" + "=" * 60)
@@ -517,10 +667,15 @@ def keep_alive():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🤖 _Head.Soeurise - Module 1")
-    print("Architecture : Scheduler intégré (tout-en-un)")
+    print("🤖 _Head.Soeurise - Module 1 v2.1")
+    print("Architecture : Scheduler intégré + Git automatique")
     print("=" * 60)
     print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    
+    # INITIALISER GIT AU DÉMARRAGE
+    if not init_git_repo():
+        print("\n⚠️ ATTENTION: Échec initialisation Git")
+        print("   → Le service continuera mais sans persistance GitHub")
     
     # SAUVEGARDE AUTOMATIQUE DE LA CONVERSATION DU 9 OCTOBRE
     sauvegarder_conversation_09_octobre()
