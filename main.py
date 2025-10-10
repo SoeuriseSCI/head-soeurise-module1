@@ -127,7 +127,7 @@ def fetch_emails():
                     "subject": subject,
                     "from": from_email,
                     "date": date_email,
-                    "body": body[:1000]  # Limiter taille
+                    "body": body[:10000]  # Limiter taille
                 })
             except Exception as e:
                 print(f"Erreur traitement email {email_id}: {e}")
