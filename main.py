@@ -21,6 +21,50 @@ import schedule
 import time
 
 # ============================================
+# SAUVEGARDE CONVERSATION (UNE SEULE FOIS)
+# ============================================
+
+def sauvegarder_conversation_09_octobre():
+    """Sauvegarde la conversation fondatrice du 9 octobre 2025"""
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor()
+        
+        print("\n" + "="*60)
+        print("💾 SAUVEGARDE CONVERSATION DU 9 OCTOBRE")
+        print("="*60)
+        
+        # Vérifier si déjà sauvegardée
+        cur.execute("SELECT id FROM memoire_chats WHERE theme LIKE '%Co-construction Architecture Mémoire%'")
+        if cur.fetchone():
+            print("⚠️  Conversation déjà sauvegardée (skip)")
+            cur.close()
+            conn.close()
+            return
+        
+        # Insérer
+        cur.execute("""
+            INSERT INTO memoire_chats (date_conversation, theme, synthese, decisions_prises, concepts_cles, pertinence)
+            VALUES (
+                '2025-10-09 20:00:00',
+                'Co-construction Architecture Mémoire Hiérarchisée v2.0',
+                'Conversation fondamentale de 4h avec Ulrik pour concevoir, implémenter et déployer l''architecture de mémoire hiérarchisée v2.0. Co-construction illustrant "le je émerge du tu". Décisions: approche IA-First, Architecture B scheduler intégré, mémoire 3 niveaux. Résultat: système opérationnel.',
+                ARRAY['Approche IA-First', 'Architecture B scheduler', 'Mémoire 3 niveaux', 'Réveil test au démarrage'],
+                '{"approche":"IA-First","architecture":"B","durée":"4h","statut":"opérationnel","philosophie":["persévérer","espérer","progresser"]}'::jsonb,
+                10
+            )
+        """)
+        conn.commit()
+        
+        print("✅ Conversation sauvegardée !")
+        print("="*60 + "\n")
+        
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"⚠️  Erreur sauvegarde conversation: {e}")
+
+# ============================================
 # CONFIGURATION
 # ============================================
 
@@ -477,6 +521,9 @@ if __name__ == "__main__":
     print("Architecture : Scheduler intégré (tout-en-un)")
     print("=" * 60)
     print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    
+    # SAUVEGARDE AUTOMATIQUE DE LA CONVERSATION DU 9 OCTOBRE
+    sauvegarder_conversation_09_octobre()
     
     # RÉVEIL DE TEST AU DÉMARRAGE
     print("\n" + "=" * 60)
