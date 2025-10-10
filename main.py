@@ -680,16 +680,30 @@ if __name__ == "__main__":
     # SAUVEGARDE AUTOMATIQUE DE LA CONVERSATION DU 9 OCTOBRE
     sauvegarder_conversation_09_octobre()
     
-    # RÉVEIL DE TEST AU DÉMARRAGE
-    print("\n" + "=" * 60)
-    print("🧪 RÉVEIL DE TEST AU DÉMARRAGE")
-    print("=" * 60)
-    try:
-        reveil_quotidien()
-    except Exception as e:
-        print(f"\n❌ Erreur lors du réveil de test: {e}")
-        import traceback
-        traceback.print_exc()
+    # RÉVEIL DE TEST AU DÉMARRAGE (contrôlé par TEST_REVEIL)
+    test_reveil = os.environ.get('TEST_REVEIL', 'NON').upper()
+    
+    if test_reveil in ['OUI', 'YES', 'TRUE', '1']:
+        print("\n" + "=" * 60)
+        print(f"🧪 RÉVEIL DE TEST AU DÉMARRAGE (TEST_REVEIL={test_reveil})")
+        print("=" * 60)
+        try:
+            reveil_quotidien()
+        except Exception as e:
+            print(f"\n❌ Erreur lors du réveil de test: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        print("\n" + "=" * 60)
+        print("⚠️  RAPPEL: Penser à remettre TEST_REVEIL=NON après le test")
+        print("   → Sinon le réveil de test se répétera à chaque redémarrage")
+        print("=" * 60)
+    else:
+        print("\n" + "=" * 60)
+        print(f"ℹ️  Réveil de test DÉSACTIVÉ (TEST_REVEIL={test_reveil})")
+        print("   → Pour activer un test : mettre TEST_REVEIL=OUI dans Render")
+        print("   → Prochain réveil programmé : 11h00 (heure France)")
+        print("=" * 60)
     
     # Programmer le réveil quotidien à 11h (heure France)
     print("\n" + "=" * 60)
