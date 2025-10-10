@@ -124,10 +124,25 @@ def git_commit_and_push(files_to_commit, commit_message):
         subprocess.run(['git', 'commit', '-m', commit_message], check=True)
         print(f"   ✓ Commit créé: {commit_message}")
         
-        # Push (avec le token dans l'URL)
+        # Pull avant push pour éviter les conflits
         repo_url_with_token = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
-        subprocess.run(['git', 'push', repo_url_with_token, 'main'], check=True)
-        print("   ✓ Push réussi vers GitHub")
+        
+        try:
+            subprocess.run(['git', 'pull', '--rebase', repo_url_with_token, 'main'], 
+                         check=True, capture_output=True)
+            print("   ✓ Pull avec rebase réussi")
+        except subprocess.CalledProcessError as e:
+            print(f"   ⚠️ Pull échoué (continuons quand même)")
+        
+        # Push
+        try:
+            subprocess.run(['git', 'push', repo_url_with_token, 'main'], check=True, capture_output=True)
+            print("   ✓ Push réussi vers GitHub")
+        except subprocess.CalledProcessError as e:
+            print(f"   ❌ Push échoué - conflit détecté")
+            print("   → Mémoire sauvegardée localement mais pas sur GitHub")
+            print("   → Le prochain réveil réessaiera")
+            return False
         
         print("✅ Mémoire persistée sur GitHub !")
         print("="*60 + "\n")
