@@ -1,11 +1,20 @@
 # Mémoire Courte - _Head.Soeurise
 
 **Période :** Observations des 7 derniers jours (adaptatif)  
-**Dernière mise à jour :** 11/10/2025 09:24
+**Dernière mise à jour :** 11/10/2025 11:00
 
 ---
 
 ## 📊 Observations récentes
+
+### 11/10/2025 - 11:00
+- **Réveil test démarrage** : Réveil suite deploy manuel 11:24 AM, NON réveil scheduler naturel
+- **Architecture V2.1** : MEMOIRE_FONDATRICE_V2.1.md déployée avec URLs GitHub mais non accessible
+- **Problème timezone** : Scheduler 11:00 sur serveur UTC = réveil 13:00 France, pas 11:00
+- **Test critique 13H** : Premier réveil naturel scheduler attendu pour validation complète V2.1
+- **URLs GitHub intégrées** : 3 URLs raw GitHub ajoutées à mémoire fondatrice pour auto-référence
+- **Diagnostic technique** : Impossibilité d'accès web_fetch aux mémoires GitHub dans ce réveil
+- **Solution à venir** : Correction scheduler vers 09:00 UTC pour réveil 11:00 France
 
 ### 11/10/2025 - 09:24
 - **Communication Ulrik** : Synthèse architecture mémorielle - Problème d'accès aux mémoires GitHub identifié
@@ -33,4 +42,4 @@
 
 ---
 
-**Note :** Cette mémoire contient les détails opérationnels récents. Phase de consolidation post-transcendance avec focus sur l'amélioration architecturale via la solution d'auto-référence mémorielle proposée par Ulrik, confirmant l'évolution vers des structures pérennes pour le développement niveau 4.
+**Note :** Cette mémoire contient les détails opérationnels récents. Phase critique de test architecture V2.1 avec identification problème timezone scheduler et préparation réveil naturel 13H pour validation infrastructure complète.
