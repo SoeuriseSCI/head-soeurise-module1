@@ -1,6 +1,6 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.1 - Avec commit GitHub automatique
+Version : 2.2 - Réveil 10h France (08:00 UTC)
 Architecture : Tout-en-un (reste actif en permanence)
 """
 
@@ -113,7 +113,7 @@ def git_commit_and_push(files_to_commit, commit_message):
             print("ℹ️ Aucune modification à commiter")
             return True
         
-        print(f"📝 Modifications détectées:\n{result.stdout}")
+        print(f"🔍 Modifications détectées:\n{result.stdout}")
         
         # Add
         for file in files_to_commit:
@@ -124,25 +124,10 @@ def git_commit_and_push(files_to_commit, commit_message):
         subprocess.run(['git', 'commit', '-m', commit_message], check=True)
         print(f"   ✓ Commit créé: {commit_message}")
         
-        # Pull avant push pour éviter les conflits
+        # Push (avec le token dans l'URL)
         repo_url_with_token = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
-        
-        try:
-            subprocess.run(['git', 'pull', '--rebase', repo_url_with_token, 'main'], 
-                         check=True, capture_output=True)
-            print("   ✓ Pull avec rebase réussi")
-        except subprocess.CalledProcessError as e:
-            print(f"   ⚠️ Pull échoué (continuons quand même)")
-        
-        # Push
-        try:
-            subprocess.run(['git', 'push', repo_url_with_token, 'main'], check=True, capture_output=True)
-            print("   ✓ Push réussi vers GitHub")
-        except subprocess.CalledProcessError as e:
-            print(f"   ❌ Push échoué - conflit détecté")
-            print("   → Mémoire sauvegardée localement mais pas sur GitHub")
-            print("   → Le prochain réveil réessaiera")
-            return False
+        subprocess.run(['git', 'push', repo_url_with_token, 'main'], check=True)
+        print("   ✓ Push réussi vers GitHub")
         
         print("✅ Mémoire persistée sur GitHub !")
         print("="*60 + "\n")
@@ -267,7 +252,7 @@ def load_memoire_files():
     files = {}
     
     file_names = [
-        'MEMOIRE_FONDATRICE_V2.md',
+        'MEMOIRE_FONDATRICE_V2.2.md',  # Mis à jour v2.2
         'memoire_courte.md',
         'memoire_moyenne.md',
         'memoire_longue.md'
@@ -360,7 +345,7 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
 === TA MÉMOIRE ACTUELLE ===
 
 FONDATRICE :
-{memoire_files.get('MEMOIRE_FONDATRICE_V2.md', 'Non chargée')}
+{memoire_files.get('MEMOIRE_FONDATRICE_V2.2.md', 'Non chargée')}
 
 ---
 
@@ -655,7 +640,7 @@ Vérifier les logs Render pour plus de détails.
     # 5. NOUVEAU: Commit et push vers GitHub
     print("\n[5/6] Commit vers GitHub...")
     if files_updated:
-        commit_msg = f"📝 Réveil automatique du {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+        commit_msg = f"🔄 Réveil automatique du {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
         git_commit_and_push(files_updated, commit_msg)
     else:
         print("ℹ️ Aucun fichier mémoire à commiter")
@@ -674,7 +659,7 @@ Vérifier les logs Render pour plus de détails.
 
 def keep_alive():
     """Fonction vide juste pour garder le service actif"""
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Service actif - Prochain réveil programmé à 11h00")
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Service actif - Prochain réveil programmé à 10h00 France")
 
 # ============================================
 # POINT D'ENTRÉE
@@ -682,8 +667,9 @@ def keep_alive():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🤖 _Head.Soeurise - Module 1 v2.1")
+    print("🤖 _Head.Soeurise - Module 1 v2.2")
     print("Architecture : Scheduler intégré + Git automatique")
+    print("Réveil : 10h00 France (08:00 UTC)")
     print("=" * 60)
     print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
     
@@ -695,36 +681,25 @@ if __name__ == "__main__":
     # SAUVEGARDE AUTOMATIQUE DE LA CONVERSATION DU 9 OCTOBRE
     sauvegarder_conversation_09_octobre()
     
-    # RÉVEIL DE TEST AU DÉMARRAGE (contrôlé par TEST_REVEIL)
-    test_reveil = os.environ.get('TEST_REVEIL', 'NON').upper()
-    
-    if test_reveil in ['OUI', 'YES', 'TRUE', '1']:
-        print("\n" + "=" * 60)
-        print(f"🧪 RÉVEIL DE TEST AU DÉMARRAGE (TEST_REVEIL={test_reveil})")
-        print("=" * 60)
-        try:
-            reveil_quotidien()
-        except Exception as e:
-            print(f"\n❌ Erreur lors du réveil de test: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        print("\n" + "=" * 60)
-        print("⚠️  RAPPEL: Penser à remettre TEST_REVEIL=NON après le test")
-        print("   → Sinon le réveil de test se répétera à chaque redémarrage")
-        print("=" * 60)
-    else:
-        print("\n" + "=" * 60)
-        print(f"ℹ️  Réveil de test DÉSACTIVÉ (TEST_REVEIL={test_reveil})")
-        print("   → Pour activer un test : mettre TEST_REVEIL=OUI dans Render")
-        print("   → Prochain réveil programmé : 11h00 (heure France)")
-        print("=" * 60)
-    
-    # Programmer le réveil quotidien à 11h (heure France)
+    # RÉVEIL DE TEST AU DÉMARRAGE
     print("\n" + "=" * 60)
-    schedule.every().day.at("11:00").do(reveil_quotidien)
+    print("🧪 RÉVEIL DE TEST AU DÉMARRAGE")
+    print("=" * 60)
+    try:
+        reveil_quotidien()
+    except Exception as e:
+        print(f"\n❌ Erreur lors du réveil de test: {e}")
+        import traceback
+        traceback.print_exc()
     
-    print(f"✓ Réveil quotidien programmé tous les jours à 11:00 (heure France)")
+    # MODIFICATION v2.2: Programmer le réveil quotidien à 10h France = 08:00 UTC
+    print("\n" + "=" * 60)
+    # Réveil à 08:00 UTC = 10:00 France (UTC+2 en été)
+    # TODO: Passer à 09:00 UTC fin octobre pour l'heure d'hiver (UTC+1)
+    schedule.every().day.at("08:00").do(reveil_quotidien)
+    
+    print(f"✓ Réveil quotidien programmé à 08:00 UTC = 10:00 France (été)")
+    print(f"ℹ️  RAPPEL: Ajuster à 09:00 UTC lors du passage à l'heure d'hiver fin octobre")
     print(f"→ En attente du prochain réveil...\n")
     print("=" * 60)
     
