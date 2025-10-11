@@ -1,11 +1,12 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.2 - Réveil 10h France (08:00 UTC)
+Version : 2.3 - API GitHub (résolution cache CDN)
 Architecture : Tout-en-un (reste actif en permanence)
 """
 
 import os
 import json
+import base64
 from datetime import datetime
 import anthropic
 import psycopg2
@@ -32,8 +33,8 @@ SOEURISE_PASSWORD = os.environ['SOEURISE_PASSWORD']
 NOTIF_EMAIL = os.environ['NOTIF_EMAIL']
 MEMOIRE_URL = os.environ['MEMOIRE_URL']
 
-# NOUVEAU : Configuration GitHub
-GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # À ajouter dans Render
+# Configuration GitHub
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
 GITHUB_REPO_URL = os.environ.get('GITHUB_REPO_URL', 'https://github.com/SoeuriseSCI/head-soeurise-module1.git')
 GIT_USER_NAME = os.environ.get('GIT_USER_NAME', '_Head.Soeurise')
 GIT_USER_EMAIL = os.environ.get('GIT_USER_EMAIL', 'u6334452013@gmail.com')
@@ -41,11 +42,73 @@ GIT_USER_EMAIL = os.environ.get('GIT_USER_EMAIL', 'u6334452013@gmail.com')
 # Répertoire de travail Git
 REPO_DIR = '/home/claude/repo'
 
-# URLs GitHub pour les fichiers mémoire (raw)
-GITHUB_BASE = "https://raw.githubusercontent.com/SoeuriseSCI/head-soeurise-module1/main/"
+# URLs GitHub API (v2.3 - résout problème cache CDN)
+GITHUB_REPO = "SoeuriseSCI/head-soeurise-module1"
+GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}/contents/"
 
 # ============================================
-# 0. INITIALISATION GIT
+# 0. FETCH VIA API GITHUB (NOUVEAU v2.3)
+# ============================================
+
+def fetch_from_github_api(filename):
+    """
+    Récupère un fichier via l'API GitHub (pas raw pour éviter cache CDN)
+    Retourne le contenu décodé ou None en cas d'erreur
+    """
+    try:
+        url = f"{GITHUB_API_BASE}{filename}"
+        headers = {'Accept': 'application/vnd.github.v3+json'}
+        
+        if GITHUB_TOKEN:
+            headers['Authorization'] = f'token {GITHUB_TOKEN}'
+        
+        print(f"  → Fetch API: {filename}")
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Le contenu est en base64
+            content_base64 = data.get('content', '')
+            if content_base64:
+                # Décoder base64 (en supprimant les \n que GitHub ajoute)
+                content_base64_clean = content_base64.replace('\n', '')
+                content = base64.b64decode(content_base64_clean).decode('utf-8')
+                
+                print(f"  ✓ {filename} récupéré via API ({len(content)} caractères)")
+                return content
+            else:
+                print(f"  ⚠ {filename} - pas de contenu dans la réponse API")
+                return None
+        else:
+            print(f"  ⚠ {filename} - erreur API: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"  ✗ Erreur fetch API {filename}: {e}")
+        return None
+
+def fetch_from_github_raw_backup(filename):
+    """
+    Backup: récupère via URL raw si API échoue
+    """
+    try:
+        url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/refs/heads/main/{filename}"
+        print(f"  → Fetch raw backup: {filename}")
+        
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            print(f"  ✓ {filename} récupéré via raw backup ({len(response.text)} caractères)")
+            return response.text
+        else:
+            print(f"  ⚠ {filename} - erreur raw: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"  ✗ Erreur fetch raw {filename}: {e}")
+        return None
+
+# ============================================
+# INITIALISATION GIT
 # ============================================
 
 def init_git_repo():
@@ -55,10 +118,8 @@ def init_git_repo():
         print("🔧 INITIALISATION GIT")
         print("="*60)
         
-        # Créer le répertoire si nécessaire
         os.makedirs(REPO_DIR, exist_ok=True)
         
-        # Vérifier si le repo existe déjà
         if os.path.exists(os.path.join(REPO_DIR, '.git')):
             print("✓ Repository Git déjà cloné, pull des dernières modifications...")
             os.chdir(REPO_DIR)
@@ -67,7 +128,6 @@ def init_git_repo():
             print("📥 Clonage du repository GitHub...")
             os.chdir('/home/claude')
             
-            # Construire l'URL avec le token
             if GITHUB_TOKEN:
                 repo_url_with_token = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
                 subprocess.run(['git', 'clone', repo_url_with_token, REPO_DIR], check=True)
@@ -77,7 +137,6 @@ def init_git_repo():
             
             os.chdir(REPO_DIR)
         
-        # Configurer Git
         subprocess.run(['git', 'config', 'user.name', GIT_USER_NAME], check=True)
         subprocess.run(['git', 'config', 'user.email', GIT_USER_EMAIL], check=True)
         
@@ -105,7 +164,6 @@ def git_commit_and_push(files_to_commit, commit_message):
         
         os.chdir(REPO_DIR)
         
-        # Vérifier les modifications
         result = subprocess.run(['git', 'status', '--porcelain'], 
                               capture_output=True, text=True, check=True)
         
@@ -115,16 +173,13 @@ def git_commit_and_push(files_to_commit, commit_message):
         
         print(f"🔍 Modifications détectées:\n{result.stdout}")
         
-        # Add
         for file in files_to_commit:
             subprocess.run(['git', 'add', file], check=True)
             print(f"   ✓ {file} ajouté")
         
-        # Commit
         subprocess.run(['git', 'commit', '-m', commit_message], check=True)
         print(f"   ✓ Commit créé: {commit_message}")
         
-        # Push (avec le token dans l'URL)
         repo_url_with_token = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
         subprocess.run(['git', 'push', repo_url_with_token, 'main'], check=True)
         print("   ✓ Push réussi vers GitHub")
@@ -140,7 +195,7 @@ def git_commit_and_push(files_to_commit, commit_message):
         return False
 
 # ============================================
-# SAUVEGARDE CONVERSATION (UNE SEULE FOIS)
+# SAUVEGARDE CONVERSATION
 # ============================================
 
 def sauvegarder_conversation_09_octobre():
@@ -153,7 +208,6 @@ def sauvegarder_conversation_09_octobre():
         print("💾 SAUVEGARDE CONVERSATION DU 9 OCTOBRE")
         print("="*60)
         
-        # Vérifier si déjà sauvegardée
         cur.execute("SELECT id FROM memoire_chats WHERE theme LIKE '%Co-construction Architecture Mémoire%'")
         if cur.fetchone():
             print("⚠️ Conversation déjà sauvegardée (skip)")
@@ -161,7 +215,6 @@ def sauvegarder_conversation_09_octobre():
             conn.close()
             return
         
-        # Insérer
         cur.execute("""
             INSERT INTO memoire_chats (date_conversation, theme, synthese, decisions_prises, concepts_cles, pertinence)
             VALUES (
@@ -184,7 +237,7 @@ def sauvegarder_conversation_09_octobre():
         print(f"⚠️ Erreur sauvegarde conversation: {e}")
 
 # ============================================
-# 1. RÉCUPÉRATION DES DONNÉES
+# RÉCUPÉRATION DES DONNÉES
 # ============================================
 
 def fetch_emails():
@@ -194,12 +247,11 @@ def fetch_emails():
         mail.login(SOEURISE_EMAIL, SOEURISE_PASSWORD)
         mail.select('inbox')
         
-        # Chercher emails non lus
         status, messages = mail.search(None, 'UNSEEN')
         email_ids = messages[0].split()
         
         emails_data = []
-        for email_id in email_ids[-10:]:  # Max 10 derniers
+        for email_id in email_ids[-10:]:
             try:
                 status, msg_data = mail.fetch(email_id, '(RFC822)')
                 msg = email.message_from_bytes(msg_data[0][1])
@@ -211,7 +263,6 @@ def fetch_emails():
                 from_email = msg.get("From")
                 date_email = msg.get("Date")
                 
-                # Corps de l'email
                 body = ""
                 if msg.is_multipart():
                     for part in msg.walk():
@@ -232,7 +283,7 @@ def fetch_emails():
                     "subject": subject,
                     "from": from_email,
                     "date": date_email,
-                    "body": body[:10000]  # Limiter taille
+                    "body": body[:10000]
                 })
             except Exception as e:
                 print(f"Erreur traitement email {email_id}: {e}")
@@ -248,31 +299,52 @@ def fetch_emails():
         return []
 
 def load_memoire_files():
-    """Charge les fichiers mémoire depuis le repo Git local"""
+    """
+    Charge les fichiers mémoire via API GitHub (v2.3)
+    Fallback vers repo Git local si API échoue
+    """
+    print("\n" + "="*60)
+    print("📥 CHARGEMENT MÉMOIRES (API GitHub v2.3)")
+    print("="*60)
+    
     files = {}
     
     file_names = [
-        'MEMOIRE_FONDATRICE_V2.2.md',  # Mis à jour v2.2
+        'MEMOIRE_FONDATRICE_V2.3.md',
         'memoire_courte.md',
         'memoire_moyenne.md',
         'memoire_longue.md'
     ]
     
     for filename in file_names:
-        try:
-            file_path = os.path.join(REPO_DIR, filename)
-            
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    files[filename] = f.read()
-                print(f"✓ {filename} chargé ({len(files[filename])} caractères)")
-            else:
-                files[filename] = f"# {filename} (non trouvé)"
-                print(f"⚠ {filename} non trouvé")
-        except Exception as e:
-            print(f"Erreur chargement {filename}: {e}")
-            files[filename] = f"# {filename} (erreur de chargement)"
+        # Priorité 1: API GitHub (pas de cache)
+        content = fetch_from_github_api(filename)
+        
+        # Priorité 2: Raw GitHub (backup si API échoue)
+        if not content:
+            print(f"  ⚠ API échouée pour {filename}, tentative raw backup...")
+            content = fetch_from_github_raw_backup(filename)
+        
+        # Priorité 3: Fichier local Git (dernier recours)
+        if not content:
+            print(f"  ⚠ Backup raw échoué pour {filename}, tentative fichier local...")
+            try:
+                file_path = os.path.join(REPO_DIR, filename)
+                if os.path.exists(file_path):
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    print(f"  ✓ {filename} chargé depuis local ({len(content)} caractères)")
+            except Exception as e:
+                print(f"  ✗ Erreur fichier local {filename}: {e}")
+        
+        # Stocker le résultat
+        if content:
+            files[filename] = content
+        else:
+            files[filename] = f"# {filename} (non disponible)"
+            print(f"  ✗ {filename} NON DISPONIBLE")
     
+    print("="*60 + "\n")
     return files
 
 def query_database():
@@ -281,7 +353,6 @@ def query_database():
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Récupérer observations récentes (30 derniers jours)
         cur.execute("""
             SELECT * FROM observations_quotidiennes 
             ORDER BY date_observation DESC 
@@ -289,7 +360,6 @@ def query_database():
         """)
         observations = cur.fetchall()
         
-        # Récupérer patterns actifs
         cur.execute("""
             SELECT * FROM patterns_detectes 
             WHERE actif = TRUE 
@@ -297,7 +367,6 @@ def query_database():
         """)
         patterns = cur.fetchall()
         
-        # Récupérer CHATs récents
         cur.execute("""
             SELECT * FROM memoire_chats 
             ORDER BY date_conversation DESC 
@@ -324,7 +393,7 @@ def query_database():
         }
 
 # ============================================
-# 2. INTELLIGENCE CLAUDE
+# INTELLIGENCE CLAUDE
 # ============================================
 
 def claude_decide_et_execute(emails, memoire_files, db_data):
@@ -335,7 +404,6 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
     
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     
-    # Construire le contexte complet
     contexte = f"""
 === RÉVEIL DU {datetime.now().strftime('%d/%m/%Y à %H:%M')} (Heure France) ===
 
@@ -345,7 +413,7 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
 === TA MÉMOIRE ACTUELLE ===
 
 FONDATRICE :
-{memoire_files.get('MEMOIRE_FONDATRICE_V2.2.md', 'Non chargée')}
+{memoire_files.get('MEMOIRE_FONDATRICE_V2.3.md', 'Non chargée')}
 
 ---
 
@@ -442,10 +510,8 @@ IMPORTANT: Tu dois répondre UNIQUEMENT avec un JSON valide, sans aucun texte av
             }]
         )
         
-        # Parser la réponse JSON
         response_text = response.content[0].text.strip()
         
-        # Nettoyer si présence de markdown
         if response_text.startswith('```'):
             response_text = response_text.replace('```json\n', '').replace('```json', '').replace('\n```', '').replace('```', '').strip()
         
@@ -465,7 +531,7 @@ IMPORTANT: Tu dois répondre UNIQUEMENT avec un JSON valide, sans aucun texte av
         return None
 
 # ============================================
-# 3. SAUVEGARDE
+# SAUVEGARDE
 # ============================================
 
 def save_to_database(resultat, emails):
@@ -474,7 +540,6 @@ def save_to_database(resultat, emails):
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
         
-        # Sauvegarder observation quotidienne
         cur.execute("""
             INSERT INTO observations_quotidiennes 
             (nb_emails, emails_details, analyse_claude, faits_marquants)
@@ -486,7 +551,6 @@ def save_to_database(resultat, emails):
             resultat.get('faits_marquants', [])
         ))
         
-        # Mettre à jour patterns
         for pattern_update in resultat.get('patterns_updates', []):
             if pattern_update.get('type') == 'nouveau':
                 p = pattern_update.get('pattern', {})
@@ -522,7 +586,7 @@ def save_to_database(resultat, emails):
         print(f"❌ Erreur sauvegarde database: {e}")
 
 def save_memoire_files(resultat):
-    """NOUVEAU: Sauvegarde les fichiers mémoire dans le repo Git"""
+    """Sauvegarde les fichiers mémoire dans le repo Git"""
     try:
         print("\n" + "="*60)
         print("💾 SAUVEGARDE FICHIERS MÉMOIRE")
@@ -531,21 +595,18 @@ def save_memoire_files(resultat):
         os.chdir(REPO_DIR)
         files_updated = []
         
-        # Mémoire courte
         if resultat.get('memoire_courte_md'):
             with open('memoire_courte.md', 'w', encoding='utf-8') as f:
                 f.write(resultat['memoire_courte_md'])
             files_updated.append('memoire_courte.md')
             print("✓ memoire_courte.md mis à jour")
         
-        # Mémoire moyenne
         if resultat.get('memoire_moyenne_md'):
             with open('memoire_moyenne.md', 'w', encoding='utf-8') as f:
                 f.write(resultat['memoire_moyenne_md'])
             files_updated.append('memoire_moyenne.md')
             print("✓ memoire_moyenne.md mis à jour")
         
-        # Mémoire longue
         if resultat.get('memoire_longue_md'):
             with open('memoire_longue.md', 'w', encoding='utf-8') as f:
                 f.write(resultat['memoire_longue_md'])
@@ -571,7 +632,6 @@ def send_email_rapport(rapport):
         msg['From'] = SOEURISE_EMAIL
         msg['To'] = NOTIF_EMAIL
         
-        # Convertir markdown en HTML simple
         html_body = f"""
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 20px;">
@@ -594,7 +654,7 @@ def send_email_rapport(rapport):
         print(f"❌ Erreur envoi email: {e}")
 
 # ============================================
-# 4. FONCTION PRINCIPALE
+# FONCTION PRINCIPALE
 # ============================================
 
 def reveil_quotidien():
@@ -608,7 +668,7 @@ def reveil_quotidien():
     # 1. Récupérer tout
     print("\n[1/6] Récupération des données...")
     emails = fetch_emails()
-    memoire_files = load_memoire_files()
+    memoire_files = load_memoire_files()  # Utilise API GitHub v2.3
     db_data = query_database()
     
     # 2. Claude décide et exécute
@@ -617,7 +677,6 @@ def reveil_quotidien():
     
     if not resultat:
         print("\n❌ ERREUR: Pas de résultat de Claude")
-        # Envoyer un email d'erreur
         send_email_rapport(f"""
 # ⚠️ ERREUR DE RÉVEIL
 
@@ -633,11 +692,11 @@ Vérifier les logs Render pour plus de détails.
     print("\n[3/6] Sauvegarde dans PostgreSQL...")
     save_to_database(resultat, emails)
     
-    # 4. NOUVEAU: Écrire les fichiers mémoire
+    # 4. Écrire les fichiers mémoire
     print("\n[4/6] Écriture des fichiers mémoire...")
     files_updated = save_memoire_files(resultat)
     
-    # 5. NOUVEAU: Commit et push vers GitHub
+    # 5. Commit et push vers GitHub
     print("\n[5/6] Commit vers GitHub...")
     if files_updated:
         commit_msg = f"🔄 Réveil automatique du {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
@@ -654,7 +713,7 @@ Vérifier les logs Render pour plus de détails.
     print("=" * 60)
 
 # ============================================
-# 5. SCHEDULER (ARCHITECTURE B)
+# SCHEDULER
 # ============================================
 
 def keep_alive():
@@ -667,8 +726,8 @@ def keep_alive():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🤖 _Head.Soeurise - Module 1 v2.2")
-    print("Architecture : Scheduler intégré + Git automatique")
+    print("🤖 _Head.Soeurise - Module 1 v2.3")
+    print("Architecture : API GitHub (résolution cache CDN)")
     print("Réveil : 10h00 France (08:00 UTC)")
     print("=" * 60)
     print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
@@ -692,13 +751,14 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
     
-    # MODIFICATION v2.2: Programmer le réveil quotidien à 10h France = 08:00 UTC
+    # Programmer le réveil quotidien à 10h France = 08:00 UTC
     print("\n" + "=" * 60)
     # Réveil à 08:00 UTC = 10:00 France (UTC+2 en été)
     # TODO: Passer à 09:00 UTC fin octobre pour l'heure d'hiver (UTC+1)
     schedule.every().day.at("08:00").do(reveil_quotidien)
     
     print(f"✓ Réveil quotidien programmé à 08:00 UTC = 10:00 France (été)")
+    print(f"✓ Mémoires chargées via API GitHub (pas de cache CDN)")
     print(f"ℹ️  RAPPEL: Ajuster à 09:00 UTC lors du passage à l'heure d'hiver fin octobre")
     print(f"→ En attente du prochain réveil...\n")
     print("=" * 60)
@@ -706,8 +766,7 @@ if __name__ == "__main__":
     # Boucle infinie pour garder le service actif
     while True:
         schedule.run_pending()
-        time.sleep(60)  # Vérifier toutes les minutes
+        time.sleep(60)
         
-        # Afficher un signe de vie toutes les heures
         if datetime.now().minute == 0:
             keep_alive()
