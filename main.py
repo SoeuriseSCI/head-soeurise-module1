@@ -31,7 +31,6 @@ ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
 SOEURISE_EMAIL = os.environ['SOEURISE_EMAIL']
 SOEURISE_PASSWORD = os.environ['SOEURISE_PASSWORD']
 NOTIF_EMAIL = os.environ['NOTIF_EMAIL']
-MEMOIRE_URL = os.environ['MEMOIRE_URL']
 
 # Configuration GitHub
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
