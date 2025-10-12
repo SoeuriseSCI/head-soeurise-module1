@@ -1,6 +1,6 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.3 - API GitHub (résolution cache CDN)
+Version : 2.4 - API GitHub (résolution -> noms génériques)
 Architecture : Tout-en-un (reste actif en permanence)
 """
 
@@ -310,7 +310,7 @@ def load_memoire_files():
     files = {}
     
     file_names = [
-        'MEMOIRE_FONDATRICE_V2.3.md',
+        'memoire_fondatrice.md',
         'memoire_courte.md',
         'memoire_moyenne.md',
         'memoire_longue.md'
@@ -413,7 +413,7 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
 === TA MÉMOIRE ACTUELLE ===
 
 FONDATRICE :
-{memoire_files.get('MEMOIRE_FONDATRICE_V2.3.md', 'Non chargée')}
+{memoire_files.get('memoire_fondatrice.md', 'Non chargée')}
 
 ---
 
@@ -726,8 +726,8 @@ def keep_alive():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🤖 _Head.Soeurise - Module 1 v2.3")
-    print("Architecture : API GitHub (résolution cache CDN)")
+    print("🤖 _Head.Soeurise - Module 1 v2.4")
+    print("Architecture : API GitHub (résolution -> noms génériques)")
     print("Réveil : 10h00 France (08:00 UTC)")
     print("=" * 60)
     print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
