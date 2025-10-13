@@ -1,6 +1,6 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.4 - API GitHub (résolution -> noms génériques)
+Version : 2.5 - Récupération des pièces jointes des emails
 Architecture : Tout-en-un (reste actif en permanence)
 """
 
@@ -277,12 +277,24 @@ def fetch_emails():
                     except:
                         body = "Erreur décodage"
                 
+                attachments = []
+                for part in msg.walk():
+                    if part.get_content_disposition() == 'attachment':
+                        filename = part.get_filename()
+                        if filename:
+                            attachments.append({
+                                'filename': filename,
+                                'type': part.get_content_type()
+                            })
+
+
                 emails_data.append({
                     "id": email_id.decode(),
                     "subject": subject,
                     "from": from_email,
                     "date": date_email,
-                    "body": body[:10000]
+                    "body": body[:10000],
+                    "attachments": attachments  # NOUVEAU V2.5
                 })
             except Exception as e:
                 print(f"Erreur traitement email {email_id}: {e}")
@@ -725,8 +737,8 @@ def keep_alive():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🤖 _Head.Soeurise - Module 1 v2.4")
-    print("Architecture : API GitHub (résolution -> noms génériques)")
+    print("🤖 _Head.Soeurise - Module 1 v2.5")
+    print("Architecture : Récupération des pièces jointes des emails")
     print("Réveil : 10h00 France (08:00 UTC)")
     print("=" * 60)
     print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
