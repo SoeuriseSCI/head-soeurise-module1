@@ -286,7 +286,6 @@ def fetch_emails():
                             filepath = f"./temp/{filename}"
                             with open(filepath, 'wb') as f:
                                 f.write(part.get_payload(decode=True))
-                            f.close()
                 
                             # Lire le contenu selon le type, à développer dans une V2.7
                             # content = read_file_content(filepath)
@@ -791,3 +790,4 @@ if __name__ == "__main__":
         
         if datetime.now().minute == 0:
             keep_alive()
+    
