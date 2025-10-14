@@ -1,7 +1,13 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.6 - Récupération des pièces jointes des emails / Suite
+Version : 2.7 - Corrections pièces jointes + détection emails
 Architecture : Tout-en-un (reste actif en permanence)
+
+CHANGEMENTS V2.7 :
+- ✅ Fonction get_attachments() opérationnelle avec sauvegarde physique
+- ✅ Marquage explicite des emails comme lus après traitement
+- ✅ Répertoire /home/claude/attachments/ pour stockage pièces jointes
+- ✅ Métadonnées des pièces jointes incluses dans emails_data
 """
 
 import os
@@ -17,20 +23,23 @@ from email.header import decode_header
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 import requests
 import schedule
 import time
 import subprocess
 
-# ============================================
+# =====================================================
 # CONFIGURATION
-# ============================================
+# =====================================================
 
 DB_URL = os.environ['DATABASE_URL']
 ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
 SOEURISE_EMAIL = os.environ['SOEURISE_EMAIL']
 SOEURISE_PASSWORD = os.environ['SOEURISE_PASSWORD']
 NOTIF_EMAIL = os.environ['NOTIF_EMAIL']
+MEMOIRE_URL = os.environ['MEMOIRE_URL']
 
 # Configuration GitHub
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
@@ -38,16 +47,17 @@ GITHUB_REPO_URL = os.environ.get('GITHUB_REPO_URL', 'https://github.com/Soeurise
 GIT_USER_NAME = os.environ.get('GIT_USER_NAME', '_Head.Soeurise')
 GIT_USER_EMAIL = os.environ.get('GIT_USER_EMAIL', 'u6334452013@gmail.com')
 
-# Répertoire de travail Git
+# Répertoires de travail
 REPO_DIR = '/home/claude/repo'
+ATTACHMENTS_DIR = '/home/claude/attachments'
 
 # URLs GitHub API (v2.3 - résout problème cache CDN)
 GITHUB_REPO = "SoeuriseSCI/head-soeurise-module1"
 GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}/contents/"
 
-# ============================================
+# =====================================================
 # 0. FETCH VIA API GITHUB (NOUVEAU v2.3)
-# ============================================
+# =====================================================
 
 def fetch_from_github_api(filename):
     """
@@ -106,9 +116,9 @@ def fetch_from_github_raw_backup(filename):
         print(f"  ✗ Erreur fetch raw {filename}: {e}")
         return None
 
-# ============================================
+# =====================================================
 # INITIALISATION GIT
-# ============================================
+# =====================================================
 
 def init_git_repo():
     """Initialise ou met à jour le repository Git local"""
@@ -170,7 +180,7 @@ def git_commit_and_push(files_to_commit, commit_message):
             print("ℹ️ Aucune modification à commiter")
             return True
         
-        print(f"🔍 Modifications détectées:\n{result.stdout}")
+        print(f"📝 Modifications détectées:\n{result.stdout}")
         
         for file in files_to_commit:
             subprocess.run(['git', 'add', file], check=True)
@@ -193,9 +203,9 @@ def git_commit_and_push(files_to_commit, commit_message):
         traceback.print_exc()
         return False
 
-# ============================================
+# =====================================================
 # SAUVEGARDE CONVERSATION
-# ============================================
+# =====================================================
 
 def sauvegarder_conversation_09_octobre():
     """Sauvegarde la conversation fondatrice du 9 octobre 2025"""
@@ -235,26 +245,107 @@ def sauvegarder_conversation_09_octobre():
     except Exception as e:
         print(f"⚠️ Erreur sauvegarde conversation: {e}")
 
-# ============================================
-# RÉCUPÉRATION DES DONNÉES
-# ============================================
+# =====================================================
+# RÉCUPÉRATION DES DONNÉES - AMÉLIORÉ V2.7
+# =====================================================
+
+def get_attachments(msg):
+    """
+    NOUVEAU V2.7: Extrait et sauvegarde les pièces jointes d'un email
+    Retourne une liste de dictionnaires avec métadonnées
+    """
+    attachments = []
+    
+    # Créer le répertoire si nécessaire
+    os.makedirs(ATTACHMENTS_DIR, exist_ok=True)
+    
+    if msg.is_multipart():
+        for part in msg.walk():
+            # Identifier les pièces jointes
+            content_disposition = part.get("Content-Disposition")
+            
+            if content_disposition and "attachment" in content_disposition:
+                filename = part.get_filename()
+                
+                if filename:
+                    # Décoder le nom de fichier si nécessaire
+                    if isinstance(filename, str):
+                        # Déjà décodé
+                        pass
+                    else:
+                        decoded = decode_header(filename)
+                        filename = decoded[0][0]
+                        if isinstance(filename, bytes):
+                            filename = filename.decode()
+                    
+                    # Créer un nom de fichier unique avec timestamp
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    safe_filename = f"{timestamp}_{filename}"
+                    filepath = os.path.join(ATTACHMENTS_DIR, safe_filename)
+                    
+                    # Récupérer le contenu de la pièce jointe
+                    try:
+                        payload = part.get_payload(decode=True)
+                        
+                        if payload:
+                            # Sauvegarder physiquement le fichier
+                            with open(filepath, 'wb') as f:
+                                f.write(payload)
+                            
+                            # Métadonnées
+                            file_size = len(payload)
+                            content_type = part.get_content_type()
+                            
+                            attachments.append({
+                                "filename": filename,
+                                "safe_filename": safe_filename,
+                                "filepath": filepath,
+                                "size": file_size,
+                                "content_type": content_type,
+                                "saved_at": datetime.now().isoformat()
+                            })
+                            
+                            print(f"      📎 {filename} ({file_size} bytes) → {safe_filename}")
+                        
+                    except Exception as e:
+                        print(f"      ⚠️ Erreur extraction {filename}: {e}")
+                        continue
+    
+    return attachments
 
 def fetch_emails():
-    """Récupère les nouveaux emails via IMAP"""
+    """
+    AMÉLIORÉ V2.7: Récupère les nouveaux emails via IMAP
+    - Extraction des pièces jointes
+    - Marquage explicite comme lu après traitement
+    """
     try:
+        print("\n" + "="*60)
+        print("📧 RÉCUPÉRATION EMAILS")
+        print("="*60)
+        
         mail = imaplib.IMAP4_SSL('imap.gmail.com')
         mail.login(SOEURISE_EMAIL, SOEURISE_PASSWORD)
         mail.select('inbox')
         
+        # Chercher les emails NON LUS
         status, messages = mail.search(None, 'UNSEEN')
         email_ids = messages[0].split()
         
+        print(f"📊 {len(email_ids)} emails non lus détectés")
+        
         emails_data = []
-        for email_id in email_ids[-10:]:
+        processed_ids = []
+        
+        for email_id in email_ids[-10:]:  # Limiter aux 10 derniers
             try:
+                print(f"\n  → Traitement email ID {email_id.decode()}")
+                
+                # Récupérer l'email complet
                 status, msg_data = mail.fetch(email_id, '(RFC822)')
                 msg = email.message_from_bytes(msg_data[0][1])
                 
+                # Extraire le sujet
                 subject = decode_header(msg["Subject"])[0][0]
                 if isinstance(subject, bytes):
                     subject = subject.decode()
@@ -262,6 +353,10 @@ def fetch_emails():
                 from_email = msg.get("From")
                 date_email = msg.get("Date")
                 
+                print(f"      Sujet: {subject}")
+                print(f"      De: {from_email}")
+                
+                # Extraire le corps du message
                 body = ""
                 if msg.is_multipart():
                     for part in msg.walk():
@@ -277,45 +372,49 @@ def fetch_emails():
                     except:
                         body = "Erreur décodage"
                 
-                attachments = []
-                for part in msg.walk():
-                    if part.get_content_disposition() == 'attachment':
-                        filename = part.get_filename()
-                        if filename:
-                            # Sauvegarder le fichier physiquement, NOUVEAU V2.6
-                            filepath = f"./temp/{filename}"
-                            with open(filepath, 'wb') as f:
-                                f.write(part.get_payload(decode=True))
+                # NOUVEAU V2.7: Extraire les pièces jointes
+                attachments = get_attachments(msg)
                 
-                            # Lire le contenu selon le type, à développer dans une V2.7
-                            # content = read_file_content(filepath)
-                
-                            attachments.append({
-                                'filename': filename,
-                                'filepath': filepath,
-                                'type': part.get_content_type()
-                            #    'content': content
-                            })
-
+                # Construire les données de l'email
                 emails_data.append({
                     "id": email_id.decode(),
                     "subject": subject,
                     "from": from_email,
                     "date": date_email,
-                    "body": body[:10000],
-                    "attachments": attachments  # NOUVEAU V2.5
+                    "body": body[:10000],  # Limiter à 10k caractères
+                    "attachments": attachments,  # NOUVEAU
+                    "has_attachments": len(attachments) > 0  # NOUVEAU
                 })
+                
+                processed_ids.append(email_id)
+                print(f"      ✓ Email traité ({len(attachments)} pièce(s) jointe(s))")
+                
             except Exception as e:
-                print(f"Erreur traitement email {email_id}: {e}")
+                print(f"      ✗ Erreur traitement email {email_id}: {e}")
                 continue
+        
+        # NOUVEAU V2.7: Marquer EXPLICITEMENT comme lus
+        if processed_ids:
+            print(f"\n📌 Marquage de {len(processed_ids)} emails comme lus...")
+            for email_id in processed_ids:
+                try:
+                    mail.store(email_id, '+FLAGS', '\\Seen')
+                except Exception as e:
+                    print(f"   ⚠️ Erreur marquage {email_id}: {e}")
+            print("   ✓ Emails marqués comme lus")
         
         mail.close()
         mail.logout()
         
-        print(f"✓ {len(emails_data)} emails récupérés")
+        print(f"\n✅ {len(emails_data)} emails récupérés et traités")
+        print("="*60 + "\n")
+        
         return emails_data
+        
     except Exception as e:
-        print(f"Erreur récupération emails: {e}")
+        print(f"❌ Erreur récupération emails: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 def load_memoire_files():
@@ -330,7 +429,7 @@ def load_memoire_files():
     files = {}
     
     file_names = [
-        'memoire_fondatrice.md',
+        'MEMOIRE_FONDATRICE_V2.3.md',
         'memoire_courte.md',
         'memoire_moyenne.md',
         'memoire_longue.md'
@@ -412,9 +511,9 @@ def query_database():
             'chats': []
         }
 
-# ============================================
+# =====================================================
 # INTELLIGENCE CLAUDE
-# ============================================
+# =====================================================
 
 def claude_decide_et_execute(emails, memoire_files, db_data):
     """
@@ -433,7 +532,7 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
 === TA MÉMOIRE ACTUELLE ===
 
 FONDATRICE :
-{memoire_files.get('memoire_fondatrice.md', 'Non chargée')}
+{memoire_files.get('MEMOIRE_FONDATRICE_V2.3.md', 'Non chargée')}
 
 ---
 
@@ -532,6 +631,7 @@ IMPORTANT: Tu dois répondre UNIQUEMENT avec un JSON valide, sans aucun texte av
         
         response_text = response.content[0].text.strip()
         
+        # Nettoyer les balises markdown si présentes
         if response_text.startswith('```'):
             response_text = response_text.replace('```json\n', '').replace('```json', '').replace('\n```', '').replace('```', '').strip()
         
@@ -550,9 +650,9 @@ IMPORTANT: Tu dois répondre UNIQUEMENT avec un JSON valide, sans aucun texte av
         print(f"❌ Erreur appel Claude: {e}")
         return None
 
-# ============================================
+# =====================================================
 # SAUVEGARDE
-# ============================================
+# =====================================================
 
 def save_to_database(resultat, emails):
     """Sauvegarde dans PostgreSQL"""
@@ -673,13 +773,13 @@ def send_email_rapport(rapport):
     except Exception as e:
         print(f"❌ Erreur envoi email: {e}")
 
-# ============================================
+# =====================================================
 # FONCTION PRINCIPALE
-# ============================================
+# =====================================================
 
 def reveil_quotidien():
     """
-    Fonction principale - Orchestration avec persistance Git
+    Fonction principale - Orchestration avec persistence Git
     """
     print("=" * 60)
     print(f"=== RÉVEIL {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} ===")
@@ -732,30 +832,33 @@ Vérifier les logs Render pour plus de détails.
     print("=== RÉVEIL TERMINÉ AVEC SUCCÈS ===")
     print("=" * 60)
 
-# ============================================
+# =====================================================
 # SCHEDULER
-# ============================================
+# =====================================================
 
 def keep_alive():
     """Fonction vide juste pour garder le service actif"""
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Service actif - Prochain réveil programmé à 10h00 France")
 
-# ============================================
+# =====================================================
 # POINT D'ENTRÉE
-# ============================================
+# =====================================================
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🤖 _Head.Soeurise - Module 1 v2.5")
-    print("Architecture : Récupération des pièces jointes des emails")
+    print("🔧 _Head.Soeurise - Module 1 v2.7")
+    print("Architecture : API GitHub (résolution cache CDN)")
     print("Réveil : 10h00 France (08:00 UTC)")
+    print("NOUVEAU V2.7:")
+    print("  - ✅ Pièces jointes : extraction + sauvegarde physique")
+    print("  - ✅ Emails : marquage explicite comme lus")
     print("=" * 60)
     print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
     
     # INITIALISER GIT AU DÉMARRAGE
     if not init_git_repo():
         print("\n⚠️ ATTENTION: Échec initialisation Git")
-        print("   → Le service continuera mais sans persistance GitHub")
+        print("   → Le service continuera mais sans persistence GitHub")
     
     # SAUVEGARDE AUTOMATIQUE DE LA CONVERSATION DU 9 OCTOBRE
     sauvegarder_conversation_09_octobre()
@@ -779,15 +882,16 @@ if __name__ == "__main__":
     
     print(f"✓ Réveil quotidien programmé à 08:00 UTC = 10:00 France (été)")
     print(f"✓ Mémoires chargées via API GitHub (pas de cache CDN)")
-    print(f"ℹ️  RAPPEL: Ajuster à 09:00 UTC lors du passage à l'heure d'hiver fin octobre")
-    print(f"→ En attente du prochain réveil...\n")
+    print(f"✓ Répertoire attachments: {ATTACHMENTS_DIR}")
     print("=" * 60)
     
-    # Boucle infinie pour garder le service actif
+    # Keep-alive toutes les 30 minutes
+    schedule.every(30).minutes.do(keep_alive)
+    
+    # Boucle principale
+    print("\n⏰ En attente du prochain réveil programmé...")
+    print("   (Le service reste actif en permanence)\n")
+    
     while True:
         schedule.run_pending()
-        time.sleep(60)
-        
-        if datetime.now().minute == 0:
-            keep_alive()
-    
+        time.sleep(60)  # Vérifier toutes les minutes
