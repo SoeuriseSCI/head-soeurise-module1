@@ -1,6 +1,6 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.5 - Récupération des pièces jointes des emails
+Version : 2.6 - Récupération des pièces jointes des emails / Suite
 Architecture : Tout-en-un (reste actif en permanence)
 """
 
@@ -282,11 +282,21 @@ def fetch_emails():
                     if part.get_content_disposition() == 'attachment':
                         filename = part.get_filename()
                         if filename:
+                            # Sauvegarder le fichier physiquement, NOUVEAU V2.6
+                            filepath = f"./temp/{filename}"
+                            with open(filepath, 'wb') as f:
+                                f.write(part.get_payload(decode=True))
+                            f.close()
+                
+                            # Lire le contenu selon le type, à développer dans une V2.7
+                            # content = read_file_content(filepath)
+                
                             attachments.append({
                                 'filename': filename,
+                                'filepath': filepath,
                                 'type': part.get_content_type()
+                            #    'content': content
                             })
-
 
                 emails_data.append({
                     "id": email_id.decode(),
