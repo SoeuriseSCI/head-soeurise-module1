@@ -1,28 +1,14 @@
-# Dépendances pour _Head.Soeurise Module 1
-# Architecture Mémoire Hiérarchisée v2.0
-# Architecture B : Scheduler intégré (tout-en-un)
+# _Head.Soeurise V2.8 - Requirements
+# Installation: pip install -r requirements.txt --break-system-packages
 
-# API Anthropic (Claude)
-anthropic>=0.39.0
-
-# Base de données PostgreSQL
-psycopg2-binary>=2.9.0
-
-# Requêtes HTTP (pour charger fichiers GitHub)
+# Core dependencies
+anthropic>=0.18.0
+psycopg2-binary>=2.9.9
 requests>=2.31.0
-
-# Scheduler pour réveil automatique
 schedule>=1.2.0
 
-# Les autres dépendances sont dans la bibliothèque standard Python :
-# - imaplib (emails IMAP)
-# - smtplib (envoi emails)
-# - email (parsing emails)
-# - json (parsing JSON)
-# - datetime (gestion dates)
-# - os (variables d'environnement)
-# - time (sleep)
+# V2.8: PDF analysis
+pdfplumber==0.11.0
 
-# - json (parsing JSON)
-# - datetime (gestion dates)
-# - os (variables d'environnement)
+# Optional but recommended
+python-dotenv>=1.0.0  # For local .env files
