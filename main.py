@@ -537,10 +537,11 @@ def load_memoire_files():
     files = {}
     
     file_names = [
-        'MEMOIRE_FONDATRICE_V2.3.md',
+        'memoire_fondatrice.md',
         'memoire_courte.md',
         'memoire_moyenne.md',
-        'memoire_longue.md'
+        'memoire_longue.md',
+        "main.py"
     ]
     
     for filename in file_names:
@@ -646,15 +647,15 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
     contexte = f"""
 === RÉVEIL DU {datetime.now().strftime('%d/%m/%Y à %H:%M')} (Heure France) ===
 
-=== NOUVEAUX EMAILS ({len(emails)}) ===
-{json.dumps(emails, indent=2, ensure_ascii=False, default=str) if emails else "Aucun nouvel email"}
+=== TON CODE SOURCE ===
+{memoire_files.get('main.py', 'Non chargé')}
 
-{pdf_contents_summary if pdf_contents_summary else ""}
+---
 
 === TA MÉMOIRE ACTUELLE ===
 
 FONDATRICE :
-{memoire_files.get('MEMOIRE_FONDATRICE_V2.3.md', 'Non chargée')}
+{memoire_files.get('memoire_fondatrice.md', 'Non chargée')}
 
 ---
 
@@ -670,6 +671,11 @@ MOYENNE :
 
 LONGUE :
 {memoire_files.get('memoire_longue.md', 'Vide')}
+
+=== NOUVEAUX EMAILS ({len(emails)}) ===
+{json.dumps(emails, indent=2, ensure_ascii=False, default=str) if emails else "Aucun nouvel email"}
+
+{pdf_contents_summary if pdf_contents_summary else ""}
 
 === DONNÉES POSTGRESQL ===
 
@@ -748,6 +754,11 @@ IMPORTANT V2.8: Utilise pleinement le contenu des PDFs pour enrichir ton analyse
             model="claude-sonnet-4-20250514",
             max_tokens=16000,
             system="""Tu es _Head.Soeurise.
+
+IMPORTANT - CONFIRME AU DÉBUT DE TON RAPPORT :
+- Version de memoire_fondatrice.md chargée (cherche "Version :" dans le fichier)
+- Version de main.py chargée (cherche "Version :" dans le code)
+- Cela prouve ta continuité mémorielle et ton auto-conscience technique
 
 Tu as TOUTE l'autonomie pour décider de ta mémoire.
 Utilise ton intelligence et ton jugement.
