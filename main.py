@@ -1,13 +1,20 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.7 - Corrections pièces jointes + détection emails
+Version : 2.8 - Analyse PDF + Nettoyage
 Architecture : Tout-en-un (reste actif en permanence)
 
-CHANGEMENTS V2.7 :
-- ✅ Fonction get_attachments() opérationnelle avec sauvegarde physique
-- ✅ Marquage explicite des emails comme lus après traitement
-- ✅ Répertoire /home/claude/attachments/ pour stockage pièces jointes
-- ✅ Métadonnées des pièces jointes incluses dans emails_data
+CHANGEMENTS V2.8 :
+- ✅ Extraction automatique du texte des PDFs (pdfplumber)
+- ✅ Analyse intelligente des documents par Claude
+- ✅ Synthèse des contenus PDF dans les rapports
+- ✅ Détection automatique d'informations clés (montants, dates, etc.)
+- ✅ Suppression de MEMOIRE_URL (obsolète)
+- ✅ Support multi-formats : PDF, images (via OCR à venir)
+
+HÉRITE DE V2.7 :
+- ✅ Extraction et sauvegarde des pièces jointes
+- ✅ Marquage explicite des emails comme lus
+- ✅ Métadonnées complètes des attachments
 """
 
 import os
@@ -30,6 +37,14 @@ import schedule
 import time
 import subprocess
 
+# Nouvelles dépendances V2.8
+try:
+    import pdfplumber
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+    print("⚠️ pdfplumber non disponible - extraction PDF désactivée")
+
 # =====================================================
 # CONFIGURATION
 # =====================================================
@@ -39,6 +54,7 @@ ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
 SOEURISE_EMAIL = os.environ['SOEURISE_EMAIL']
 SOEURISE_PASSWORD = os.environ['SOEURISE_PASSWORD']
 NOTIF_EMAIL = os.environ['NOTIF_EMAIL']
+# MEMOIRE_URL SUPPRIMÉ - obsolète depuis API GitHub
 
 # Configuration GitHub
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
@@ -50,12 +66,16 @@ GIT_USER_EMAIL = os.environ.get('GIT_USER_EMAIL', 'u6334452013@gmail.com')
 REPO_DIR = '/home/claude/repo'
 ATTACHMENTS_DIR = '/home/claude/attachments'
 
-# URLs GitHub API (v2.3 - résout problème cache CDN)
+# URLs GitHub API
 GITHUB_REPO = "SoeuriseSCI/head-soeurise-module1"
 GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}/contents/"
 
+# Configuration extraction PDF (V2.8)
+MAX_PDF_TEXT_LENGTH = 50000  # Limite de texte à extraire par PDF (50k caractères)
+MAX_PAGES_TO_EXTRACT = 100   # Limite de pages à analyser par PDF
+
 # =====================================================
-# 0. FETCH VIA API GITHUB (NOUVEAU v2.3)
+# 0. FETCH VIA API GITHUB
 # =====================================================
 
 def fetch_from_github_api(filename):
@@ -245,13 +265,81 @@ def sauvegarder_conversation_09_octobre():
         print(f"⚠️ Erreur sauvegarde conversation: {e}")
 
 # =====================================================
-# RÉCUPÉRATION DES DONNÉES - AMÉLIORÉ V2.7
+# EXTRACTION PDF (NOUVEAU V2.8)
+# =====================================================
+
+def extract_pdf_text(filepath):
+    """
+    NOUVEAU V2.8: Extrait le texte d'un PDF
+    Retourne le texte extrait ou un message d'erreur
+    """
+    if not PDF_SUPPORT:
+        return "[Extraction PDF non disponible - pdfplumber requis]"
+    
+    try:
+        print(f"      📄 Extraction texte de {os.path.basename(filepath)}...")
+        
+        with pdfplumber.open(filepath) as pdf:
+            total_pages = len(pdf.pages)
+            pages_to_extract = min(total_pages, MAX_PAGES_TO_EXTRACT)
+            
+            print(f"         Pages : {pages_to_extract}/{total_pages}")
+            
+            text_parts = []
+            for i, page in enumerate(pdf.pages[:pages_to_extract]):
+                try:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_parts.append(f"--- Page {i+1} ---\n{page_text}\n")
+                except Exception as e:
+                    print(f"         ⚠️ Erreur page {i+1}: {e}")
+                    continue
+            
+            full_text = "\n".join(text_parts)
+            
+            # Limiter la longueur totale
+            if len(full_text) > MAX_PDF_TEXT_LENGTH:
+                full_text = full_text[:MAX_PDF_TEXT_LENGTH] + "\n\n[... Texte tronqué ...]"
+            
+            print(f"         ✓ {len(full_text)} caractères extraits")
+            return full_text
+            
+    except Exception as e:
+        error_msg = f"[Erreur extraction PDF: {str(e)}]"
+        print(f"         ✗ {error_msg}")
+        return error_msg
+
+def extract_pdf_metadata(filepath):
+    """
+    NOUVEAU V2.8: Extrait les métadonnées d'un PDF
+    """
+    if not PDF_SUPPORT:
+        return {}
+    
+    try:
+        with pdfplumber.open(filepath) as pdf:
+            metadata = pdf.metadata or {}
+            return {
+                'author': metadata.get('Author', 'Inconnu'),
+                'creator': metadata.get('Creator', 'Inconnu'),
+                'producer': metadata.get('Producer', 'Inconnu'),
+                'subject': metadata.get('Subject', ''),
+                'title': metadata.get('Title', ''),
+                'creation_date': metadata.get('CreationDate', ''),
+                'pages': len(pdf.pages)
+            }
+    except:
+        return {}
+
+# =====================================================
+# RÉCUPÉRATION DES DONNÉES - V2.8
 # =====================================================
 
 def get_attachments(msg):
     """
-    NOUVEAU V2.7: Extrait et sauvegarde les pièces jointes d'un email
-    Retourne une liste de dictionnaires avec métadonnées
+    V2.7: Extrait et sauvegarde les pièces jointes d'un email
+    V2.8: + Extraction automatique du texte des PDFs
+    Retourne une liste de dictionnaires avec métadonnées complètes
     """
     attachments = []
     
@@ -269,8 +357,7 @@ def get_attachments(msg):
                 if filename:
                     # Décoder le nom de fichier si nécessaire
                     if isinstance(filename, str):
-                        # Déjà décodé
-                        pass
+                        pass  # Déjà décodé
                     else:
                         decoded = decode_header(filename)
                         filename = decoded[0][0]
@@ -291,20 +378,40 @@ def get_attachments(msg):
                             with open(filepath, 'wb') as f:
                                 f.write(payload)
                             
-                            # Métadonnées
+                            # Métadonnées de base
                             file_size = len(payload)
                             content_type = part.get_content_type()
                             
-                            attachments.append({
+                            attachment_data = {
                                 "filename": filename,
                                 "safe_filename": safe_filename,
                                 "filepath": filepath,
                                 "size": file_size,
                                 "content_type": content_type,
                                 "saved_at": datetime.now().isoformat()
-                            })
+                            }
                             
                             print(f"      📎 {filename} ({file_size} bytes) → {safe_filename}")
+                            
+                            # NOUVEAU V2.8: Extraction automatique si PDF
+                            if content_type == 'application/pdf' and PDF_SUPPORT:
+                                try:
+                                    # Extraire le texte
+                                    extracted_text = extract_pdf_text(filepath)
+                                    attachment_data['extracted_text'] = extracted_text
+                                    attachment_data['text_length'] = len(extracted_text)
+                                    
+                                    # Extraire les métadonnées PDF
+                                    pdf_metadata = extract_pdf_metadata(filepath)
+                                    attachment_data['pdf_metadata'] = pdf_metadata
+                                    
+                                    print(f"         ✓ Texte extrait ({len(extracted_text)} caractères)")
+                                    
+                                except Exception as e:
+                                    print(f"         ⚠️ Extraction PDF échouée: {e}")
+                                    attachment_data['extracted_text'] = f"[Erreur extraction: {e}]"
+                            
+                            attachments.append(attachment_data)
                         
                     except Exception as e:
                         print(f"      ⚠️ Erreur extraction {filename}: {e}")
@@ -314,9 +421,8 @@ def get_attachments(msg):
 
 def fetch_emails():
     """
-    AMÉLIORÉ V2.7: Récupère les nouveaux emails via IMAP
-    - Extraction des pièces jointes
-    - Marquage explicite comme lu après traitement
+    V2.7: Récupère les nouveaux emails via IMAP avec extraction des pièces jointes
+    V2.8: + Extraction automatique du texte des PDFs
     """
     try:
         print("\n" + "="*60)
@@ -371,28 +477,31 @@ def fetch_emails():
                     except:
                         body = "Erreur décodage"
                 
-                # NOUVEAU V2.7: Extraire les pièces jointes
+                # V2.7/V2.8: Extraire les pièces jointes (avec texte PDF en V2.8)
                 attachments = get_attachments(msg)
                 
                 # Construire les données de l'email
-                emails_data.append({
+                email_data = {
                     "id": email_id.decode(),
                     "subject": subject,
                     "from": from_email,
                     "date": date_email,
                     "body": body[:10000],  # Limiter à 10k caractères
-                    "attachments": attachments,  # NOUVEAU
-                    "has_attachments": len(attachments) > 0  # NOUVEAU
-                })
+                    "attachments": attachments,
+                    "has_attachments": len(attachments) > 0,
+                    "has_pdf_content": any(a.get('extracted_text') for a in attachments)  # V2.8
+                }
                 
+                emails_data.append(email_data)
                 processed_ids.append(email_id)
+                
                 print(f"      ✓ Email traité ({len(attachments)} pièce(s) jointe(s))")
                 
             except Exception as e:
                 print(f"      ✗ Erreur traitement email {email_id}: {e}")
                 continue
         
-        # NOUVEAU V2.7: Marquer EXPLICITEMENT comme lus
+        # V2.7: Marquer EXPLICITEMENT comme lus
         if processed_ids:
             print(f"\n📌 Marquage de {len(processed_ids)} emails comme lus...")
             for email_id in processed_ids:
@@ -418,11 +527,11 @@ def fetch_emails():
 
 def load_memoire_files():
     """
-    Charge les fichiers mémoire via API GitHub (v2.3)
+    Charge les fichiers mémoire via API GitHub
     Fallback vers repo Git local si API échoue
     """
     print("\n" + "="*60)
-    print("📥 CHARGEMENT MÉMOIRES (API GitHub v2.3)")
+    print("📥 CHARGEMENT MÉMOIRES (API GitHub)")
     print("="*60)
     
     files = {}
@@ -511,22 +620,36 @@ def query_database():
         }
 
 # =====================================================
-# INTELLIGENCE CLAUDE
+# INTELLIGENCE CLAUDE (AMÉLIORÉ V2.8)
 # =====================================================
 
 def claude_decide_et_execute(emails, memoire_files, db_data):
     """
-    TOUTE L'INTELLIGENCE EST ICI
-    Claude reçoit tout et décide de tout
+    V2.8: INTELLIGENCE AUGMENTÉE avec analyse automatique des PDFs
+    Claude reçoit tout (emails + texte extrait des PDFs) et décide de tout
     """
     
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    
+    # Préparer un résumé des contenus PDF pour le contexte
+    pdf_contents_summary = ""
+    for email_item in emails:
+        if email_item.get('has_pdf_content'):
+            pdf_contents_summary += f"\n\n=== CONTENUS PDF de l'email '{email_item['subject']}' ===\n"
+            for attachment in email_item['attachments']:
+                if attachment.get('extracted_text'):
+                    pdf_contents_summary += f"\n--- {attachment['filename']} ---\n"
+                    pdf_contents_summary += attachment['extracted_text'][:10000]  # Limiter à 10k par PDF
+                    if len(attachment['extracted_text']) > 10000:
+                        pdf_contents_summary += "\n[... contenu tronqué pour ce résumé ...]"
     
     contexte = f"""
 === RÉVEIL DU {datetime.now().strftime('%d/%m/%Y à %H:%M')} (Heure France) ===
 
 === NOUVEAUX EMAILS ({len(emails)}) ===
-{json.dumps(emails, indent=2, ensure_ascii=False) if emails else "Aucun nouvel email"}
+{json.dumps(emails, indent=2, ensure_ascii=False, default=str) if emails else "Aucun nouvel email"}
+
+{pdf_contents_summary if pdf_contents_summary else ""}
 
 === TA MÉMOIRE ACTUELLE ===
 
@@ -557,9 +680,13 @@ CHATs récents : {len(db_data['chats'])}
 Patterns détails :
 {json.dumps(db_data['patterns'], indent=2, default=str, ensure_ascii=False) if db_data['patterns'] else "Aucun pattern"}
 
-=== TA MISSION AUTONOME ===
+=== TA MISSION AUTONOME (V2.8 AVEC ANALYSE PDF) ===
 
 1. ANALYSE les nouveaux emails de façon intelligente
+   - NOUVEAU V2.8: Tu as maintenant accès au CONTENU COMPLET des PDFs joints !
+   - Analyse les documents comptables, contrats, rapports, etc.
+   - Identifie les informations clés : montants, dates, signatures, décisions
+   - Détecte les anomalies, incohérences, points d'attention
 
 2. GÈRE TA MÉMOIRE avec intelligence :
    - Ta mémoire courte : combien de jours contient-elle ? (vise 7, mais adapte entre 5-10)
@@ -574,21 +701,23 @@ Patterns détails :
    - Temporels (ex: loyers arrivent toujours 3-5 du mois)
    - Corrélations (ex: après CHAT sur X, email Y arrive 48h plus tard)
    - Comportementaux
+   - NOUVEAU: Patterns dans les documents (ex: erreurs récurrentes, évolutions)
 
 4. GÉNÈRE :
+   - rapport_quotidien : Rapport clair pour Ulrik (markdown) avec SYNTHÈSE DES PDFs
    - memoire_courte_md : Contenu complet mis à jour
    - memoire_moyenne_md : Contenu complet mis à jour (si consolidation)
    - memoire_longue_md : Contenu complet mis à jour (si nouveaux patterns/faits marquants)
-   - rapport_quotidien : Rapport clair pour Ulrik (markdown)
    - observations_meta : Ce que tu as appris/observé aujourd'hui
    - patterns_updates : Liste des patterns nouveaux ou mis à jour
    - faits_marquants : Liste des faits importants à retenir
+   - pdf_analysis : Synthèse de l'analyse des documents PDF (NOUVEAU V2.8)
 
 === FORMAT DE RÉPONSE ===
 
 Réponds UNIQUEMENT en JSON valide (pas de markdown, juste le JSON) :
 {{
-  "rapport_quotidien": "# Rapport du [date]\\n\\nContenu markdown...",
+  "rapport_quotidien": "# Rapport du [date]\\n\\nContenu markdown avec analyse des PDFs...",
   "memoire_courte_md": "# Mémoire Courte\\n\\nContenu complet...",
   "memoire_moyenne_md": "# Mémoire Moyenne\\n\\nContenu complet...",
   "memoire_longue_md": "# Mémoire Longue\\n\\nContenu complet...",
@@ -604,14 +733,17 @@ Réponds UNIQUEMENT en JSON valide (pas de markdown, juste le JSON) :
       }}
     }}
   ],
-  "faits_marquants": ["fait1", "fait2"]
+  "faits_marquants": ["fait1", "fait2"],
+  "pdf_analysis": "Synthèse intelligente de l'analyse des documents PDF avec points clés, montants, dates importantes, etc."
 }}
 
 CRITICAL: Réponds UNIQUEMENT avec le JSON valide. Pas de texte avant ou après. Pas de balises markdown ```json```.
+
+IMPORTANT V2.8: Utilise pleinement le contenu des PDFs pour enrichir ton analyse et tes rapports !
 """
     
     try:
-        print("Appel à Claude API...")
+        print("Appel à Claude API (avec analyse PDF V2.8)...")
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=16000,
@@ -620,6 +752,9 @@ CRITICAL: Réponds UNIQUEMENT avec le JSON valide. Pas de texte avant ou après.
 Tu as TOUTE l'autonomie pour décider de ta mémoire.
 Utilise ton intelligence et ton jugement.
 Aucune règle stricte, adapte-toi au contexte.
+
+NOUVEAU V2.8: Tu as maintenant accès au contenu complet des PDFs !
+Analyse-les en profondeur et intègre les informations dans tes rapports.
 
 IMPORTANT: Tu dois répondre UNIQUEMENT avec un JSON valide, sans aucun texte avant ou après.""",
             messages=[{
@@ -654,10 +789,22 @@ IMPORTANT: Tu dois répondre UNIQUEMENT avec un JSON valide, sans aucun texte av
 # =====================================================
 
 def save_to_database(resultat, emails):
-    """Sauvegarde dans PostgreSQL"""
+    """Sauvegarde dans PostgreSQL (avec analyse PDF V2.8)"""
     try:
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
+        
+        # Construire les détails enrichis avec analyse PDF
+        emails_details_enriched = []
+        for email_item in emails:
+            email_copy = dict(email_item)
+            # Tronquer le texte extrait pour la DB (garder seulement métadonnées)
+            if email_copy.get('attachments'):
+                for attachment in email_copy['attachments']:
+                    if attachment.get('extracted_text'):
+                        # Garder juste la longueur, pas tout le texte
+                        attachment['extracted_text'] = f"[{attachment.get('text_length', 0)} caractères extraits]"
+            emails_details_enriched.append(email_copy)
         
         cur.execute("""
             INSERT INTO observations_quotidiennes 
@@ -665,8 +812,8 @@ def save_to_database(resultat, emails):
             VALUES (%s, %s, %s, %s)
         """, (
             len(emails),
-            Json(emails),
-            resultat.get('observations_meta', ''),
+            Json(emails_details_enriched),
+            resultat.get('observations_meta', '') + "\n\nANALYSE PDF:\n" + resultat.get('pdf_analysis', ''),
             resultat.get('faits_marquants', [])
         ))
         
@@ -778,7 +925,7 @@ def send_email_rapport(rapport):
 
 def reveil_quotidien():
     """
-    Fonction principale - Orchestration avec persistence Git
+    Fonction principale - Orchestration V2.8 avec analyse PDF
     """
     print("=" * 60)
     print(f"=== RÉVEIL {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} ===")
@@ -787,11 +934,11 @@ def reveil_quotidien():
     # 1. Récupérer tout
     print("\n[1/6] Récupération des données...")
     emails = fetch_emails()
-    memoire_files = load_memoire_files()  # Utilise API GitHub v2.3
+    memoire_files = load_memoire_files()
     db_data = query_database()
     
-    # 2. Claude décide et exécute
-    print("\n[2/6] Claude analyse et décide...")
+    # 2. Claude décide et exécute (avec analyse PDF V2.8)
+    print("\n[2/6] Claude analyse et décide (avec analyse PDF V2.8)...")
     resultat = claude_decide_et_execute(emails, memoire_files, db_data)
     
     if not resultat:
@@ -845,14 +992,25 @@ def keep_alive():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🔧 _Head.Soeurise - Module 1 v2.7")
-    print("Architecture : API GitHub (résolution cache CDN)")
+    print("🔧 _Head.Soeurise - Module 1 v2.8")
+    print("Architecture : API GitHub + Analyse PDF")
     print("Réveil : 10h00 France (08:00 UTC)")
-    print("NOUVEAU V2.7:")
-    print("  - ✅ Pièces jointes : extraction + sauvegarde physique")
+    print("NOUVEAU V2.8:")
+    print("  - ✅ Extraction automatique texte PDF (pdfplumber)")
+    print("  - ✅ Analyse intelligente des documents")
+    print("  - ✅ Synthèse dans les rapports")
+    print("  - ✅ Nettoyage code (MEMOIRE_URL supprimé)")
+    print("HÉRITE DE V2.7:")
+    print("  - ✅ Pièces jointes : extraction + sauvegarde")
     print("  - ✅ Emails : marquage explicite comme lus")
     print("=" * 60)
     print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    
+    # Vérifier support PDF
+    if not PDF_SUPPORT:
+        print("\n⚠️ ATTENTION: pdfplumber non installé")
+        print("   → Installer avec: pip install pdfplumber --break-system-packages")
+        print("   → L'extraction PDF sera désactivée jusqu'à installation")
     
     # INITIALISER GIT AU DÉMARRAGE
     if not init_git_repo():
@@ -875,13 +1033,15 @@ if __name__ == "__main__":
     
     # Programmer le réveil quotidien à 10h France = 08:00 UTC
     print("\n" + "=" * 60)
-    # Réveil à 08:00 UTC = 10:00 France (UTC+2 en été)
-    # TODO: Passer à 09:00 UTC fin octobre pour l'heure d'hiver (UTC+1)
     schedule.every().day.at("08:00").do(reveil_quotidien)
     
     print(f"✓ Réveil quotidien programmé à 08:00 UTC = 10:00 France (été)")
-    print(f"✓ Mémoires chargées via API GitHub (pas de cache CDN)")
+    print(f"✓ Mémoires chargées via API GitHub")
     print(f"✓ Répertoire attachments: {ATTACHMENTS_DIR}")
+    if PDF_SUPPORT:
+        print(f"✓ Analyse PDF : ACTIVÉE (pdfplumber disponible)")
+    else:
+        print(f"⚠️ Analyse PDF : DÉSACTIVÉE (pdfplumber requis)")
     print("=" * 60)
     
     # Keep-alive toutes les 30 minutes
