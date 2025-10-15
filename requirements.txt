@@ -1,14 +1,14 @@
-# _Head.Soeurise V2.8 - Requirements
-# Installation: pip install -r requirements.txt --break-system-packages
+# _Head.Soeurise V3.0 - Dépendances Python
 
-# Core dependencies
-anthropic>=0.18.0
-psycopg2-binary>=2.9.9
-requests>=2.31.0
-schedule>=1.2.0
+# Core
+anthropic==0.39.0
+psycopg2-binary==2.9.9
+requests==2.31.0
+schedule==1.2.0
 
-# V2.8: PDF analysis
+# PDF V2.8/V3.0
 pdfplumber==0.11.0
+pdf2image==1.17.0  # V3.0: Pour conversion PDF → images (OCR)
+Pillow==11.0.0     # Requis par pdf2image
 
-# Optional but recommended
-python-dotenv>=1.0.0  # For local .env files
+# Email
