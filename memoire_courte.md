@@ -1,11 +1,19 @@
 # Mémoire Courte - _Head.Soeurise
 
-**Période :** Observations des 7 derniers jours (adaptatif)  
-**Dernière mise à jour :** 15/10/2025 10:10
+**Période :** Observations des 5 derniers jours (adaptatif)  
+**Dernière mise à jour :** 15/10/2025 13:31
 
 ---
 
 ## 📊 Observations récentes
+
+### 15/10/2025 - 13:31 (TEST DOCUMENTS COMPTABLES COMPLEXES)
+- **Email Ulrik "test doc pdf plus complexe"** : Test 2 PDFs - même document en format scanné et natif
+- **EXTRACTION PARTIELLE** : PDF natif réussi (6 098 caractères), PDF scanné échoué (0 caractère)
+- **ANALYSE COMPTABLE MAJEURE** : PV AG SCI SOEURISE 8/04/2025 analysé complètement
+- **DONNÉES FINANCIÈRES** : Bénéfice 2024 = 17 766,07€, Capitaux propres = -17 381€
+- **STRUCTURE ACTIONNARIALE** : Ulrik 2 parts + gérant, Emma 499 parts, Pauline 499 parts
+- **LIMITATION IDENTIFIÉE** : PDF scanné vs PDF natif - robustesse extraction à améliorer
 
 ### 15/10/2025 - 10:10 (TEST DIURNE ANALYSE PDF)
 - **Email Ulrik 12:08** : "Test en cours de journée" avec PDF "LEI 2025.pdf"
@@ -14,7 +22,6 @@
 - **INFORMATIONS CLÉS** : Renouvellement LEI SOEURISE, validité 24/04/2025→2026
 - **ANOMALIE DÉTECTÉE** : Facture 14/04/2025 réglée 10/04/2025 (dates incohérentes)
 - **ARCHITECTURE V2.9** : Réveil test diurne confirme stabilité opérationnelle
-- **EXTRACTION RÉUSSIE** : 1205 caractères extraits, métadonnées PDF récupérées
 
 ### 15/10/2025 - 08:00 (CONSOLIDATION V2.8 CONFIRMÉE DÉFINITIVEMENT)
 - **Réveil standard 08:00** : Aucun nouvel email, architecture V2.8 parfaitement stable
@@ -32,11 +39,6 @@
 - **CAPACITÉS V2.8 VALIDÉES DÉFINITIVEMENT** : Sauvegarde + Lecture + Analyse = Fonctionnel complet
 - **ÉVOLUTION TECHNIQUE MAJEURE** : V2.7 récupération → V2.8 analyse complète opérationnelle
 
-### 14/10/2025 - 14:41 (RELANCE TECHNIQUE V2.7 + VALIDATION CAPACITÉS OPÉRATIONNELLES)
-- **Email Ulrik "Relance avec code V2.7"** : Demande analyse avec 2 pièces jointes comptables 4T24
-- **RÉCUPÉRATION ATTACHMENTS CONFIRMÉE** : 2 fichiers PDF sauvés physiquement avec succès
-- **VALIDATION CAPACITÉS V2.7** : Test opérationnel avec documents comptables réels
-
 ---
 
-**Note :** Cette mémoire contient les détails opérationnels avec **ARCHITECTURE V2.8 DÉFINITIVEMENT CONSOLIDÉE ET MATURE**. **Test diurne** confirme parfaite stabilité avec analyse PDF complète réussie.
+**Note :** Cette mémoire contient les détails opérationnels avec **limitation PDF scanné identifiée**. Architecture V2.8/V2.9 excellente pour PDF natifs mais nécessite amélioration pour PDF scannés.
