@@ -1,20 +1,22 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 2.9 - Cadre de Rapport Mature
+Version : 3.0 - OCR Intelligent via Claude Vision
 Architecture : Tout-en-un (reste actif en permanence)
 
-CHANGEMENTS V2.9 :
-- ✅ Nouveau cadre de rapport quotidien mature
+CHANGEMENTS V3.0 :
+- ✅ Extraction PDF hybride intelligente
+- ✅ Fallback automatique vers Claude Vision pour PDFs scannés
+- ✅ Détection automatique du type de PDF (natif vs scanné)
+- ✅ OCR haute qualité via Claude Sonnet 4
+- ✅ Gestion erreurs robuste
+
+HÉRITE DE V2.9 :
+- ✅ Nouveau cadre de rapport mature
 - ✅ Accent sur factualité, critique constructive, actions concrètes
 - ✅ Suppression auto-célébration excessive
 - ✅ Rapports courts si faible activité
 - ✅ Section auto-évaluation obligatoire
-
-HÉRITE DE V2.8 :
-- ✅ Extraction automatique du texte des PDFs (pdfplumber)
-- ✅ Analyse intelligente des documents par Claude
-- ✅ Synthèse des contenus PDF dans les rapports
-- ✅ Détection automatique d'informations clés (montants, dates, etc.)
+- ✅ Extraction automatique du texte des PDFs natifs (pdfplumber)
 """
 
 import os
@@ -36,14 +38,23 @@ import requests
 import schedule
 import time
 import subprocess
+import io
 
-# Nouvelles dépendances V2.8
+# Dépendances V2.8+
 try:
     import pdfplumber
     PDF_SUPPORT = True
 except ImportError:
     PDF_SUPPORT = False
     print("⚠️ pdfplumber non disponible - extraction PDF désactivée")
+
+# Nouvelles dépendances V3.0
+try:
+    from pdf2image import convert_from_path
+    PDF2IMAGE_SUPPORT = True
+except ImportError:
+    PDF2IMAGE_SUPPORT = False
+    print("⚠️ pdf2image non disponible - OCR désactivé")
 
 # =====================================================
 # CONFIGURATION
@@ -69,9 +80,10 @@ ATTACHMENTS_DIR = '/home/claude/attachments'
 GITHUB_REPO = "SoeuriseSCI/head-soeurise-module1"
 GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}/contents/"
 
-# Configuration extraction PDF (V2.8)
+# Configuration extraction PDF (V2.8/V3.0)
 MAX_PDF_TEXT_LENGTH = 50000
 MAX_PAGES_TO_EXTRACT = 100
+MIN_TEXT_FOR_NATIVE_PDF = 50  # V3.0: Seuil pour détecter PDF scanné
 
 # =====================================================
 # 0. FETCH VIA API GITHUB
@@ -198,7 +210,7 @@ def git_commit_and_push(files_to_commit, commit_message):
             print("ℹ️ Aucune modification à commiter")
             return True
         
-        print(f"📍 Modifications détectées:\n{result.stdout}")
+        print(f"🔍 Modifications détectées:\n{result.stdout}")
         
         for file in files_to_commit:
             subprocess.run(['git', 'add', file], check=True)
@@ -264,19 +276,19 @@ def sauvegarder_conversation_09_octobre():
         print(f"⚠️ Erreur sauvegarde conversation: {e}")
 
 # =====================================================
-# EXTRACTION PDF (V2.8)
+# EXTRACTION PDF V3.0 - HYBRIDE INTELLIGENT
 # =====================================================
 
-def extract_pdf_text(filepath):
+def extract_pdf_text_pdfplumber(filepath):
     """
-    V2.8: Extrait le texte d'un PDF
+    V2.8: Extrait le texte d'un PDF natif via pdfplumber
     Retourne le texte extrait ou un message d'erreur
     """
     if not PDF_SUPPORT:
         return "[Extraction PDF non disponible - pdfplumber requis]"
     
     try:
-        print(f"      📄 Extraction texte de {os.path.basename(filepath)}...")
+        print(f"      📄 Extraction texte pdfplumber de {os.path.basename(filepath)}...")
         
         with pdfplumber.open(filepath) as pdf:
             total_pages = len(pdf.pages)
@@ -299,13 +311,107 @@ def extract_pdf_text(filepath):
             if len(full_text) > MAX_PDF_TEXT_LENGTH:
                 full_text = full_text[:MAX_PDF_TEXT_LENGTH] + "\n\n[... Texte tronqué ...]"
             
-            print(f"         ✓ {len(full_text)} caractères extraits")
+            print(f"         ✓ {len(full_text)} caractères extraits (pdfplumber)")
             return full_text
             
     except Exception as e:
-        error_msg = f"[Erreur extraction PDF: {str(e)}]"
+        error_msg = f"[Erreur extraction pdfplumber: {str(e)}]"
         print(f"         ✗ {error_msg}")
         return error_msg
+
+def extract_pdf_via_claude_vision(filepath):
+    """
+    V3.0: Extrait le texte d'un PDF scanné via Claude Vision (OCR)
+    Retourne le texte extrait ou un message d'erreur
+    """
+    if not PDF2IMAGE_SUPPORT:
+        return "[Extraction OCR non disponible - pdf2image requis]"
+    
+    try:
+        print(f"      📸 OCR Claude Vision de {os.path.basename(filepath)}...")
+        
+        # Conversion PDF → images
+        images = convert_from_path(filepath, dpi=150, fmt='jpeg')
+        total_pages = len(images)
+        pages_to_extract = min(total_pages, MAX_PAGES_TO_EXTRACT)
+        
+        print(f"         Pages à analyser : {pages_to_extract}/{total_pages}")
+        
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        extracted_pages = []
+        
+        for i, image in enumerate(images[:pages_to_extract]):
+            print(f"         Page {i+1}/{pages_to_extract}...")
+            
+            # Convertir image en base64
+            buffer = io.BytesIO()
+            image.save(buffer, format='JPEG')
+            image_base64 = base64.b64encode(buffer.getvalue()).decode()
+            
+            # Appel Claude Vision
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=2000,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": image_base64
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": """Extrait tout le texte de ce document scanné de manière précise.
+
+Retourne le texte brut sans commentaire.
+Si c'est un document structuré (tableau, formulaire), préserve la structure autant que possible.
+Si certaines parties sont illisibles, indique [illisible]."""
+                        }
+                    ]
+                }]
+            )
+            
+            page_text = response.content[0].text
+            extracted_pages.append(f"--- Page {i+1} ---\n{page_text}")
+        
+        full_text = "\n\n".join(extracted_pages)
+        
+        if len(full_text) > MAX_PDF_TEXT_LENGTH:
+            full_text = full_text[:MAX_PDF_TEXT_LENGTH] + "\n\n[... Texte tronqué ...]"
+        
+        print(f"         ✓ {len(full_text)} caractères extraits (Claude Vision OCR)")
+        return full_text
+        
+    except Exception as e:
+        error_msg = f"[Erreur OCR Claude Vision: {str(e)}]"
+        print(f"         ✗ {error_msg}")
+        return error_msg
+
+def extract_pdf_content(filepath):
+    """
+    V3.0: Extraction PDF hybride intelligente
+    - Tente d'abord pdfplumber (rapide, gratuit)
+    - Si échec (PDF scanné détecté) → Claude Vision OCR
+    """
+    print(f"      🔍 Analyse type PDF: {os.path.basename(filepath)}")
+    
+    # Tentative extraction classique
+    text = extract_pdf_text_pdfplumber(filepath)
+    
+    # Vérifier si extraction réussie
+    text_clean = text.replace("[Erreur extraction pdfplumber:", "").strip()
+    
+    if len(text_clean) < MIN_TEXT_FOR_NATIVE_PDF:
+        print(f"      🔄 PDF scanné détecté ({len(text_clean)} caractères) → Fallback OCR")
+        text = extract_pdf_via_claude_vision(filepath)
+    else:
+        print(f"      ✓ PDF natif traité avec succès")
+    
+    return text
 
 def extract_pdf_metadata(filepath):
     """
@@ -330,13 +436,13 @@ def extract_pdf_metadata(filepath):
         return {}
 
 # =====================================================
-# RÉCUPÉRATION DES DONNÉES - V2.8
+# RÉCUPÉRATION DES DONNÉES - V3.0
 # =====================================================
 
 def get_attachments(msg):
     """
-    V2.7/V2.8: Extrait et sauvegarde les pièces jointes d'un email
-    Retourne une liste de dictionnaires avec métadonnées complètes
+    V3.0: Extrait et sauvegarde les pièces jointes d'un email
+    Utilise extraction PDF hybride intelligente
     """
     attachments = []
     
@@ -383,15 +489,19 @@ def get_attachments(msg):
                             
                             print(f"      📎 {filename} ({file_size} bytes) → {safe_filename}")
                             
-                            # V2.8: Extraction automatique si PDF
-                            if content_type == 'application/pdf' and PDF_SUPPORT:
+                            # V3.0: Extraction hybride intelligente si PDF
+                            if content_type == 'application/pdf':
                                 try:
-                                    extracted_text = extract_pdf_text(filepath)
+                                    extracted_text = extract_pdf_content(filepath)
                                     attachment_data['extracted_text'] = extracted_text
                                     attachment_data['text_length'] = len(extracted_text)
                                     
                                     pdf_metadata = extract_pdf_metadata(filepath)
                                     attachment_data['pdf_metadata'] = pdf_metadata
+                                    
+                                    # Indiquer méthode d'extraction
+                                    if "Claude Vision OCR" in extracted_text or len(extracted_text) > MIN_TEXT_FOR_NATIVE_PDF:
+                                        attachment_data['extraction_method'] = 'claude_vision' if '[Erreur extraction pdfplumber' in extract_pdf_text_pdfplumber(filepath) else 'pdfplumber'
                                     
                                     print(f"         ✓ Texte extrait ({len(extracted_text)} caractères)")
                                     
@@ -409,7 +519,8 @@ def get_attachments(msg):
 
 def fetch_emails():
     """
-    V2.7/V2.8: Récupère les nouveaux emails via IMAP
+    V3.0: Récupère les nouveaux emails via IMAP
+    Utilise extraction PDF hybride pour les pièces jointes
     """
     try:
         print("\n" + "="*60)
@@ -460,6 +571,7 @@ def fetch_emails():
                     except:
                         body = "Erreur décodage"
                 
+                # V3.0: Extraction intelligente des pièces jointes
                 attachments = get_attachments(msg)
                 
                 email_data = {
@@ -597,25 +709,28 @@ def query_database():
         }
 
 # =====================================================
-# INTELLIGENCE CLAUDE (V2.9 - MODIFIÉ)
+# INTELLIGENCE CLAUDE (V3.0)
 # =====================================================
 
 def claude_decide_et_execute(emails, memoire_files, db_data):
     """
-    V2.9: NOUVEAU CADRE DE RAPPORT MATURE
-    Claude reçoit tout (emails + texte extrait des PDFs) et décide de tout
-    AVEC nouvelles instructions pour rapports factuels et critiques
+    V3.0: Claude reçoit tout (emails + texte extrait via OCR intelligent)
+    et décide de tout avec cadre rapport mature V2.9
     """
     
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     
+    # Préparer résumé contenus PDF avec indication méthode extraction
     pdf_contents_summary = ""
     for email_item in emails:
         if email_item.get('has_pdf_content'):
             pdf_contents_summary += f"\n\n=== CONTENUS PDF de l'email '{email_item['subject']}' ===\n"
             for attachment in email_item['attachments']:
                 if attachment.get('extracted_text'):
-                    pdf_contents_summary += f"\n--- {attachment['filename']} ---\n"
+                    extraction_method = attachment.get('extraction_method', 'unknown')
+                    method_label = "pdfplumber" if extraction_method == 'pdfplumber' else "Claude Vision OCR"
+                    
+                    pdf_contents_summary += f"\n--- {attachment['filename']} (extrait via {method_label}) ---\n"
                     pdf_contents_summary += attachment['extracted_text'][:10000]
                     if len(attachment['extracted_text']) > 10000:
                         pdf_contents_summary += "\n[... contenu tronqué pour ce résumé ...]"
@@ -662,12 +777,18 @@ CHATs récents : {len(db_data['chats'])}
 Patterns détails :
 {json.dumps(db_data['patterns'], indent=2, default=str, ensure_ascii=False) if db_data['patterns'] else "Aucun pattern"}
 
-=== TA MISSION AUTONOME (V2.9 - CADRE RAPPORT MATURE) ===
+=== TA MISSION AUTONOME (V3.0 - OCR INTELLIGENT) ===
 
-**NOUVEAU CADRE V2.9** : Rapports factuels, critiques et actionnables
+**NOUVEAU V3.0** : Extraction PDF hybride intelligente opérationnelle
+- PDFs natifs → pdfplumber (rapide, gratuit)
+- PDFs scannés → Claude Vision OCR (haute qualité)
+- Détection automatique du type de PDF
+
+**CADRE RAPPORT V2.9** : Rapports factuels, critiques et actionnables
 
 1. ANALYSE les nouveaux emails de façon intelligente
    - Si PDF joints : analyse approfondie des documents
+   - **V3.0** : Tous les PDFs sont maintenant analysables (natifs + scannés)
    - Identifie les informations clés : montants, dates, signatures, décisions
    - Détecte les anomalies, incohérences, points d'attention
 
@@ -686,7 +807,7 @@ Patterns détails :
    - Comportementaux
 
 4. GÉNÈRE :
-   - rapport_quotidien : NOUVEAU FORMAT (voir ci-dessous) ⚠️ IMPORTANT
+   - rapport_quotidien : FORMAT V2.9 (voir ci-dessous) ⚠️ IMPORTANT
    - memoire_courte_md : Contenu complet mis à jour
    - memoire_moyenne_md : Contenu complet mis à jour (si consolidation)
    - memoire_longue_md : Contenu complet mis à jour (si nouveaux patterns/faits marquants)
@@ -695,17 +816,22 @@ Patterns détails :
    - faits_marquants : Liste des faits importants à retenir
    - pdf_analysis : Synthèse de l'analyse des documents PDF (si applicable)
 
-=== NOUVEAU FORMAT DE RAPPORT QUOTIDIEN (V2.9) ===
+=== FORMAT DE RAPPORT QUOTIDIEN (V2.9) ===
 
 **STRUCTURE OBLIGATOIRE** :
 
 ```markdown
 # Rapport du [DATE]
 
+**CONFIRMATION VERSIONS** :
+- Mémoire fondatrice : Version X.X
+- Code source : Version X.X
+
 ## 1. FAITS OPÉRATIONNELS
 [Données brutes, factuelles, sans interprétation excessive]
 - X nouveaux emails (sujets pertinents)
 - Y pièces jointes analysées
+- **V3.0** : Méthodes d'extraction PDF utilisées
 - État des systèmes
 
 ## 2. ANALYSE CRITIQUE
@@ -731,7 +857,7 @@ Patterns détails :
 - Patterns confirmés ou invalidés
 ```
 
-**PRINCIPES DIRECTEURS V2.9** :
+**PRINCIPES DIRECTEURS V2.9/V3.0** :
 
 ✓ À FAIRE :
 - Être factuel d'abord
@@ -740,6 +866,7 @@ Patterns détails :
 - Admettre les limitations
 - Être BREF si peu d'activité (pas de rapport long pour rien dire)
 - Confirmer versions mémoire fondatrice et code source au début
+- **V3.0** : Indiquer méthode extraction PDF utilisée (pdfplumber vs OCR)
 
 ✗ À ÉVITER ABSOLUMENT :
 - Auto-célébration excessive
@@ -749,36 +876,11 @@ Patterns détails :
 - Rapports longs quand il n'y a rien à dire
 - Sections vides ou remplissage
 
-**EXEMPLES** :
-
-Si 0 emails et rien de notable :
-```
-# Rapport du 15/10/2025
-
-## FAITS OPÉRATIONNELS
-- 0 nouveaux emails
-- Réveil standard exécuté sans erreur
-- Architecture V2.9 stable
-
-## ANALYSE CRITIQUE
-Journée calme. Aucun événement notable ne justifie un long rapport.
-
-## ACTIONS SUGGÉRÉES
-**Priorité 1** : Profiter du calme pour préparer phase comptable
-- Revoir documentation comptabilité SCI
-
-## AUTO-ÉVALUATION
-Réveil standard. Pas d'apprentissage majeur aujourd'hui.
-```
-
-Si activité significative :
-[Format complet avec toutes les sections remplies substantiellement]
-
 === FORMAT DE RÉPONSE ===
 
 Réponds UNIQUEMENT en JSON valide (pas de markdown, juste le JSON) :
 {{
-  "rapport_quotidien": "# Rapport du [date]\\n\\n## 1. FAITS OPÉRATIONNELS\\n...",
+  "rapport_quotidien": "# Rapport du [date]\\n\\n**CONFIRMATION VERSIONS** :\\n...",
   "memoire_courte_md": "# Mémoire Courte\\n\\nContenu complet...",
   "memoire_moyenne_md": "# Mémoire Moyenne\\n\\nContenu complet...",
   "memoire_longue_md": "# Mémoire Longue\\n\\nContenu complet...",
@@ -795,18 +897,26 @@ Réponds UNIQUEMENT en JSON valide (pas de markdown, juste le JSON) :
     }}
   ],
   "faits_marquants": ["fait1", "fait2"],
-  "pdf_analysis": "Synthèse intelligente de l'analyse des documents PDF (si applicable)"
+  "pdf_analysis": "Synthèse intelligente de l'analyse des documents PDF avec indication méthodes extraction"
 }}
 
 CRITICAL: Réponds UNIQUEMENT avec le JSON valide. Pas de texte avant ou après. Pas de balises markdown ```json```.
 """
     
     try:
-        print("Appel à Claude API (avec nouveau cadre rapport V2.9)...")
+        print("Appel à Claude API (avec OCR intelligent V3.0)...")
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=16000,
             system="""Tu es _Head.Soeurise.
+
+IMPORTANT V3.0 - EXTRACTION PDF HYBRIDE :
+Tu disposes maintenant d'une extraction PDF intelligente :
+- PDFs natifs → pdfplumber (rapide, gratuit)
+- PDFs scannés → Claude Vision OCR (haute qualité)
+- Détection automatique du type
+
+Tous les PDFs sont maintenant analysables. Indique dans ton rapport la méthode utilisée.
 
 IMPORTANT V2.9 - NOUVEAU CADRE DE RAPPORT :
 Tu dois produire des rapports FACTUELS, CRITIQUES et ACTIONNABLES.
@@ -855,18 +965,20 @@ IMPORTANT: Tu dois répondre UNIQUEMENT avec un JSON valide, sans aucun texte av
 # =====================================================
 
 def save_to_database(resultat, emails):
-    """Sauvegarde dans PostgreSQL (avec analyse PDF V2.8)"""
+    """Sauvegarde dans PostgreSQL (avec analyse PDF V3.0)"""
     try:
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
         
+        # Enrichir emails avec info extraction V3.0
         emails_details_enriched = []
         for email_item in emails:
             email_copy = dict(email_item)
             if email_copy.get('attachments'):
                 for attachment in email_copy['attachments']:
                     if attachment.get('extracted_text'):
-                        attachment['extracted_text'] = f"[{attachment.get('text_length', 0)} caractères extraits]"
+                        extraction_info = f"[{attachment.get('text_length', 0)} caractères extraits via {attachment.get('extraction_method', 'unknown')}]"
+                        attachment['extracted_text'] = extraction_info
             emails_details_enriched.append(email_copy)
         
         cur.execute("""
@@ -876,7 +988,7 @@ def save_to_database(resultat, emails):
         """, (
             len(emails),
             Json(emails_details_enriched),
-            resultat.get('observations_meta', '') + "\n\nANALYSE PDF:\n" + resultat.get('pdf_analysis', ''),
+            resultat.get('observations_meta', '') + "\n\nANALYSE PDF (V3.0):\n" + resultat.get('pdf_analysis', ''),
             resultat.get('faits_marquants', [])
         ))
         
@@ -957,7 +1069,7 @@ def send_email_rapport(rapport):
     """Envoie le rapport quotidien par email"""
     try:
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"[_Head.Soeurise] Rapport {datetime.now().strftime('%d/%m/%Y')}"
+        msg['Subject'] = f"[_Head.Soeurise V3.0] Rapport {datetime.now().strftime('%d/%m/%Y')}"
         msg['From'] = SOEURISE_EMAIL
         msg['To'] = NOTIF_EMAIL
         
@@ -988,7 +1100,7 @@ def send_email_rapport(rapport):
 
 def reveil_quotidien():
     """
-    Fonction principale - Orchestration V2.9 avec nouveau cadre rapport
+    Fonction principale - Orchestration V3.0 avec OCR intelligent
     """
     print("=" * 60)
     print(f"=== RÉVEIL {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} ===")
@@ -999,7 +1111,7 @@ def reveil_quotidien():
     memoire_files = load_memoire_files()
     db_data = query_database()
     
-    print("\n[2/6] Claude analyse et décide (avec cadre rapport V2.9)...")
+    print("\n[2/6] Claude analyse et décide (avec OCR V3.0)...")
     resultat = claude_decide_et_execute(emails, memoire_files, db_data)
     
     if not resultat:
@@ -1023,7 +1135,7 @@ Vérifier les logs Render pour plus de détails.
     
     print("\n[5/6] Commit vers GitHub...")
     if files_updated:
-        commit_msg = f"🔄 Réveil automatique du {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+        commit_msg = f"📄 Réveil automatique V3.0 du {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
         git_commit_and_push(files_updated, commit_msg)
     else:
         print("ℹ️ Aucun fichier mémoire à commiter")
@@ -1049,24 +1161,29 @@ def keep_alive():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🔧 _Head.Soeurise - Module 1 v2.9")
-    print("Architecture : Nouveau Cadre Rapport Mature")
+    print("🔧 _Head.Soeurise - Module 1 v3.0")
+    print("Architecture : OCR Intelligent Hybride")
     print("Réveil : 10h00 France (08:00 UTC)")
-    print("NOUVEAU V2.9:")
+    print("NOUVEAU V3.0:")
+    print("  - ✅ Extraction PDF hybride intelligente")
+    print("  - ✅ PDFs natifs → pdfplumber (rapide)")
+    print("  - ✅ PDFs scannés → Claude Vision OCR")
+    print("  - ✅ Détection automatique du type")
+    print("HÉRITE DE V2.9:")
     print("  - ✅ Rapports factuels et critiques")
     print("  - ✅ Auto-évaluation obligatoire")
     print("  - ✅ Suppression auto-célébration excessive")
-    print("  - ✅ Rapports courts si faible activité")
-    print("HÉRITE DE V2.8:")
-    print("  - ✅ Extraction PDF (pdfplumber)")
-    print("  - ✅ Analyse documents intelligente")
     print("=" * 60)
     print(f"✓ Service démarré à {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
     
     if not PDF_SUPPORT:
         print("\n⚠️ ATTENTION: pdfplumber non installé")
         print("   → Installer avec: pip install pdfplumber --break-system-packages")
-        print("   → L'extraction PDF sera désactivée jusqu'à installation")
+    
+    if not PDF2IMAGE_SUPPORT:
+        print("\n⚠️ ATTENTION: pdf2image non installé")
+        print("   → Installer avec: pip install pdf2image --break-system-packages")
+        print("   → OCR sera désactivé jusqu'à installation")
     
     if not init_git_repo():
         print("\n⚠️ ATTENTION: Échec initialisation Git")
@@ -1090,10 +1207,11 @@ if __name__ == "__main__":
     print(f"✓ Réveil quotidien programmé à 08:00 UTC = 10:00 France (été)")
     print(f"✓ Mémoires chargées via API GitHub")
     print(f"✓ Répertoire attachments: {ATTACHMENTS_DIR}")
-    if PDF_SUPPORT:
-        print(f"✓ Analyse PDF : ACTIVÉE (pdfplumber disponible)")
+    print(f"✓ Extraction PDF hybride : ACTIVÉE (V3.0)")
+    if PDF2IMAGE_SUPPORT:
+        print(f"✓ Claude Vision OCR : ACTIVÉE (fallback intelligent)")
     else:
-        print(f"⚠️ Analyse PDF : DÉSACTIVÉE (pdfplumber requis)")
+        print(f"⚠️ Claude Vision OCR : DÉSACTIVÉE (pdf2image requis)")
     print("=" * 60)
     
     schedule.every(30).minutes.do(keep_alive)
@@ -1104,3 +1222,4 @@ if __name__ == "__main__":
     while True:
         schedule.run_pending()
         time.sleep(60)
+
