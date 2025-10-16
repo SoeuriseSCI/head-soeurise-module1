@@ -1,11 +1,14 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 3.2 - Configuration Centralisée + Haiku 4.5 + Limites Réalistes
-Architecture : Tout-en-un (reste actif en permanence mais réveil automatique 1 fois par jour)
+Version : 3.2.1 - FIX Nom modèle Haiku 4.5
+Architecture : Tout-en-un (reste actif en permanence)
+
+CHANGEMENTS V3.2.1 :
+- 🐛 FIX : Nom modèle corrigé "claude-haiku-4-5" (était "claude-haiku-4-20250604")
 
 CHANGEMENTS V3.2 :
 - ✅ Configuration centralisée en haut du fichier
-- ✅ Haiku 4.5 (claude-haiku-4-20250604) au lieu de Sonnet 4
+- ✅ Haiku 4.5 (claude-haiku-4-5) au lieu de Sonnet 4
 - ✅ Limites réalistes pour éviter timeouts/coûts
 - ✅ Identité _Head.Soeurise persistante dans le code
 - ✅ Simplification drastique (suppression verbosité excessive)
@@ -72,14 +75,14 @@ GITHUB_REPO = "SoeuriseSCI/head-soeurise-module1"
 GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}/contents/"
 
 # 🤖 Modèle Claude - V3.2 HAIKU 4.5
-CLAUDE_MODEL = "claude-haiku-4-20250604"  # Haiku 4.5 au lieu de Sonnet 4
+CLAUDE_MODEL = "claude-haiku-4-5"  # Haiku 4.5 au lieu de Sonnet 4
 CLAUDE_MAX_TOKENS = 8000  # Réduit (Haiku plus concis)
 
 # 📊 Limites réalistes V3.2 (éviter timeouts/coûts)
 MAX_EMAILS_TO_FETCH = 10  # Maximum 10 emails par réveil
 MAX_ATTACHMENTS_PER_EMAIL = 3  # Maximum 3 PDFs par email
 MAX_EMAIL_BODY_LENGTH = 5000  # Tronquer corps email si trop long
-MAX_PDF_TEXT_LENGTH = 50000  # Réduire extraction PDF
+MAX_PDF_TEXT_LENGTH = 30000  # Réduire extraction PDF (était 50000)
 MAX_PDF_PAGES_TO_EXTRACT = 50  # Maximum 50 pages (était 100)
 MIN_TEXT_FOR_NATIVE_PDF = 50  # Seuil détection PDF scanné
 
@@ -697,8 +700,8 @@ def reveil_quotidien():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("_Head.Soeurise V3.2")
-    print("Modèle: Haiku 4.5 + Extraction PDF hybride")
+    print("_Head.Soeurise V3.2.1")
+    print("Modèle: Haiku 4.5 (claude-haiku-4-5)")
     print("Réveil: 08:00 UTC = 10:00 France")
     print("=" * 60)
     
@@ -731,4 +734,3 @@ if __name__ == "__main__":
     while True:
         schedule.run_pending()
         time.sleep(60)
-
