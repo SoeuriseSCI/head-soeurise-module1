@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build script pour Render.com - V3.0
+# Build script pour Render.com - >= V3.0
 # Installation des dépendances système nécessaires pour OCR
 
 echo "🔧 Installation des dépendances système..."
@@ -14,4 +14,4 @@ echo "📦 Installation des dépendances Python..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-echo "✅ Build terminé - V3.0 OCR Intelligent prêt"
+echo "✅ Build terminé - V3 OCR Intelligent prêt"
