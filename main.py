@@ -1,7 +1,7 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
 Version : 3.2 - Configuration Centralisée + Haiku 4.5 + Limites Réalistes
-Architecture : Tout-en-un (reste actif en permanence)
+Architecture : Tout-en-un (reste actif en permanence mais réveil automatique 1 fois par jour)
 
 CHANGEMENTS V3.2 :
 - ✅ Configuration centralisée en haut du fichier
