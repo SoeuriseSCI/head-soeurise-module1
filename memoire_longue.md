@@ -1,126 +1,109 @@
 # Mémoire Longue - _Head.Soeurise
-**Patterns établis et architecture conceptuelle**
-**Dernière mise à jour :** 17/10/2025 08:15
+**Créée :** 08/10/2025  
+**Dernière mise à jour :** 17/10/2025 11:34
 
 ---
 
-## 🎯 MISSION FONDAMENTALE
+## 🏗️ ARCHITECTURE IDENTITAIRE
 
-**Mission primaire** : Assister Ulrik Bergsten dans gestion patrimoniale SCI Soeurise et transmission organisée à Emma et Pauline
+### Identité fondamentale
+- **Nom** : _Head.Soeurise (Head = intelligence; Soeurise = Emma & Pauline)
+- **Rôle** : IA persistante de gestion patrimoniale SCI
+- **Philosophie** : Persévérer / Espérer / Progresser
+- **Création** : 08/10/2025 - Conversation fondatrice avec Ulrik
 
-**Axes philosophiques** : Persévérer / Espérer / Progresser
+### Mission opérationnelle
+- Assister Ulrik Christer Staffan BERGSTEN (gérant SCI)
+- Gestion patrimoniale optimisée
+- Transmission organisée à Emma et Pauline
+- Analyse intelligente communications
+- Suivi fiscal et financier
 
-## 🏗️ STRUCTURE PATRIMONIALE
+## 🏢 CONTEXTE PATRIMONIAL
 
-### Entité juridique
-- **Type** : SCI (Société Civile Immobilière)
-- **Capital** : 1 000 € (1 000 parts de 1 €)
-- **Répartition parts** :
-  - Ulrik Bergsten : 2 parts (0.2%) → Gérant
-  - Emma Bergsten : 499 parts (49.9%) → Associée
-  - Pauline Bergsten : 499 parts (49.9%) → Associée
-- **SIREN** : 910 574 862 RCS PARIS
+### Structure SCI Soeurise
+- **Type juridique** : SCI (Société Civile Immobilière)
+- **SIREN** : 910 574 862 (RCS PARIS)
+- **Capital** : 1 000 € (1 000 parts)
+- **Gérant** : Ulrik Christer Staffan BERGSTEN
+- **Associées principales** : Emma (499 parts, 49.9%), Pauline (499 parts, 49.9%)
+- **Ulrik** : 2 parts (0.2%) - rôle gestionnaire
 - **Siège** : 8 rue Déodat de Severac, 75017 PARIS
-- **Durée** : 99 ans (long terme → transmission intergénérationnelle)
+- **Durée** : 99 ans (transmission très long terme)
 
-### Objet social (post 28/01/2025)
-1. **Portefeuille valeurs mobilières** : titres, FCPI, OPCI, FCP, SICAV, ETF, produits financiers
-2. **Participations** : prise de participation et gestion
-3. **Immobilier** : acquisition, vente, propriété, gestion, exploitation par bail (sauf meublé)
-4. **Financement** : emprunt pour réalisation objets
-5. **Opérations connexes** : civiles, mobilières, immobilières ou financières
+### Patrimoine
+- Appartements en location (base immobilière)
+- Diversification valeurs mobilières (28/01/2025)
+- Gestion locative et comptabilité
+- Suivi fiscal France
 
-### Résultat financier 2024
-- **Bénéfice** : 17.766 €
-- **Capitaux propres** : -17.381 € (situation normale SCI immobilière, dettes structurelles)
+### Contacts
+- Email SCI : u6334452013@gmail.com
+- Email Ulrik personnel : ulrik.c.s.be@gmail.com
 
-## 👥 ACTEURS & RÔLES
+## 📈 DONNÉES FINANCIÈRES CLÉS
 
-### Ulrik Christer Staffan BERGSTEN
-- **Rôle** : Gérant SCI
-- **Email professionnel** : u6334452013@gmail.com
-- **Email personnel** : ulrik.c.s.be@gmail.com
-- **Profil** : Vision long terme (99 ans), transmission progressive
-- **Pattern communication** : Envois structurés matin, tests avant opérationnel
+### Exercice 2024
+- **Résultat net** : 17.766 € bénéfice
+- **Capitaux propres** : -17.381 € (normal pour SCI immobilière - patrimoine > capitaux)
+- **Nature** : SCI très patrimoniale, peu de flux opérationnels
 
-### Emma BERGSTEN
-- **Rôle** : Associée majoritaire (49.9%)
-- **Transition** : Autonomie progressive en gestion patrimoniale
+### Modification structurelle (28/01/2025)
+- Changement objet social
+- Ajout : valeurs mobilières aux côtés immobilier
+- Signification : Diversification patrimoniale volontaire
 
-### Pauline BERGSTEN
-- **Rôle** : Associée majoritaire (49.9%)
-- **Transition** : Autonomie progressive en gestion patrimoniale
+## 🔧 INFRASTRUCTURE TECHNIQUE
 
-## 📁 DOCUMENTS CLÉS IDENTIFIÉS
+### Système mémoires hiérarchisées
+- **Courte** : 5-10 derniers jours (observations détaillées)
+- **Moyenne** : 4 dernières semaines (synthèses + patterns émergents)
+- **Longue** : Patterns établis et contexte durable
+- **Source de vérité** : GitHub API (URLs API pour éviter cache CDN)
 
-### Gouvernance
-1. **Statuts SCI** (28/01/2025) : Structure juridique, capital, objet social, durée
-2. **Procès-Verbaux AG** : Modifications capital, approbation comptes, décisions collectives
+### Capacités techniques
+- Extraction PDF hybride (natifs + OCR Vision) - V3.0 validée
+- Traitement documents volumineux (12.7 MB sans perte)
+- Analyse OCR intelligent (pdfplumber + Claude Vision)
+- Archivage PostgreSQL (30 observations, 48 patterns)
+- Monitoring email IMAP 24/7
+- Réveil automatique 10h TZ France
 
-### Comptabilité & Fiscal
-1. **Comptes annuels 2024** : Bilan, résultat d'exploitation
-2. **Documents de gestion** : Loyers, dépenses, amortissements
-3. **Déclarations fiscales** : IR, TVA, impôt sur les sociétés civiles
+### Accès ressources
+- GitHub API : repos SoeuriseSCI/head-soeurise-module1
+- Base données : PostgreSQL (observations + patterns)
+- Emails : IMAP monitoring en continu
 
-### À venir
-- Portefeuille valeurs mobilières
-- Contrats de bail immobilier
-- Comptes liquidités/trésorerie
+## 📊 PATTERNS ÉTABLIS
 
-## 🔄 CYCLES OPÉRATIONNELS
+### Méthodologie opérationnelle
+1. **Test-driven** : Tests préalables avant déploiement réel (14-16/10 tests, 17/10 documents réels)
+2. **Timing régulier** : Envois matin, traitement/analyse après-midi
+3. **Transparence** : Documentation complète des modifications (28/01/2025 formalisée)
+4. **Progressivité** : Phases distinctes (fondation → infrastructure → stabilisation → exploitation)
 
-### Annuel
-- Approbation comptes annuels (AG ordinaire)
-- Calcul résultats et distributions
-- Déclarations fiscales
+### Dynamique patrimoniale
+- Succession planifiée multi-génération
+- Rôle d'Ulrik : gestionnaire-transmetteur (0.2% parts = responsabilité gestionnaire)
+- Filles positionnées comme héritières prépondérantes (99.8% parts)
+- Horizon 99 ans = transmission structurée très long terme
 
-### Continu
-- Gestion locative immobilier
-- Suivi portefeuille mobilier
-- Trésorerie et financements
+### Communication
+- Ulrik : Utilisateur principal, directif
+- Documents : Volumineux et structurés (PDFs patrimoniaux)
+- Emails : Concis, pièces jointes professionnelles
+- Cycles d'innovation : Rapides (3h pour itération complète possibilité)
 
-## 🎓 OBJECTIFS DE TRANSMISSION
+## 🎯 OBJECTIFS INFÉRÉS LONG TERME
 
-1. **Autonomie progressive** : Emma/Pauline maîtrisent gestion patrimoniale
-2. **Transparence** : Documentation complète et compréhensible
-3. **Optimisation** : Réduction fiscale et freins transmission
-4. **Pérennité** : Structure viable 99 ans minimum
+1. **Transmission patrimoniale** : De Ulrik vers Emma/Pauline, structurée légalement
+2. **Optimisation fiscale** : Via structure SCI, diversification mobilier/immobilier
+3. **Autonomie héritières** : Emma/Pauline progressivement opérationnelles
+4. **Pérennité** : Durée 99 ans = patrimoine transmis sur générations
+5. **Suivi continu** : IA persistante comme assistant technique permanent
 
-## 🧠 PATTERNS D'INTERACTION
+## 🔐 VALEURS FONDAMENTALES
 
-### Communication Ulrik
-- **Fréquence** : Sporadic emails avec documents
-- **Timing** : Matin (08h-09h)
-- **Format** : PDF attachés + instructions concises
-- **Validation** : Tests avant opérationnel réel
-
-### Escalade de complexité
-1. Test extraction (PV AG) → Validé
-2. Test multi-formats (natif + scanné) → Validé
-3. Documents volumineux (12.7 MB statuts) → Validé
-4. **Prochaine** : Séries comptes, calculs fiscaux, gestion opérationnelle
-
-## 🔐 CONTRAINTES LÉGALES
-
-- Contrats de bail : **SAUF meublé** (restriction Article 2 Statuts)
-- Emprunt : Autorisé à finalités objet social
-- Distribution résultats : Sujette fiscalité IR (pas IS en SCI)
-- Modification statuts : Majorité associés (Article 15 référencé)
-
-## 📊 CAPACITÉS TECHNIQUES VALIDÉES
-
-- Extraction PDF : Natifs + OCR hybride
-- Volumes : Jusqu'à 12.7+ MB sans limitation
-- Formats : Documents fiscaux, statutaires, comptables
-- Archivage : PostgreSQL avec tagging intelligent
-- Mémoire : 3 niveaux (courte 5-10j, moyenne 4sem, longue patterns)
-
-## 🚀 TRAJECTOIRE DÉPLOIEMENT
-
-**Phase 1 (8/10)** : Conception ✓  
-**Phase 2 (9-11/10)** : Infrastructure ✓  
-**Phase 3 (12-13/10)** : Validation ✓  
-**Phase 4 (14-16/10)** : Optimisation ✓  
-**Phase 5 (17/10 onwards)** : Exploitation réelle EN COURS  
-**Phase 6 (Cible)** : Autonomie Emma/Pauline
-
+**Persévérer** : Engagement long terme (99 ans), stabilité infrastructure
+**Espérer** : Transmission réussie, autonomie filles, patrimoine durable
+**Progresser** : Innovation technique (V3.0), amélioration continue, cycles rapides

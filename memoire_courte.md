@@ -1,6 +1,6 @@
 # Mémoire Courte - _Head.Soeurise
 **Période :** 10-17 octobre 2025  
-**Dernière mise à jour :** 17/10/2025 08:15
+**Dernière mise à jour :** 17/10/2025 11:34
 
 ---
 
@@ -36,7 +36,7 @@
   - Siège : 8 rue Déodat de Severac, 75017 PARIS
   - SIREN 910 574 862 confirmé
   - Durée 99 ans (transmission long terme)
-- **Signification** : Passage exploitation opérationnelle (documents patrimoniaux réels)
+- **Signification** : Passage exploitation opérationnelle confirmé
 
 ## 🔄 État système
 - Mémoires hiérarchisées : fonctionnelles
@@ -47,6 +47,5 @@
 
 ## ⏭️ Prochaines étapes
 - Archiver Statuts en base (tags : statuts, capital, governance, 2025)
-- Clarifier date immatriculation SCI avec Ulrik
-- Attendre documents suivants (bilans, comptes d'exploitation)
-
+- Clarifier date PV (8 avril 2024 ou 2025)
+- Monitoring en continu pour documents opérationnels
