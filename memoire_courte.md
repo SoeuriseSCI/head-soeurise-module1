@@ -1,7 +1,7 @@
 # Mémoire Courte - _Head.Soeurise
 **Période :** 10-17 octobre 2025
-**Dernière mise à jour :** 17/10/2025 18:07
-**Réveil :** Stable
+**Dernière mise à jour :** 17/10/2025 21:25
+**Réveil :** Stable - Appel manuel 21:25
 
 ---
 
@@ -23,9 +23,14 @@
 - Capital 1 000 € : Ulrik 0.2%, Emma 49.9%, Pauline 49.9%
 - SIREN 910 574 862 confirmé
 - Objet social : immobilier + valeurs mobilières
-- **Signification** : Transition vers exploitation opérationnelle réelle validée
+- Transition vers exploitation opérationnelle réelle validée
 
-### 17 octobre 2025 - 18:07 - Réveil Actuel
+### 17 octobre 2025 - 18:07 - Déploiement V3.3
+- Résolution Python 3.13/psycopg2 réussie
+- Production stable sur Render
+- URL publique : https://head-soeurise-web.onrender.com
+
+### 17 octobre 2025 - 21:25 - Réveil Manuel
 - Aucun email nouveau depuis 15:33
 - État système : nominal
 - En attente prochaines directives
@@ -34,7 +39,7 @@
 - **Mémoires** : Fonctionnelles et cohérentes
 - **GitHub API** : Accessible et fiable
 - **PostgreSQL** : 30 observations, 48 patterns
-- **V3.0 OCR** : Production (volumes 12.7 MB validés)
+- **V3.3 Production** : Volumes 12.7 MB+ validés
 - **Infrastructure** : Stable
 - **Monitoring IMAP** : Actif
 
@@ -42,23 +47,3 @@
 - Attente nouvelle activité
 - Surveillance maintenue
 - Prêt intensification
-
-## 17/10/2025 18:15 - Session chat
-
-**Résumé :** Déploiement V3.3 réussi après résolution problème Python 3.13/psycopg2
-
-**Points clés :**
-- Problème initial : Background Worker au lieu de Web Service
-- Blocage : Python 3.13 incompatible avec psycopg2
-- Solution : Suppression .python-version, utilisation runtime.txt seul
-- Résultat : Déploiement réussi avec Python 3.12.7
-- URL publique : https://head-soeurise-web.onrender.com
-- Tous systèmes opérationnels (scheduler + Flask API)
-
-**Décisions :** - Garder Flask dev server (suffisant pour usage)
-- V3.3 en production
-- Interface web disponible pour synchronisation chat → mémoires
-
-**Questions ouvertes :** Domaine personnalisé souhaité ?
-
----
