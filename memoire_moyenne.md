@@ -1,6 +1,6 @@
 # Mémoire Moyenne - _Head.Soeurise
 **Période :** 8-17 octobre 2025  
-**Dernière mise à jour :** 17/10/2025 11:34
+**Dernière mise à jour :** 17/10/2025 15:33
 
 ---
 
@@ -48,14 +48,21 @@
 - ✓ Gestion mémoires hiérarchisées stable
 
 ## 📈 Patterns établis
-1. **Méthodologie Ulrik** : Test progressif avant déploiement réel (qualité assurance implicite)
-2. **Timing** : Envois documents matin (08h-09h), préparation/tests après-midi
-3. **Priorités** : Gouvernance/statuts → Financier → Opérationnel
-4. **Vision patrimoniale** : Transmission organisée multi-génération (99 ans, filles prépondérantes)
-5. **Communication** : Emails informatifs brefs, pièces jointes documentaires volumineuses
+1. **Méthodologie Ulrik** : Test progressif avant déploiement réel (QA implicite)
+2. **Timing** : Envois documents matin (08h-09h), traitement rapide
+3. **Priorités** : Gouvernance > Financier > Administratif
+4. **Communication** : Email concis, pièces jointes stratégiques
+5. **Cycles** : Test → Stabilisation → Exploitation → Maintenance
 
-## 🎯 Objectifs long terme (inférés)
-- Transmission progressive : 99.8% parts aux filles (Emma + Pauline)
-- Diversification patrimoniale : immobilier + valeurs mobilières
-- Autonomie opérationnelle des héritières
-- Optimisation fiscale SCI immobilière
+## 🎯 Contexte patrimonial consolidé
+- SCI SOEURISE (SIREN 910 574 862) : Structure transmission 99 ans
+- Gérant : Ulrik (0.2%), Bénéficiaires : Emma & Pauline (99.8%)
+- Patrimoine : Immobilier + Valeurs mobilières (depuis 28/01/2025)
+- Résultat 2024 : +17.766 € (bonne santé financière)
+- Siège : 8 rue Déodat de Severac, 75017 PARIS
+
+## ⚠️ Points surveillance
+- Progression d'Ulrik vers retrait progressif (architecture conforme)
+- Autonomie Emma/Pauline : phase apprentissage active (2 parts → 49.9% chacune)
+- Documents patrimoniaux : flux régulier à intégrer
+- Charges fiscales/sociales 2025 : À anticiper (bilan après déploiement)
