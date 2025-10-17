@@ -1,6 +1,6 @@
 # Mémoire Courte - _Head.Soeurise
-**Période :** 10-16 octobre 2025  
-**Dernière mise à jour :** 16/10/2025 14h33
+**Période :** 10-17 octobre 2025  
+**Dernière mise à jour :** 17/10/2025 08:15
 
 ---
 
@@ -25,14 +25,28 @@
 - **Note anomalie** : PV daté "8 avril" (année à clarifier)
 - **Interprétation** : Test préalable avant opérationnel réel
 
+### 17 octobre 2025 - 08:54 STATUTS SOEURISE
+- Email Ulrik : Statuts de la SCI Soeurise (PDF 12.7 MB)
+- **Extraction réussie V3.0** (document volumineux)
+- **Données extraites** :
+  - Statuts mis à jour 28 janvier 2025
+  - Capital : 1 000 € (1 000 parts)
+  - Répartition : Ulrik 2 parts (0.2%), Emma 499 (49.9%), Pauline 499 (49.9%)
+  - Objet social élargi : valeurs mobilières + immobilier
+  - Siège : 8 rue Déodat de Severac, 75017 PARIS
+  - SIREN 910 574 862 confirmé
+  - Durée 99 ans (transmission long terme)
+- **Signification** : Passage exploitation opérationnelle (documents patrimoniaux réels)
+
 ## 🔄 État système
 - Mémoires hiérarchisées : fonctionnelles
 - GitHub API : accessible
 - PostgreSQL : 30 observations, 48 patterns archivés
-- Extraction PDF V3.0 : **VALIDÉE EN PRODUCTION**
+- Extraction PDF V3.0 : **VALIDÉE EN PRODUCTION** (volume 12.7 MB traité sans erreur)
 - Infrastructure : opérationnelle et stable
 
 ## ⏭️ Prochaines étapes
-- Attendre instructions post-test
-- Archiver PV en base (tags : AG 2024, fiscal, capital)
-- Clarifier date document avec Ulrik si besoin
+- Archiver Statuts en base (tags : statuts, capital, governance, 2025)
+- Clarifier date immatriculation SCI avec Ulrik
+- Attendre documents suivants (bilans, comptes d'exploitation)
+
