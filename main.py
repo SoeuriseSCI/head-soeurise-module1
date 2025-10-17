@@ -961,6 +961,131 @@ def log_conversation():
         return jsonify({'error': str(e)}), 500
 
 # =====================================================
+# ðŸ†• V3.3 - ENDPOINTS FLASK POUR ACCÈS AUX MÉMOIRES
+# À ajouter dans main_V3.3.py après la ligne : @app.route('/api/log-conversation', methods=['POST'])
+# =====================================================
+
+@app.route('/api/memoire/<memoire_type>', methods=['GET'])
+def get_memoire(memoire_type):
+    """Endpoint sécurisé pour accéder aux mémoires dynamiques
+    
+    Authentification : Token requis (API_SECRET_TOKEN)
+    Types acceptés : courte, moyenne, longue
+    
+    Utilisation : 
+        GET /api/memoire/courte?token=<API_SECRET_TOKEN>
+        GET /api/mc?token=<API_SECRET_TOKEN>
+    
+    Réponse JSON :
+    {
+        "type": "courte",
+        "filename": "memoire_courte.md",
+        "content": "...",
+        "timestamp": "2025-10-17T18:30:00.000000",
+        "size": 12345,
+        "status": "OK"
+    }
+    """
+    
+    # ✅ Vérification du token (obligatoire)
+    token = request.args.get('token')
+    if not token or token != API_SECRET_TOKEN:
+        return jsonify({'error': 'Token manquant ou invalide'}), 401
+    
+    # ✅ Validation du type de mémoire
+    valid_types = ['courte', 'moyenne', 'longue']
+    if memoire_type not in valid_types:
+        return jsonify({
+            'error': f'Type de mémoire invalide',
+            'accepted': valid_types,
+            'received': memoire_type
+        }), 400
+    
+    try:
+        os.chdir(REPO_DIR)
+        
+        # ✅ Git pull pour garantir version à jour
+        try:
+            pull_result = subprocess.run(
+                ['git', 'pull'],
+                check=True,
+                capture_output=True,
+                timeout=10,
+                text=True
+            )
+            pull_status = "updated" if "Already up to date" not in pull_result.stdout else "already_latest"
+        except Exception as pull_error:
+            print(f"⚠️ Git pull échoué lors accès mémoire {memoire_type}: {pull_error}")
+            pull_status = "pull_failed_using_local"
+        
+        # ✅ Mapper type → fichier
+        file_mapping = {
+            'courte': 'memoire_courte.md',
+            'moyenne': 'memoire_moyenne.md',
+            'longue': 'memoire_longue.md'
+        }
+        
+        filename = file_mapping[memoire_type]
+        filepath = os.path.join(REPO_DIR, filename)
+        
+        # ✅ Vérifier existence du fichier
+        if not os.path.exists(filepath):
+            return jsonify({
+                'error': f'Fichier {filename} non trouvé dans le repo',
+                'path': filepath,
+                'type': memoire_type
+            }), 404
+        
+        # ✅ Lire le fichier
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # ✅ Réponse avec métadonnées
+        return jsonify({
+            'type': memoire_type,
+            'filename': filename,
+            'content': content,
+            'timestamp': datetime.now().isoformat(),
+            'size': len(content),
+            'git_pull_status': pull_status,
+            'status': 'OK'
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Erreur endpoint mémoire/{memoire_type}: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': str(e),
+            'type': memoire_type,
+            'status': 'ERROR'
+        }), 500
+
+# =====================================================
+# SHORTCUTS PRATIQUES
+# =====================================================
+
+@app.route('/api/mc', methods=['GET'])
+def get_memoire_courte():
+    """Shortcut: GET /api/mc?token=...
+    Équivalent à : GET /api/memoire/courte?token=..."""
+    return get_memoire('courte')
+
+
+@app.route('/api/mm', methods=['GET'])
+def get_memoire_moyenne():
+    """Shortcut: GET /api/mm?token=...
+    Équivalent à : GET /api/memoire/moyenne?token=..."""
+    return get_memoire('moyenne')
+
+
+@app.route('/api/ml', methods=['GET'])
+def get_memoire_longue():
+    """Shortcut: GET /api/ml?token=...
+    Équivalent à : GET /api/memoire/longue?token=..."""
+    return get_memoire('longue')
+
+# =====================================================
 # FONCTION PRINCIPALE
 # =====================================================
 
