@@ -42,3 +42,23 @@
 - Attente nouvelle activité
 - Surveillance maintenue
 - Prêt intensification
+
+## 17/10/2025 18:15 - Session chat
+
+**Résumé :** Déploiement V3.3 réussi après résolution problème Python 3.13/psycopg2
+
+**Points clés :**
+- Problème initial : Background Worker au lieu de Web Service
+- Blocage : Python 3.13 incompatible avec psycopg2
+- Solution : Suppression .python-version, utilisation runtime.txt seul
+- Résultat : Déploiement réussi avec Python 3.12.7
+- URL publique : https://head-soeurise-web.onrender.com
+- Tous systèmes opérationnels (scheduler + Flask API)
+
+**Décisions :** - Garder Flask dev server (suffisant pour usage)
+- V3.3 en production
+- Interface web disponible pour synchronisation chat → mémoires
+
+**Questions ouvertes :** Domaine personnalisé souhaité ?
+
+---
