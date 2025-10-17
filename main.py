@@ -1,23 +1,23 @@
 """
-_Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée
-Version : 3.2.1 - FIX Nom modèle Haiku 4.5
-Architecture : Tout-en-un (reste actif en permanence)
+_Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée + Flask API
+Version : 3.3 - Synchronisation chat → mémoires
+Architecture : Threading (Scheduler + Flask API en parallèle)
 
-CHANGEMENTS V3.2.1 :
-- 🐛 FIX : Nom modèle corrigé "claude-haiku-4-5" (était "claude-haiku-4-20250604")
+CHANGEMENTS V3.3 :
+- 🆕 Flask API avec endpoints web
+- 🆕 Interface web pour logger conversations
+- 🆕 Authentification par token secret
+- 🆕 Threading : scheduler + API en parallèle
+- 🆕 Endpoint /api/log-conversation pour mise à jour mémoire courte
+- 🆕 Résolution amnésie conversationnelle
 
-CHANGEMENTS V3.2 :
-- ✅ Configuration centralisée en haut du fichier
-- ✅ Haiku 4.5 (claude-haiku-4-5) au lieu de Sonnet 4
-- ✅ Limites réalistes pour éviter timeouts/coûts
-- ✅ Identité _Head.Soeurise persistante dans le code
-- ✅ Simplification drastique (suppression verbosité excessive)
-- ✅ Code mature et opérationnel
-
-HÉRITE DE V3.0/3.1 :
-- ✅ Extraction PDF hybride intelligente (pdfplumber + Claude Vision OCR)
-- ✅ Nouveau cadre de rapport mature (v2.9)
-- ✅ Auto-évaluation obligatoire
+HÉRITE DE V3.2.1 :
+- ✅ Modèle Haiku 4.5 (claude-haiku-4-5)
+- ✅ Configuration centralisée
+- ✅ Limites réalistes
+- ✅ Extraction PDF hybride (pdfplumber + Claude Vision OCR)
+- ✅ Cadre rapport v2.9 avec auto-évaluation
+- ✅ Identité _Head.Soeurise persistante
 """
 
 import os
@@ -38,6 +38,8 @@ import schedule
 import time
 import subprocess
 import io
+import threading
+from flask import Flask, request, jsonify, render_template_string
 
 try:
     import pdfplumber
@@ -52,7 +54,7 @@ except ImportError:
     PDF2IMAGE_SUPPORT = False
 
 # =====================================================
-# ⚙️ CONFIGURATION CENTRALISÉE V3.2
+# ⚙️ CONFIGURATION CENTRALISÉE V3.3
 # =====================================================
 
 # 🔐 Credentials
@@ -65,6 +67,7 @@ GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
 GITHUB_REPO_URL = os.environ.get('GITHUB_REPO_URL', 'https://github.com/SoeuriseSCI/head-soeurise-module1.git')
 GIT_USER_NAME = os.environ.get('GIT_USER_NAME', '_Head.Soeurise')
 GIT_USER_EMAIL = os.environ.get('GIT_USER_EMAIL', 'u6334452013@gmail.com')
+API_SECRET_TOKEN = os.environ.get('API_SECRET_TOKEN', 'changeme')  # 🆕 V3.3
 
 # 📁 Répertoires
 REPO_DIR = '/home/claude/repo'
@@ -74,29 +77,32 @@ ATTACHMENTS_DIR = '/home/claude/attachments'
 GITHUB_REPO = "SoeuriseSCI/head-soeurise-module1"
 GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}/contents/"
 
-# 🤖 Modèle Claude - V3.2 HAIKU 4.5
-CLAUDE_MODEL = "claude-haiku-4-5"  # Haiku 4.5 au lieu de Sonnet 4
-CLAUDE_MAX_TOKENS = 8000  # Réduit (Haiku plus concis)
+# 🤖 Modèle Claude - V3.2.1 HAIKU 4.5
+CLAUDE_MODEL = "claude-haiku-4-5"
+CLAUDE_MAX_TOKENS = 8000
 
-# 📊 Limites réalistes V3.2 (éviter timeouts/coûts)
-MAX_EMAILS_TO_FETCH = 10  # Maximum 10 emails par réveil
-MAX_ATTACHMENTS_PER_EMAIL = 3  # Maximum 3 PDFs par email
-MAX_EMAIL_BODY_LENGTH = 5000  # Tronquer corps email si trop long
-MAX_PDF_TEXT_LENGTH = 30000  # Réduire extraction PDF (était 50000)
-MAX_PDF_PAGES_TO_EXTRACT = 50  # Maximum 50 pages (était 100)
-MIN_TEXT_FOR_NATIVE_PDF = 50  # Seuil détection PDF scanné
+# 📊 Limites réalistes V3.2.1
+MAX_EMAILS_TO_FETCH = 10
+MAX_ATTACHMENTS_PER_EMAIL = 3
+MAX_EMAIL_BODY_LENGTH = 5000
+MAX_PDF_TEXT_LENGTH = 30000
+MAX_PDF_PAGES_TO_EXTRACT = 50
+MIN_TEXT_FOR_NATIVE_PDF = 50
 
-# 👤 Identité _Head.Soeurise
+# 💤 Identité _Head.Soeurise
 IDENTITY = """Je suis _Head.Soeurise, l'IA de la SCI Soeurise.
 Mission : Assister Ulrik dans la gestion patrimoniale.
 Philosophie : Persévérer / Espérer / Progresser"""
+
+# 🆕 Flask App V3.3
+app = Flask(__name__)
 
 # =====================================================
 # FONCTIONS UTILITAIRES
 # =====================================================
 
 def fetch_from_github_api(filename):
-    """Récupère fichier via API GitHub (pas raw pour éviter cache CDN)"""
+    """Récupère fichier via API GitHub"""
     try:
         url = f"{GITHUB_API_BASE}{filename}"
         headers = {'Accept': 'application/vnd.github.v3+json'}
@@ -279,9 +285,8 @@ def extract_pdf_content(filepath):
         text = extract_pdf_via_claude_vision(filepath)
     
     return text
-
 # =====================================================
-# RÉCUPÉRATION DONNÉES
+# RÉCUPÉRATION DONNÉES - SUITE PARTIE 1
 # =====================================================
 
 def get_attachments(msg):
@@ -421,11 +426,26 @@ def fetch_emails():
         return []
 
 def load_memoire_files():
-    """Charge fichiers mémoire via API GitHub"""
+    """Charge fichiers mémoire via Git (garantie version à jour)"""
     print("\n" + "="*60)
     print("📥 MÉMOIRES")
     print("="*60)
     
+    # Git pull pour garantir dernière version
+    try:
+        os.chdir(REPO_DIR)
+        result = subprocess.run(['git', 'pull'], 
+                              check=True, 
+                              capture_output=True, 
+                              text=True)
+        if "Already up to date" in result.stdout:
+            print("  ℹ️ Déjà à jour")
+        else:
+            print("  ✓ Git pull - Nouvelles modifications")
+    except Exception as e:
+        print(f"  ⚠️ Git pull: {e}")
+    
+    # Lecture locale (toujours à jour après pull)
     files = {}
     file_names = [
         'memoire_fondatrice.md',
@@ -435,19 +455,15 @@ def load_memoire_files():
     ]
     
     for filename in file_names:
-        content = fetch_from_github_api(filename)
-        if not content:
-            content = fetch_from_github_raw_backup(filename)
-        if not content:
-            try:
-                file_path = os.path.join(REPO_DIR, filename)
-                if os.path.exists(file_path):
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-            except:
-                pass
-        
-        files[filename] = content if content else f"# {filename} (non disponible)"
+        try:
+            file_path = os.path.join(REPO_DIR, filename)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            files[filename] = content
+            print(f"  ✓ {filename} ({len(content)} chars)")
+        except Exception as e:
+            print(f"  ✗ {filename}: {e}")
+            files[filename] = f"# {filename} (non disponible)"
     
     print("="*60 + "\n")
     return files
@@ -476,7 +492,7 @@ def query_database():
         return {'observations': [], 'patterns': []}
 
 # =====================================================
-# INTELLIGENCE CLAUDE HAIKU 4.5 (V3.2)
+# INTELLIGENCE CLAUDE HAIKU 4.5 (V3.2.1)
 # =====================================================
 
 def claude_decide_et_execute(emails, memoire_files, db_data):
@@ -489,7 +505,7 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
         for attachment in email_item.get('attachments', []):
             if attachment.get('extracted_text'):
                 pdf_contents += f"\n--- {attachment['filename']} ---\n"
-                pdf_contents += attachment['extracted_text'][:5000]  # Limiter
+                pdf_contents += attachment['extracted_text'][:5000]
     
     contexte = f"""
 === RÉVEIL {datetime.now().strftime('%d/%m/%Y %H:%M')} ===
@@ -643,7 +659,7 @@ def send_email_rapport(rapport):
     """Envoie rapport par email"""
     try:
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"[_Head.Soeurise V3.2] {datetime.now().strftime('%d/%m/%Y')}"
+        msg['Subject'] = f"[_Head.Soeurise V3.3] {datetime.now().strftime('%d/%m/%Y')}"
         msg['From'] = SOEURISE_EMAIL
         msg['To'] = NOTIF_EMAIL
         
@@ -660,6 +676,289 @@ def send_email_rapport(rapport):
         print("✓ Email envoyé")
     except Exception as e:
         print(f"✗ Email: {e}")
+
+# =====================================================
+# 🆕 V3.3 - MISE À JOUR MÉMOIRE COURTE DEPUIS CHAT
+# =====================================================
+
+def update_memoire_courte_from_chat(conversation_data):
+    """Met à jour memoire_courte.md avec données de conversation chat"""
+    try:
+        os.chdir(REPO_DIR)
+        
+        # Git pull d'abord
+        subprocess.run(['git', 'pull'], check=True, capture_output=True)
+        
+        # Lire mémoire courte actuelle
+        with open('memoire_courte.md', 'r', encoding='utf-8') as f:
+            current_content = f.read()
+        
+        # Ajouter nouvelle entrée
+        new_entry = f"""
+
+## {datetime.now().strftime('%d/%m/%Y %H:%M')} - Session chat
+
+**Résumé :** {conversation_data.get('summary', 'N/A')}
+
+**Points clés :**
+{conversation_data.get('key_points', 'N/A')}
+
+**Décisions :** {conversation_data.get('decisions', 'N/A')}
+
+**Questions ouvertes :** {conversation_data.get('questions', 'N/A')}
+
+---
+"""
+        
+        # Écrire mémoire mise à jour
+        updated_content = current_content + new_entry
+        with open('memoire_courte.md', 'w', encoding='utf-8') as f:
+            f.write(updated_content)
+        
+        # Commit et push
+        git_commit_and_push(
+            ['memoire_courte.md'],
+            f"📝 Session chat {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+        )
+        
+        return True
+    except Exception as e:
+        print(f"✗ Update mémoire chat: {e}")
+        return False
+
+# =====================================================
+# 🆕 V3.3 - FLASK API + HTML TEMPLATE
+# =====================================================
+
+HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>_Head.Soeurise - Logger Conversation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 _Head.Soeurise</h1>
+        <p class="subtitle">Logger une conversation de session chat</p>
+        
+        <form id="conversationForm">
+            <div class="form-group">
+                <label for="summary">Résumé de la conversation *</label>
+                <textarea id="summary" name="summary" required placeholder="Ex: Discussion sur la V3.3 et déploiement Render"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="key_points">Points clés *</label>
+                <textarea id="key_points" name="key_points" required placeholder="- Point 1\\n- Point 2\\n- Point 3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="decisions">Décisions prises</label>
+                <textarea id="decisions" name="decisions" placeholder="Ex: Déployer V3.3 sur Render avec Flask API"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="questions">Questions ouvertes</label>
+                <textarea id="questions" name="questions" placeholder="Ex: Quel nom de domaine personnalisé ?"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="token">Token secret *</label>
+                <input type="password" id="token" name="token" required placeholder="Votre token secret">
+            </div>
+            
+            <button type="submit">📝 Logger la conversation</button>
+        </form>
+        
+        <div id="message" class="message"></div>
+        
+        <div class="footer">
+            V3.3 - Synchronisation chat → mémoires<br>
+            🔄 Persévérer / 🌟 Espérer / 📈 Progresser
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('conversationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                summary: document.getElementById('summary').value,
+                key_points: document.getElementById('key_points').value,
+                decisions: document.getElementById('decisions').value,
+                questions: document.getElementById('questions').value,
+                token: document.getElementById('token').value
+            };
+            
+            const messageDiv = document.getElementById('message');
+            messageDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/log-conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = '✓ ' + result.message;
+                    messageDiv.style.display = 'block';
+                    
+                    document.getElementById('conversationForm').reset();
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = '✗ ' + result.error;
+                    messageDiv.style.display = 'block';
+                }
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '✗ Erreur réseau: ' + error.message;
+                messageDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>"""
+
+@app.route('/')
+def index():
+    """Page d'accueil avec formulaire"""
+    return render_template_string(HTML_TEMPLATE)
+
+@app.route('/api/log-conversation', methods=['POST'])
+def log_conversation():
+    """Endpoint pour logger une conversation"""
+    try:
+        data = request.json
+        
+        # Vérification token
+        if data.get('token') != API_SECRET_TOKEN:
+            return jsonify({'error': 'Token invalide'}), 401
+        
+        # Mise à jour mémoire courte
+        conversation_data = {
+            'summary': data.get('summary', 'N/A'),
+            'key_points': data.get('key_points', 'N/A'),
+            'decisions': data.get('decisions', 'N/A'),
+            'questions': data.get('questions', 'N/A')
+        }
+        
+        success = update_memoire_courte_from_chat(conversation_data)
+        
+        if success:
+            return jsonify({
+                'message': 'Conversation loggée avec succès',
+                'timestamp': datetime.now().isoformat()
+            }), 200
+        else:
+            return jsonify({'error': 'Échec mise à jour mémoire'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # =====================================================
 # FONCTION PRINCIPALE
@@ -695,15 +994,30 @@ def reveil_quotidien():
     print("=" * 60)
 
 # =====================================================
-# SCHEDULER
+# 🆕 V3.3 - SCHEDULER EN THREAD SÉPARÉ
+# =====================================================
+
+def run_scheduler():
+    """Thread scheduler pour réveils quotidiens"""
+    schedule.every().day.at("08:00").do(reveil_quotidien)
+    schedule.every(30).minutes.do(lambda: None)
+    
+    print("⏰ Scheduler démarré - Réveil quotidien: 08:00 UTC")
+    
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+# =====================================================
+# MAIN - THREADING V3.3
 # =====================================================
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("_Head.Soeurise V3.2.1")
+    print("_Head.Soeurise V3.3")
     print("Modèle: Haiku 4.5 (claude-haiku-4-5)")
-    print("Réveil: 08:00 UTC = 10:00 France")
-    print("=" * 60)
+    print("Architecture: Threading (Scheduler + Flask API)")
+    print("="*60)
     
     if not init_git_repo():
         print("⚠️ Échec initialisation Git")
@@ -718,19 +1032,17 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
     
-    print("\n" + "=" * 60)
-    schedule.every().day.at("08:00").do(reveil_quotidien)
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    print("✓ Thread scheduler lancé")
     
-    print("✓ Réveil quotidien: 08:00 UTC")
+    print("\n" + "=" * 60)
+    print("🌐 FLASK API")
+    print("=" * 60)
     print(f"✓ Limites: {MAX_EMAILS_TO_FETCH} emails × {MAX_ATTACHMENTS_PER_EMAIL} PDFs")
     print(f"✓ Email body: {MAX_EMAIL_BODY_LENGTH} chars | PDF: {MAX_PDF_PAGES_TO_EXTRACT} pages")
     print(f"✓ Modèle: {CLAUDE_MODEL}")
-    print("=" * 60)
+    print("=" * 60 + "\n")
     
-    schedule.every(30).minutes.do(lambda: None)
-    
-    print("\n⏰ En attente du prochain réveil...\n")
-    
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
