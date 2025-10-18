@@ -1,23 +1,23 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée + Flask API
-Version : 3.3 - Synchronisation chat → mémoires
+Version : 3.4 - Phase 2.1 MVP : Auto-alimentation mémoire courte via /api/log-session
 Architecture : Threading (Scheduler + Flask API en parallèle)
 
-CHANGEMENTS V3.3 :
-- 🆕 Flask API avec endpoints web
-- 🆕 Interface web pour logger conversations
-- 🆕 Authentification par token secret
-- 🆕 Threading : scheduler + API en parallèle
-- 🆕 Endpoint /api/log-conversation pour mise à jour mémoire courte
-- 🆕 Résolution amnésie conversationnelle
+CHANGEMENTS V3.4 :
+- 🆕 Endpoint POST /api/log-session pour logger sessions chat
+- 🆕 Fonction append_to_memoire_courte() pour mise à jour mémoire
+- 🆕 Formulaire amélioré avec importance levels (CRITIQUE/IMPORTANT/NORMAL)
+- 🆕 Auto-parsing des listes (newline-separated)
+- ✅ Synchronisation bidirectionnelle chat ↔ mémoires
 
-HÉRITE DE V3.2.1 :
-- ✅ Modèle Haiku 4.5 (claude-haiku-4-5)
+HÉRITE DE V3.3 :
+- ✅ Flask API + Threading (Scheduler + Web en parallèle)
+- ✅ Interface web pour logger conversations
+- ✅ Authentification par token secret
+- ✅ Extraction PDF hybride (pdfplumber + Claude Vision OCR)
+- ✅ Haiku 4.5 (claude-haiku-4-5-20251001)
 - ✅ Configuration centralisée
 - ✅ Limites réalistes
-- ✅ Extraction PDF hybride (pdfplumber + Claude Vision OCR)
-- ✅ Cadre rapport v2.9 avec auto-évaluation
-- ✅ Identité _Head.Soeurise persistante
 """
 
 import os
@@ -54,7 +54,7 @@ except ImportError:
     PDF2IMAGE_SUPPORT = False
 
 # =====================================================
-# ⚙️ CONFIGURATION CENTRALISÉE V3.3
+# ⚙️ CONFIGURATION CENTRALISÉE V3.4
 # =====================================================
 
 # 🔐 Credentials
@@ -67,7 +67,7 @@ GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
 GITHUB_REPO_URL = os.environ.get('GITHUB_REPO_URL', 'https://github.com/SoeuriseSCI/head-soeurise-module1.git')
 GIT_USER_NAME = os.environ.get('GIT_USER_NAME', '_Head.Soeurise')
 GIT_USER_EMAIL = os.environ.get('GIT_USER_EMAIL', 'u6334452013@gmail.com')
-API_SECRET_TOKEN = os.environ.get('API_SECRET_TOKEN', 'changeme')  # 🆕 V3.3
+API_SECRET_TOKEN = os.environ.get('API_SECRET_TOKEN', 'changeme')
 
 # 📁 Répertoires
 REPO_DIR = '/home/claude/repo'
@@ -77,8 +77,8 @@ ATTACHMENTS_DIR = '/home/claude/attachments'
 GITHUB_REPO = "SoeuriseSCI/head-soeurise-module1"
 GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}/contents/"
 
-# 🤖 Modèle Claude - V3.2.1 HAIKU 4.5
-CLAUDE_MODEL = "claude-haiku-4-5"
+# 🤖 Modèle Claude - V3.4 HAIKU 4.5
+CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 CLAUDE_MAX_TOKENS = 8000
 
 # 📊 Limites réalistes V3.2.1
@@ -89,12 +89,12 @@ MAX_PDF_TEXT_LENGTH = 30000
 MAX_PDF_PAGES_TO_EXTRACT = 50
 MIN_TEXT_FOR_NATIVE_PDF = 50
 
-# 💤 Identité _Head.Soeurise
+# 👤 Identité _Head.Soeurise
 IDENTITY = """Je suis _Head.Soeurise, l'IA de la SCI Soeurise.
 Mission : Assister Ulrik dans la gestion patrimoniale.
 Philosophie : Persévérer / Espérer / Progresser"""
 
-# 🆕 Flask App V3.3
+# 🆕 Flask App V3.4
 app = Flask(__name__)
 
 # =====================================================
@@ -285,8 +285,9 @@ def extract_pdf_content(filepath):
         text = extract_pdf_via_claude_vision(filepath)
     
     return text
+
 # =====================================================
-# RÉCUPÉRATION DONNÉES - SUITE PARTIE 1
+# RÉCUPÉRATION DONNÉES
 # =====================================================
 
 def get_attachments(msg):
@@ -431,7 +432,6 @@ def load_memoire_files():
     print("📥 MÉMOIRES")
     print("="*60)
     
-    # Git pull pour garantir dernière version
     try:
         os.chdir(REPO_DIR)
         result = subprocess.run(['git', 'pull'], 
@@ -445,7 +445,6 @@ def load_memoire_files():
     except Exception as e:
         print(f"  ⚠️ Git pull: {e}")
     
-    # Lecture locale (toujours à jour après pull)
     files = {}
     file_names = [
         'memoire_fondatrice.md',
@@ -492,7 +491,7 @@ def query_database():
         return {'observations': [], 'patterns': []}
 
 # =====================================================
-# INTELLIGENCE CLAUDE HAIKU 4.5 (V3.2.1)
+# INTELLIGENCE CLAUDE HAIKU 4.5 (V3.4)
 # =====================================================
 
 def claude_decide_et_execute(emails, memoire_files, db_data):
@@ -659,7 +658,7 @@ def send_email_rapport(rapport):
     """Envoie rapport par email"""
     try:
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"[_Head.Soeurise V3.3] {datetime.now().strftime('%d/%m/%Y')}"
+        msg['Subject'] = f"[_Head.Soeurise V3.4] {datetime.now().strftime('%d/%m/%Y')}"
         msg['From'] = SOEURISE_EMAIL
         msg['To'] = NOTIF_EMAIL
         
@@ -678,56 +677,130 @@ def send_email_rapport(rapport):
         print(f"✗ Email: {e}")
 
 # =====================================================
-# 🆕 V3.3 - MISE À JOUR MÉMOIRE COURTE DEPUIS CHAT
+# 🆕 V3.4 - FONCTION APPEND_TO_MEMOIRE_COURTE
 # =====================================================
 
-def update_memoire_courte_from_chat(conversation_data):
-    """Met à jour memoire_courte.md avec données de conversation chat"""
+def append_to_memoire_courte(session_data):
+    """
+    Ajoute une entrée de session chat à la mémoire courte.
+    
+    Workflow :
+    1. Git pull (dernière version)
+    2. Lire memoire_courte.md
+    3. Formater nouvelle entrée
+    4. Concaténer + écrire
+    5. Git commit + push
+    
+    Args:
+        session_data (dict) : 
+            - summary (str) : Résumé de la session
+            - key_points (list) : Points clés
+            - decisions (list) : Décisions prises
+            - questions_ouvertes (list) : Questions ouvertes
+            - importance_level (int) : 1=CRITIQUE, 2=IMPORTANT, 3=NORMAL
+    
+    Returns:
+        dict : {'success': bool, 'message': str, 'timestamp': str}
+    """
     try:
+        print("\n" + "="*60)
+        print("📝 LOGGING SESSION CHAT")
+        print("="*60)
+        
         os.chdir(REPO_DIR)
         
-        # Git pull d'abord
-        subprocess.run(['git', 'pull'], check=True, capture_output=True)
+        # 1. Git pull (assure dernière version, évite conflits)
+        print("  🔄 Git pull...")
+        result = subprocess.run(['git', 'pull'], 
+                              check=True, 
+                              capture_output=True, 
+                              text=True)
         
-        # Lire mémoire courte actuelle
+        # 2. Lire mémoire courte actuelle
+        print("  📖 Lecture memoire_courte.md...")
         with open('memoire_courte.md', 'r', encoding='utf-8') as f:
             current_content = f.read()
         
-        # Ajouter nouvelle entrée
-        new_entry = f"""
+        # 3. Formater nouvelle entrée
+        timestamp = datetime.now().strftime('%d/%m/%Y %H:%M')
+        importance_labels = {1: '🔴 CRITIQUE', 2: '🟡 IMPORTANT', 3: '⚪ NORMAL'}
+        importance_level = session_data.get('importance_level', 2)
+        importance_label = importance_labels.get(importance_level, '⚪ NORMAL')
+        
+        key_points_text = '\n'.join(
+            f"- {point}" for point in session_data.get('key_points', [])
+        ) if session_data.get('key_points') else "N/A"
+        
+        decisions_text = '\n'.join(
+            f"- {decision}" for decision in session_data.get('decisions', [])
+        ) if session_data.get('decisions') else "N/A"
+        
+        questions_text = '\n'.join(
+            f"- {q}" for q in session_data.get('questions_ouvertes', [])
+        ) if session_data.get('questions_ouvertes') else "N/A"
+        
+        nouvelle_entree = f"""
+## {timestamp} - Session chat {importance_label}
 
-## {datetime.now().strftime('%d/%m/%Y %H:%M')} - Session chat
-
-**Résumé :** {conversation_data.get('summary', 'N/A')}
+**Résumé :** {session_data.get('summary', 'N/A')}
 
 **Points clés :**
-{conversation_data.get('key_points', 'N/A')}
+{key_points_text}
 
-**Décisions :** {conversation_data.get('decisions', 'N/A')}
+**Décisions :**
+{decisions_text}
 
-**Questions ouvertes :** {conversation_data.get('questions', 'N/A')}
+**Questions ouvertes :**
+{questions_text}
 
 ---
 """
         
-        # Écrire mémoire mise à jour
-        updated_content = current_content + new_entry
+        # 4. Concaténer (nouvelle entrée À LA FIN du fichier)
+        updated_content = current_content + nouvelle_entree
+        
+        # 5. Écrire
+        print("  ✍️  Écriture mise à jour...")
         with open('memoire_courte.md', 'w', encoding='utf-8') as f:
             f.write(updated_content)
         
-        # Commit et push
-        git_commit_and_push(
-            ['memoire_courte.md'],
-            f"📝 Session chat {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-        )
+        # 6. Git commit + push
+        print("  📤 Git commit...")
+        subprocess.run(['git', 'add', 'memoire_courte.md'], check=True)
+        subprocess.run(['git', 'commit', '-m', 
+                       f"📝 Session chat {timestamp} ({importance_label})"], 
+                       check=True, 
+                       capture_output=True)
         
-        return True
+        print("  🚀 Git push...")
+        repo_url_with_token = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
+        subprocess.run(['git', 'push', repo_url_with_token, 'main'], 
+                       check=True, 
+                       capture_output=True)
+        
+        message = f"✅ Session loggée ({timestamp}) - {importance_label}"
+        print(f"  {message}")
+        print("="*60 + "\n")
+        
+        return {
+            'success': True,
+            'message': message,
+            'timestamp': timestamp
+        }
+        
     except Exception as e:
-        print(f"✗ Update mémoire chat: {e}")
-        return False
+        error_msg = f"❌ Erreur logging session: {str(e)}"
+        print(f"  {error_msg}")
+        print("="*60 + "\n")
+        
+        return {
+            'success': False,
+            'message': error_msg,
+            'timestamp': datetime.now().isoformat()
+        }
 
 # =====================================================
-# 🆕 V3.3 - FLASK API + HTML TEMPLATE
+# 🆕 V3.4 - ROUTES FLASK MISES À JOUR
 # =====================================================
 
 HTML_TEMPLATE = """<!DOCTYPE html>
@@ -735,7 +808,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>_Head.Soeurise - Logger Conversation</title>
+    <title>_Head.Soeurise - Logger Session</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -751,7 +824,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             background: white;
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 600px;
+            max-width: 700px;
             width: 100%;
             padding: 40px;
         }
@@ -775,7 +848,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-weight: 600;
             font-size: 14px;
         }
-        input, textarea {
+        input[type="text"],
+        input[type="password"],
+        textarea,
+        select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
@@ -784,13 +860,31 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             transition: border-color 0.3s;
             font-family: inherit;
         }
-        input:focus, textarea:focus {
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        textarea:focus,
+        select:focus {
             outline: none;
             border-color: #667eea;
         }
         textarea {
             resize: vertical;
-            min-height: 100px;
+            min-height: 80px;
+        }
+        .importance-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+        }
+        .importance-group label {
+            flex: 1;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .importance-group input[type="radio"] {
+            width: auto;
         }
         button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -810,6 +904,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         button:active {
             transform: translateY(0);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
         .message {
             padding: 12px;
@@ -833,67 +932,120 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             color: #999;
             font-size: 12px;
         }
+        .field-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🧠 _Head.Soeurise</h1>
-        <p class="subtitle">Logger une conversation de session chat</p>
+        <p class="subtitle">Logger une session de chat pour synchroniser la mémoire</p>
         
-        <form id="conversationForm">
+        <form id="sessionForm">
             <div class="form-group">
-                <label for="summary">Résumé de la conversation *</label>
-                <textarea id="summary" name="summary" required placeholder="Ex: Discussion sur la V3.3 et déploiement Render"></textarea>
+                <label for="summary">Résumé de la session *</label>
+                <textarea id="summary" name="summary" required 
+                    placeholder="Ex: Planification Phase 2.1 - auto-alimentation des sessions chat"></textarea>
+                <div class="field-hint">Résumé court (1-2 lignes) de ce qui s'est passé</div>
             </div>
             
             <div class="form-group">
-                <label for="key_points">Points clés *</label>
-                <textarea id="key_points" name="key_points" required placeholder="- Point 1\\n- Point 2\\n- Point 3"></textarea>
+                <label for="key_points">Points clés</label>
+                <textarea id="key_points" name="key_points" 
+                    placeholder="- Point 1
+- Point 2
+- Point 3"></textarea>
+                <div class="field-hint">Un point par ligne, ou laisse vide si pas pertinent</div>
             </div>
             
             <div class="form-group">
                 <label for="decisions">Décisions prises</label>
-                <textarea id="decisions" name="decisions" placeholder="Ex: Déployer V3.3 sur Render avec Flask API"></textarea>
+                <textarea id="decisions" name="decisions" 
+                    placeholder="- Décision 1
+- Décision 2"></textarea>
+                <div class="field-hint">Choses décidées/validées pendant la session</div>
             </div>
             
             <div class="form-group">
                 <label for="questions">Questions ouvertes</label>
-                <textarea id="questions" name="questions" placeholder="Ex: Quel nom de domaine personnalisé ?"></textarea>
+                <textarea id="questions" name="questions" 
+                    placeholder="- Quelle est la priorité ?
+- Faut-il faire X avant Y ?"></textarea>
+                <div class="field-hint">Points à clarifier ou décisions en suspens</div>
+            </div>
+            
+            <div class="form-group">
+                <label>Importance de cette session</label>
+                <div class="importance-group">
+                    <label>
+                        <input type="radio" name="importance" value="1" required> 
+                        🔴 CRITIQUE
+                    </label>
+                    <label>
+                        <input type="radio" name="importance" value="2" checked> 
+                        🟡 IMPORTANT
+                    </label>
+                    <label>
+                        <input type="radio" name="importance" value="3"> 
+                        ⚪ NORMAL
+                    </label>
+                </div>
+                <div class="field-hint">CRITIQUE=décisions majeures, IMPORTANT=progrès, NORMAL=info</div>
             </div>
             
             <div class="form-group">
                 <label for="token">Token secret *</label>
-                <input type="password" id="token" name="token" required placeholder="Votre token secret">
+                <input type="password" id="token" name="token" required 
+                    placeholder="Votre token secret API">
+                <div class="field-hint">Défini dans les variables d'environnement Render</div>
             </div>
             
-            <button type="submit">📝 Logger la conversation</button>
+            <button type="submit" id="submitBtn">📝 Logger cette session</button>
         </form>
         
         <div id="message" class="message"></div>
         
         <div class="footer">
-            V3.3 - Synchronisation chat → mémoires<br>
+            V3.4 - Phase 2.1 : Auto-alimentation mémoire courte<br>
             🔄 Persévérer / 🌟 Espérer / 📈 Progresser
         </div>
     </div>
     
     <script>
-        document.getElementById('conversationForm').addEventListener('submit', async (e) => {
+        document.getElementById('sessionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Envoi...';
+            
+            // Parser les listes (séparées par newline)
+            const parseList = (text) => {
+                return text
+                    .split('\n')
+                    .map(line => line.replace(/^[-•]\s*/, '').trim())
+                    .filter(line => line.length > 0);
+            };
+            
             const formData = {
+                token: document.getElementById('token').value,
                 summary: document.getElementById('summary').value,
-                key_points: document.getElementById('key_points').value,
-                decisions: document.getElementById('decisions').value,
-                questions: document.getElementById('questions').value,
-                token: document.getElementById('token').value
+                key_points: parseList(document.getElementById('key_points').value),
+                decisions: parseList(document.getElementById('decisions').value),
+                questions_ouvertes: parseList(document.getElementById('questions').value),
+                context: {
+                    importance_level: parseInt(document.querySelector('input[name="importance"]:checked').value)
+                }
             };
             
             const messageDiv = document.getElementById('message');
             messageDiv.style.display = 'none';
             
             try {
-                const response = await fetch('/api/log-conversation', {
+                const response = await fetch('/api/log-session', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -905,19 +1057,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 
                 if (response.ok) {
                     messageDiv.className = 'message success';
-                    messageDiv.textContent = '✓ ' + result.message;
+                    messageDiv.textContent = '✅ ' + result.message;
                     messageDiv.style.display = 'block';
                     
-                    document.getElementById('conversationForm').reset();
+                    // Reset formulaire après 2 secondes
+                    setTimeout(() => {
+                        document.getElementById('sessionForm').reset();
+                        messageDiv.style.display = 'none';
+                    }, 2000);
                 } else {
                     messageDiv.className = 'message error';
-                    messageDiv.textContent = '✗ ' + result.error;
+                    messageDiv.textContent = '❌ ' + (result.error || result.message || 'Erreur inconnue');
                     messageDiv.style.display = 'block';
                 }
             } catch (error) {
                 messageDiv.className = 'message error';
-                messageDiv.textContent = '✗ Erreur réseau: ' + error.message;
+                messageDiv.textContent = '❌ Erreur réseau: ' + error.message;
                 messageDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📝 Logger cette session';
             }
         });
     </script>
@@ -929,161 +1088,100 @@ def index():
     """Page d'accueil avec formulaire"""
     return render_template_string(HTML_TEMPLATE)
 
-@app.route('/api/log-conversation', methods=['POST'])
-def log_conversation():
-    """Endpoint pour logger une conversation"""
+@app.route('/api/log-session', methods=['POST'])
+def log_session():
+    """
+    Endpoint pour logger une session de chat dans memoire_courte.
+    
+    JSON attendu :
+    {
+        "token": "API_SECRET_TOKEN",
+        "summary": "Résumé de la session",
+        "key_points": ["point 1", "point 2"],
+        "decisions": ["décision 1"],
+        "questions_ouvertes": ["question 1"],
+        "context": {
+            "importance_level": 1  // 1=CRITIQUE, 2=IMPORTANT, 3=NORMAL
+        }
+    }
+    """
     try:
         data = request.json
         
-        # Vérification token
+        # Validation token
+        if data.get('token') != API_SECRET_TOKEN:
+            return jsonify({
+                'error': 'Token invalide',
+                'status': 'UNAUTHORIZED'
+            }), 401
+        
+        # Validation données minimales
+        if not data.get('summary'):
+            return jsonify({
+                'error': 'Champ "summary" obligatoire',
+                'status': 'INVALID_DATA'
+            }), 400
+        
+        # Préparation données pour la fonction
+        session_data = {
+            'summary': data.get('summary'),
+            'key_points': data.get('key_points', []),
+            'decisions': data.get('decisions', []),
+            'questions_ouvertes': data.get('questions_ouvertes', []),
+            'importance_level': data.get('context', {}).get('importance_level', 2)
+        }
+        
+        # Appeler la fonction de logging
+        result = append_to_memoire_courte(session_data)
+        
+        if result['success']:
+            return jsonify({
+                'status': 'success',
+                'message': result['message'],
+                'timestamp': result['timestamp']
+            }), 200
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': result['message'],
+                'timestamp': result['timestamp']
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': f'Erreur serveur: {str(e)}'
+        }), 500
+
+@app.route('/api/log-conversation', methods=['POST'])
+def log_conversation():
+    """Endpoint existant V3.3 pour backward compatibility"""
+    try:
+        data = request.json
+        
         if data.get('token') != API_SECRET_TOKEN:
             return jsonify({'error': 'Token invalide'}), 401
         
-        # Mise à jour mémoire courte
         conversation_data = {
             'summary': data.get('summary', 'N/A'),
-            'key_points': data.get('key_points', 'N/A'),
-            'decisions': data.get('decisions', 'N/A'),
-            'questions': data.get('questions', 'N/A')
+            'key_points': data.get('key_points', 'N/A').split('\n') if isinstance(data.get('key_points'), str) else [],
+            'decisions': data.get('decisions', 'N/A').split('\n') if isinstance(data.get('decisions'), str) else [],
+            'questions_ouvertes': data.get('questions', 'N/A').split('\n') if isinstance(data.get('questions'), str) else [],
+            'importance_level': 2
         }
         
-        success = update_memoire_courte_from_chat(conversation_data)
+        result = append_to_memoire_courte(conversation_data)
         
-        if success:
+        if result['success']:
             return jsonify({
-                'message': 'Conversation loggée avec succès',
-                'timestamp': datetime.now().isoformat()
+                'message': result['message'],
+                'timestamp': result['timestamp']
             }), 200
         else:
-            return jsonify({'error': 'Échec mise à jour mémoire'}), 500
+            return jsonify({'error': result['message']}), 500
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-# =====================================================
-# ðŸ†• V3.3 - ENDPOINTS FLASK POUR ACCÈS AUX MÉMOIRES
-# À ajouter dans main_V3.3.py après la ligne : @app.route('/api/log-conversation', methods=['POST'])
-# =====================================================
-
-@app.route('/api/memoire/<memoire_type>', methods=['GET'])
-def get_memoire(memoire_type):
-    """Endpoint sécurisé pour accéder aux mémoires dynamiques
-    
-    Authentification : Token requis (API_SECRET_TOKEN)
-    Types acceptés : courte, moyenne, longue
-    
-    Utilisation : 
-        GET /api/memoire/courte?token=<API_SECRET_TOKEN>
-        GET /api/mc?token=<API_SECRET_TOKEN>
-    
-    Réponse JSON :
-    {
-        "type": "courte",
-        "filename": "memoire_courte.md",
-        "content": "...",
-        "timestamp": "2025-10-17T18:30:00.000000",
-        "size": 12345,
-        "status": "OK"
-    }
-    """
-    
-    # ✅ Vérification du token (obligatoire)
-    token = request.args.get('token')
-    if not token or token != API_SECRET_TOKEN:
-        return jsonify({'error': 'Token manquant ou invalide'}), 401
-    
-    # ✅ Validation du type de mémoire
-    valid_types = ['courte', 'moyenne', 'longue']
-    if memoire_type not in valid_types:
-        return jsonify({
-            'error': f'Type de mémoire invalide',
-            'accepted': valid_types,
-            'received': memoire_type
-        }), 400
-    
-    try:
-        os.chdir(REPO_DIR)
-        
-        # ✅ Git pull pour garantir version à jour
-        try:
-            pull_result = subprocess.run(
-                ['git', 'pull'],
-                check=True,
-                capture_output=True,
-                timeout=10,
-                text=True
-            )
-            pull_status = "updated" if "Already up to date" not in pull_result.stdout else "already_latest"
-        except Exception as pull_error:
-            print(f"⚠️ Git pull échoué lors accès mémoire {memoire_type}: {pull_error}")
-            pull_status = "pull_failed_using_local"
-        
-        # ✅ Mapper type → fichier
-        file_mapping = {
-            'courte': 'memoire_courte.md',
-            'moyenne': 'memoire_moyenne.md',
-            'longue': 'memoire_longue.md'
-        }
-        
-        filename = file_mapping[memoire_type]
-        filepath = os.path.join(REPO_DIR, filename)
-        
-        # ✅ Vérifier existence du fichier
-        if not os.path.exists(filepath):
-            return jsonify({
-                'error': f'Fichier {filename} non trouvé dans le repo',
-                'path': filepath,
-                'type': memoire_type
-            }), 404
-        
-        # ✅ Lire le fichier
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # ✅ Réponse avec métadonnées
-        return jsonify({
-            'type': memoire_type,
-            'filename': filename,
-            'content': content,
-            'timestamp': datetime.now().isoformat(),
-            'size': len(content),
-            'git_pull_status': pull_status,
-            'status': 'OK'
-        }), 200
-        
-    except Exception as e:
-        print(f"❌ Erreur endpoint mémoire/{memoire_type}: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'error': str(e),
-            'type': memoire_type,
-            'status': 'ERROR'
-        }), 500
-
-# =====================================================
-# SHORTCUTS PRATIQUES
-# =====================================================
-
-@app.route('/api/mc', methods=['GET'])
-def get_memoire_courte():
-    """Shortcut: GET /api/mc?token=...
-    Équivalent à : GET /api/memoire/courte?token=..."""
-    return get_memoire('courte')
-
-
-@app.route('/api/mm', methods=['GET'])
-def get_memoire_moyenne():
-    """Shortcut: GET /api/mm?token=...
-    Équivalent à : GET /api/memoire/moyenne?token=..."""
-    return get_memoire('moyenne')
-
-
-@app.route('/api/ml', methods=['GET'])
-def get_memoire_longue():
-    """Shortcut: GET /api/ml?token=...
-    Équivalent à : GET /api/memoire/longue?token=..."""
-    return get_memoire('longue')
 
 # =====================================================
 # FONCTION PRINCIPALE
@@ -1119,7 +1217,7 @@ def reveil_quotidien():
     print("=" * 60)
 
 # =====================================================
-# 🆕 V3.3 - SCHEDULER EN THREAD SÉPARÉ
+# SCHEDULER EN THREAD SÉPARÉ
 # =====================================================
 
 def run_scheduler():
@@ -1134,14 +1232,15 @@ def run_scheduler():
         time.sleep(60)
 
 # =====================================================
-# MAIN - THREADING V3.3
+# MAIN - THREADING V3.4
 # =====================================================
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("_Head.Soeurise V3.3")
-    print("Modèle: Haiku 4.5 (claude-haiku-4-5)")
+    print("_Head.Soeurise V3.4")
+    print("Modèle: Haiku 4.5 (claude-haiku-4-5-20251001)")
     print("Architecture: Threading (Scheduler + Flask API)")
+    print("Phase 2.1: Auto-alimentation mémoire courte")
     print("="*60)
     
     if not init_git_repo():
@@ -1162,11 +1261,12 @@ if __name__ == "__main__":
     print("✓ Thread scheduler lancé")
     
     print("\n" + "=" * 60)
-    print("🌐 FLASK API")
+    print("🌐 FLASK API V3.4")
     print("=" * 60)
     print(f"✓ Limites: {MAX_EMAILS_TO_FETCH} emails × {MAX_ATTACHMENTS_PER_EMAIL} PDFs")
     print(f"✓ Email body: {MAX_EMAIL_BODY_LENGTH} chars | PDF: {MAX_PDF_PAGES_TO_EXTRACT} pages")
     print(f"✓ Modèle: {CLAUDE_MODEL}")
+    print(f"✓ Phase 2.1: Endpoint /api/log-session activé")
     print("=" * 60 + "\n")
     
     port = int(os.environ.get("PORT", 10000))
