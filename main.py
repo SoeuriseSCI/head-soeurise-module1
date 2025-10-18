@@ -878,7 +878,7 @@ def get_memoire_longue():
 # 🆕 V3.4 CORRIGÉE - ROUTES FLASK EXISTANTES (INCHANGÉES)
 # =====================================================
 
-HTML_TEMPLATE = """<!DOCTYPE html>
+HTML_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -1344,85 +1344,6 @@ if __name__ == "__main__":
     print(f"✓ Modèle: {CLAUDE_MODEL}")
     print(f"✓ Phase 2.1: Endpoints /api/log-session activé")
     print(f"✓ V3.4 CORRIGÉE: Endpoints /api/mc, /api/mm, /api/ml ACTIFS")
-    print("=" * 60 + "\n")
-    
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
-
-    emails = fetch_emails()
-    print(f"  → {len(emails)} emails, {sum(e.get('attachment_count', 0) for e in emails)} pièces jointes")
-    
-    memoire_files = load_memoire_files()
-    db_data = query_database()
-    
-    resultat = claude_decide_et_execute(emails, memoire_files, db_data)
-    
-    if not resultat:
-        print("✗ Erreur: Pas de résultat Claude")
-        return
-    
-    save_to_database(resultat, emails)
-    files_updated = save_memoire_files(resultat)
-    
-    if files_updated:
-        git_commit_and_push(files_updated, f"🧠 Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    
-    send_email_rapport(resultat.get('rapport_quotidien', 'Pas de rapport'))
-    
-    print("\n✓ Réveil terminé")
-    print("=" * 60)
-
-# =====================================================
-# SCHEDULER EN THREAD SÉPARÉ
-# =====================================================
-
-def run_scheduler():
-    """Thread scheduler pour réveils quotidiens"""
-    schedule.every().day.at("08:00").do(reveil_quotidien)
-    schedule.every(30).minutes.do(lambda: None)
-    
-    print("⏰ Scheduler démarré - Réveil quotidien: 08:00 UTC")
-    
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
-
-# =====================================================
-# MAIN - THREADING V3.4
-# =====================================================
-
-if __name__ == "__main__":
-    print("=" * 60)
-    print("_Head.Soeurise V3.4")
-    print("Modèle: Haiku 4.5 (claude-haiku-4-5-20251001)")
-    print("Architecture: Threading (Scheduler + Flask API)")
-    print("Phase 2.1: Auto-alimentation mémoire courte")
-    print("="*60)
-    
-    if not init_git_repo():
-        print("⚠️ Échec initialisation Git")
-    
-    print("\n" + "=" * 60)
-    print("🧪 RÉVEIL DE TEST")
-    print("=" * 60)
-    try:
-        reveil_quotidien()
-    except Exception as e:
-        print(f"✗ Erreur: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-    scheduler_thread.start()
-    print("✓ Thread scheduler lancé")
-    
-    print("\n" + "=" * 60)
-    print("🌐 FLASK API V3.4")
-    print("=" * 60)
-    print(f"✓ Limites: {MAX_EMAILS_TO_FETCH} emails × {MAX_ATTACHMENTS_PER_EMAIL} PDFs")
-    print(f"✓ Email body: {MAX_EMAIL_BODY_LENGTH} chars | PDF: {MAX_PDF_PAGES_TO_EXTRACT} pages")
-    print(f"✓ Modèle: {CLAUDE_MODEL}")
-    print(f"✓ Phase 2.1: Endpoint /api/log-session activé")
     print("=" * 60 + "\n")
     
     port = int(os.environ.get("PORT", 10000))
