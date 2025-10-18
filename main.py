@@ -1,16 +1,15 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée + Flask API
-Version : 3.4 - Phase 2.1 MVP : Auto-alimentation mémoire courte via /api/log-session
+Version : 3.4 CORRIGÉE - Phase 2.1 MVP : Auto-alimentation mémoire courte via /api/log-session
 Architecture : Threading (Scheduler + Flask API en parallèle)
 
-CHANGEMENTS V3.4 :
-- 🆕 Endpoint POST /api/log-session pour logger sessions chat
-- 🆕 Fonction append_to_memoire_courte() pour mise à jour mémoire
-- 🆕 Formulaire amélioré avec importance levels (CRITIQUE/IMPORTANT/NORMAL)
-- 🆕 Auto-parsing des listes (newline-separated)
-- ✅ Synchronisation bidirectionnelle chat ↔ mémoires
+CHANGEMENTS V3.4 CORRIGÉE :
+- ✅ Endpoints GET /api/mc, /api/mm, /api/ml AJOUTÉS
+- 🔄 Auto-alimentation mémoire courte via /api/log-session
+- 📝 Formulaire amélioré avec importance levels (CRITIQUE/IMPORTANT/NORMAL)
+- 🎯 Synchronisation bidirectionnelle chat ↔ mémoires
 
-HÉRITE DE V3.3 :
+HÉRITÉ DE V3.3 :
 - ✅ Flask API + Threading (Scheduler + Web en parallèle)
 - ✅ Interface web pour logger conversations
 - ✅ Authentification par token secret
@@ -348,7 +347,7 @@ def fetch_emails():
     """Récupère nouveaux emails via IMAP"""
     try:
         print("\n" + "="*60)
-        print("📧 EMAILS")
+        print("🔧 EMAILS")
         print("="*60)
         
         mail = imaplib.IMAP4_SSL('imap.gmail.com')
@@ -429,7 +428,7 @@ def fetch_emails():
 def load_memoire_files():
     """Charge fichiers mémoire via Git (garantie version à jour)"""
     print("\n" + "="*60)
-    print("📥 MÉMOIRES")
+    print("🔥 MÉMOIRES")
     print("="*60)
     
     try:
@@ -710,14 +709,14 @@ def append_to_memoire_courte(session_data):
         os.chdir(REPO_DIR)
         
         # 1. Git pull (assure dernière version, évite conflits)
-        print("  🔄 Git pull...")
+        print("  📄 Git pull...")
         result = subprocess.run(['git', 'pull'], 
                               check=True, 
                               capture_output=True, 
                               text=True)
         
         # 2. Lire mémoire courte actuelle
-        print("  📖 Lecture memoire_courte.md...")
+        print("  🔖 Lecture memoire_courte.md...")
         with open('memoire_courte.md', 'r', encoding='utf-8') as f:
             current_content = f.read()
         
@@ -760,7 +759,7 @@ def append_to_memoire_courte(session_data):
         updated_content = current_content + nouvelle_entree
         
         # 5. Écrire
-        print("  ✍️  Écriture mise à jour...")
+        print("  ✏️  Écriture mise à jour...")
         with open('memoire_courte.md', 'w', encoding='utf-8') as f:
             f.write(updated_content)
         
@@ -800,7 +799,83 @@ def append_to_memoire_courte(session_data):
         }
 
 # =====================================================
-# 🆕 V3.4 - ROUTES FLASK MISES À JOUR
+# 🆕 V3.4 CORRIGÉE - ENDPOINTS GET /api/mc, /api/mm, /api/ml
+# =====================================================
+
+@app.route('/api/mc', methods=['GET'])
+def get_memoire_courte():
+    """Retourne mémoire courte via API GET"""
+    token = request.args.get('token')
+    if token != API_SECRET_TOKEN:
+        return jsonify({'error': 'Token invalide', 'status': 'UNAUTHORIZED'}), 401
+    
+    try:
+        os.chdir(REPO_DIR)
+        subprocess.run(['git', 'pull'], check=True, capture_output=True)
+        
+        with open(os.path.join(REPO_DIR, 'memoire_courte.md'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        return jsonify({
+            'status': 'OK',
+            'content': content,
+            'timestamp': datetime.now().isoformat(),
+            'type': 'courte',
+            'size': len(content)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e), 'status': 'ERROR'}), 500
+
+@app.route('/api/mm', methods=['GET'])
+def get_memoire_moyenne():
+    """Retourne mémoire moyenne via API GET"""
+    token = request.args.get('token')
+    if token != API_SECRET_TOKEN:
+        return jsonify({'error': 'Token invalide', 'status': 'UNAUTHORIZED'}), 401
+    
+    try:
+        os.chdir(REPO_DIR)
+        subprocess.run(['git', 'pull'], check=True, capture_output=True)
+        
+        with open(os.path.join(REPO_DIR, 'memoire_moyenne.md'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        return jsonify({
+            'status': 'OK',
+            'content': content,
+            'timestamp': datetime.now().isoformat(),
+            'type': 'moyenne',
+            'size': len(content)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e), 'status': 'ERROR'}), 500
+
+@app.route('/api/ml', methods=['GET'])
+def get_memoire_longue():
+    """Retourne mémoire longue via API GET"""
+    token = request.args.get('token')
+    if token != API_SECRET_TOKEN:
+        return jsonify({'error': 'Token invalide', 'status': 'UNAUTHORIZED'}), 401
+    
+    try:
+        os.chdir(REPO_DIR)
+        subprocess.run(['git', 'pull'], check=True, capture_output=True)
+        
+        with open(os.path.join(REPO_DIR, 'memoire_longue.md'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        return jsonify({
+            'status': 'OK',
+            'content': content,
+            'timestamp': datetime.now().isoformat(),
+            'type': 'longue',
+            'size': len(content)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e), 'status': 'ERROR'}), 500
+
+# =====================================================
+# 🆕 V3.4 CORRIGÉE - ROUTES FLASK EXISTANTES (INCHANGÉES)
 # =====================================================
 
 HTML_TEMPLATE = """<!DOCTYPE html>
@@ -1009,7 +1084,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div id="message" class="message"></div>
         
         <div class="footer">
-            V3.4 - Phase 2.1 : Auto-alimentation mémoire courte<br>
+            V3.4 CORRIGÉE - Phase 2.1 : Auto-alimentation mémoire courte<br>
             🔄 Persévérer / 🌟 Espérer / 📈 Progresser
         </div>
     </div>
@@ -1193,6 +1268,87 @@ def reveil_quotidien():
     print(f"🧠 _Head.Soeurise - Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print("=" * 60)
     
+    emails = fetch_emails()
+    print(f"  ↓ {len(emails)} emails, {sum(e.get('attachment_count', 0) for e in emails)} pièces jointes")
+    
+    memoire_files = load_memoire_files()
+    db_data = query_database()
+    
+    resultat = claude_decide_et_execute(emails, memoire_files, db_data)
+    
+    if not resultat:
+        print("✗ Erreur: Pas de résultat Claude")
+        return
+    
+    save_to_database(resultat, emails)
+    files_updated = save_memoire_files(resultat)
+    
+    if files_updated:
+        git_commit_and_push(files_updated, f"🧠 Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    
+    send_email_rapport(resultat.get('rapport_quotidien', 'Pas de rapport'))
+    
+    print("\n✓ Réveil terminé")
+    print("=" * 60)
+
+# =====================================================
+# SCHEDULER EN THREAD SÉPARÉ
+# =====================================================
+
+def run_scheduler():
+    """Thread scheduler pour réveils quotidiens"""
+    schedule.every().day.at("08:00").do(reveil_quotidien)
+    schedule.every(30).minutes.do(lambda: None)
+    
+    print("⏰ Scheduler démarré - Réveil quotidien: 08:00 UTC")
+    
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+# =====================================================
+# MAIN - THREADING V3.4
+# =====================================================
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("_Head.Soeurise V3.4 CORRIGÉE")
+    print("Modèle: Haiku 4.5 (claude-haiku-4-5-20251001)")
+    print("Architecture: Threading (Scheduler + Flask API)")
+    print("Phase 2.1: Auto-alimentation mémoire courte")
+    print("CORRECTION: Endpoints /api/mc, /api/mm, /api/ml AJOUTÉS")
+    print("="*60)
+    
+    if not init_git_repo():
+        print("⚠️ Échec initialisation Git")
+    
+    print("\n" + "=" * 60)
+    print("🧠 RÉVEIL DE TEST")
+    print("=" * 60)
+    try:
+        reveil_quotidien()
+    except Exception as e:
+        print(f"✗ Erreur: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    print("✓ Thread scheduler lancé")
+    
+    print("\n" + "=" * 60)
+    print("🌐 FLASK API V3.4 CORRIGÉE")
+    print("=" * 60)
+    print(f"✓ Limites: {MAX_EMAILS_TO_FETCH} emails × {MAX_ATTACHMENTS_PER_EMAIL} PDFs")
+    print(f"✓ Email body: {MAX_EMAIL_BODY_LENGTH} chars | PDF: {MAX_PDF_PAGES_TO_EXTRACT} pages")
+    print(f"✓ Modèle: {CLAUDE_MODEL}")
+    print(f"✓ Phase 2.1: Endpoints /api/log-session activé")
+    print(f"✓ V3.4 CORRIGÉE: Endpoints /api/mc, /api/mm, /api/ml ACTIFS")
+    print("=" * 60 + "\n")
+    
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+
     emails = fetch_emails()
     print(f"  → {len(emails)} emails, {sum(e.get('attachment_count', 0) for e in emails)} pièces jointes")
     
