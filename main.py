@@ -255,6 +255,10 @@ def append_to_memoire_courte(session_data: Dict[str, Any]) -> Tuple[bool, str]:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(updated_content)
         
+        # Git config (nécessaire pour detached HEAD)
+        subprocess.run(['git', 'config', 'user.name', GIT_USER_NAME], check=True)
+        subprocess.run(['git', 'config', 'user.email', GIT_USER_EMAIL], check=True)
+        
         # Git commit + push
         subprocess.run(['git', 'add', 'memoire_courte.md'], check=True)
         subprocess.run(['git', 'commit', '-m', f"📝 Session chat {timestamp} ({importance_label})"], 
