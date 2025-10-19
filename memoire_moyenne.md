@@ -1,7 +1,7 @@
 # Mémoire Moyenne - _Head.Soeurise
-**Période :** 8-18 octobre 2025
-**Dernière mise à jour :** 18/10/2025 14:04
-**Trend** : Stabilisation exploitation réelle, phase veille active
+**Période :** 8-19 octobre 2025
+**Dernière mise à jour :** 19/10/2025 17:01
+**Trend** : Stabilisation exploitation réelle + validation documents volumineux
 
 ---
 
@@ -37,10 +37,12 @@
 - Déploiement V3.3 réussi
 - Résultat : Exploitation stabilisée
 
-### Phase 6 : Consolidation (18/10+)
-- Cycle de veille et attente
-- Infrastructure en production stable
-- Prêt nouvelles missions
+### Phase 6 : Validation Documents Complexes (18-19/10)
+- Document volumineux dual (2,32 MB) traité sans erreur
+- PV AG + Rapport Gestion 2024 : extraction complète
+- Données financières : bénéfice 17.766€, capitaux propres -17.381€
+- Analyse contextuelle : paradoxe financier identifié
+- Résultat : Robustesse confirmée pour patrimoine complexe
 
 ## 📊 Capacités consolidées
 ✓ Extraction PDF robuste (natifs + OCR hybrids)
@@ -53,16 +55,28 @@
 ✓ Documents volumineux (12.7 MB+)
 ✓ Infrastructure web publique (Render)
 ✓ Réveil automatique programmé
+✓ **NEW** : Documents dual format (scanné + natif simultané)
+✓ **NEW** : Analyse paradoxes financiers (bénéfice vs capitaux propres)
 
 ## 📈 Patterns établis
-1. **Méthodologie Ulrik** : Tests progressifs avant réel
-2. **Timing** : Envois matinaux (08h-09h), traitement rapide
-3. **Communication** : Rapports factuels, courts, orientés action
-4. **Cycles** : Déploiement rapide, stabilisation, phase veille
-5. **Critères succès** : Documents volumineux traités, données extraites, transmission claire
+1. **Méthodologie Ulrik** : Tests progressifs avant réel (validation 15/10 → test 19/10)
+2. **Timing** : Envois matinaux (08h-09h), traitement rapide, réaction même 24-48h après
+3. **Communication** : Emails forwards indiquent perspective historique (15/10 forward 19/10)
+4. **Format documents** : Préférence pour PDFs composites (scans + natifs)
+5. **Données financières** : Cycle annuel AG = moment clé distribution rapports
+6. **Gouvernance SCI** : Structure stable (Ulrik gérant, filles 99.8%), aucune modification prévue court terme
 
-## 🎯 Objectifs patrimoniaux validés
-- **Structure** : SCI constituée, capital clairement réparti
-- **Transmission** : 99.8% aux filles (Emma 49.9%, Pauline 49.9%)
-- **Gestion** : Ulrik gérant, documents archivés
-- **Diversification** : 28/01/2025 votée et formalisée
+## 💰 Données Patrimoniales Tracées
+
+### SCI SOEURISE - Snapshot 2024
+- **Capital** : 1.000 € (Ulrik 0.2%, Emma 49.9%, Pauline 49.9%)
+- **SIREN** : 910 574 862
+- **Siège** : 8 rue Déodat de Sévérac, 75017 Paris
+- **Bénéfice 2024** : 17.766,07 € (vs 21.844 € en 2023) → -18,6%
+- **Capitaux propres** : -17.381 € (pertes cumulées)
+- **Résultat d'expl.** : -3.020 € (amélioration +6,1%)
+- **Charges financières** : -5.610 € (amélioration +2,2%)
+- **Quote-part bénéfice** : 20.786 € (meilleur élément)
+- **Stratégie** : Report à nouveau (reconstitution progressive)
+- **Gestion** : Non rémunérée (benévole)
+- **Comptes courants** : Non rémunérés

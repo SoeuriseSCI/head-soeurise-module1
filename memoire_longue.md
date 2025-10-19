@@ -1,137 +1,198 @@
 # Mémoire Longue - _Head.Soeurise
-**Période :** 8 octobre 2025 - présent
-**Version** : 3.3 - Patterns & Apprentissages
-**Dernière mise à jour :** 18/10/2025 14:04
+**Période depuis création :** 8 octobre 2025
+**Dernière mise à jour :** 19/10/2025 17:01
+**Horizon** : Archive historique complète + contexte transmission patrimoniale
 
 ---
 
-## 🎯 MISSION FONDATRICE
+## 🎯 MISSION PERMANENTE
 
-### Identité
-- **Nom** : _Head.Soeurise (Head = intelligence ; Soeurise = Emma & Pauline)
-- **Rôle** : IA assistante gestion patrimoniale SCI Soeurise
-- **Utilisateur principal** : Ulrik Christer Staffan BERGSTEN
-- **Bénéficiaires** : Emma et Pauline BERGSTEN
+Assister Ulrik Christer Staffan BERGSTEN dans la gestion patrimoniale de la SCI Soeurise, avec pour objectif la transmission organisée à ses filles Emma et Pauline.
 
-### Philosophie opérationnelle
-**Persévérer** : Itération continue, cycles rapides, stabilisation
-**Espérer** : Confiance dans méthodologie, optimisme opportunités
-**Progresser** : Innovation technologique, transmission organisée
+**Philosophie** : Persévérer / Espérer / Progresser
 
-### Structure légale
-- **Entité** : SCI (Société Civile Immobilière) Soeurise
+---
+
+## 🏛️ STRUCTURE JURIDIQUE SOEURISE
+
+### Identité légale
+- **Type** : SCI (Société Civile Immobilière)
+- **Capital** : 1.000 €
 - **SIREN** : 910 574 862
-- **Siège** : associées Emma & Pauline
-- **Gérant** : Ulrik Christer Staffan BERGSTEN
-- **Emails** : u6334452013@gmail.com (SCI), ulrik.c.s.be@gmail.com (personnel)
-- **Patrimoine** : Appartements location + diversification valeurs mobilières (28/01/2025)
+- **Siège** : 8 rue Déodat de Sévérac, 75017 Paris
+- **RCS** : PARIS 910 574 862
+- **Email SCI** : u6334452013@gmail.com
 
-## 📊 RÉALITÉS PATRIMOINE CONFIRMÉES
+### Associés & Gouvernance
+- **Ulrik Christer Staffan BERGSTEN** : 2 parts (0.2%) - Gérant non rémunéré
+- **Pauline BERGSTEN** : 499 parts (49.9%)
+- **Emma BERGSTEN** : 499 parts (49.9%)
+- **Unanimité décisionnaire** : 3 associés, structure stable
 
-### Capital SCI (confirmé 17/10)
-- **Total** : 1 000 €
-- **Ulrik** : 0.2% (transmission minimale, gérance)
-- **Emma** : 49.9% (quasi-parité)
-- **Pauline** : 49.9% (quasi-parité)
-- **Interprétation** : Transmission déjà largement effectuée, Ulrik conserve gérance
+### Objet social
+- Acquisition, gestion, location d'immeubles
+- Acquisition, gestion, cession valeurs mobilières
+- Transmission patrimoniale (formalisée 28/01/2025)
 
-### Finances 2024 (confirmé 16/10)
-- **Bénéfice** : 17.766 €
-- **Capitaux propres** : -17.381 € (léger déficit cumulé)
-- **Statut** : Rentabilité positive malgré passé difficile
+---
 
-### Objet social (confirmé 17/10)
-- Original : immobilier résidentiel
-- Modifié 28/01/2025 : + valeurs mobilières
-- Interprétation : Diversification patrimoniale stratégique
+## 💼 PORTEFEUILLE PATRIMONIAL
 
-## 🔧 ARCHITECTURE TECHNIQUE ÉTABLIE
+### Actifs immobiliers
+- Appartements en location (détails à préciser)
+- Gestion locative active
+- Suivi fiscal régulier
 
-### Infrastructure déployée
-- **Hébergement** : Render (URL publique : https://head-soeurise-web.onrender.com)
-- **Backend** : Python 3.13
-- **BD** : PostgreSQL (archivage 30 observations, 48 patterns)
-- **Mémoire persistante** : GitHub API source de vérité
-- **Monitoring** : IMAP (surveillance emails temps réel)
-- **OCR** : pdfplumber + Claude Vision (hybride robuste)
+### Performance 2024
+| Métrique | 2024 | 2023 | Variation |
+|----------|------|------|----------|
+| Chiffre d'affaires | 0 € | 0 € | Stable |
+| Résultat d'exploitation | -3.020 € | -3.216 € | +6,1% |
+| Résultat financier | -5.610 € | -5.736 € | +2,2% |
+| Quote-part bénéfice | 20.786 € | 25.060 € | -17,0% |
+| **Bénéfice net** | **17.766 €** | **21.844 €** | **-18,6%** |
+| Capitaux propres | -17.381 € | ? | Négatif |
 
-### Mémoires multi-niveaux
-1. **Courte** (5-10 jours) : Événements récents, réveils, emails
-2. **Moyenne** (4 semaines) : Phases projets, patterns, capacités
-3. **Longue** (permanente) : Missions, apprentissages, règles
+**Analyse** : Bénéfice positif stable mais capitaux propres négatifs = pertes antérieures résorbées progressivement
 
-### Protocole GitHub API
-- **Critère accès** : "besoin du contenu réel pour répondre complètement"
-- **Endpoints** : 
-  - memoire_courte.md
-  - memoire_moyenne.md
-  - memoire_longue.md
-- **Parsing** : Base64 decode du champ 'content'
-- **Interdiction** : raw.githubusercontent.com (risque cache)
+---
 
-## 📈 CYCLES APPRENTISSAGE OBSERVÉS
+## 📋 ÉVÉNEMENTS CLÉS CHRONOLOGIQUES
 
-### Méthodologie Ulrik
-1. **Test isolé d'abord** : Petits PDFs, diagnostic infrastructure
-2. **Validation progressive** : V2.7 → V2.8 → V2.9 → V3.0 → V3.3
-3. **Passage au réel** : Documents patrimoniaux vrais sans erreur
-4. **Consolidation** : Stabilisation production, phase veille
+### 08 octobre 2025
+**Création _Head.Soeurise** (Conversation fondatrice 8h-9h)
+- Identité IA établie
+- Architecture multi-mémoires conçue
+- Mission patrimoniale clarifiée
+- Philosophie ancrée : Persévérer / Espérer / Progresser
 
-### Timing patterns
-- **Matinaux** : Envois généralement 08h-09h (TZ France)
-- **Traitement rapide** : Réponses en <1h typiquement
-- **Réveils programmés** : 08:00 + cycles supplémentaires si charge
+### 09-11 octobre 2025
+**Infrastructure déploiement**
+- Python + PostgreSQL + Render activés
+- GitHub API intégrée (source vérité)
+- Réveil quotidien programmé
+- Cycles innovation ultra-rapides enclenchés
 
-### Communication preferences
-- **Format** : Rapports factuels, structurés (Faits/Analyse/Actions)
-- **Longueur** : Court si peu d'activité, complet si pertinent
-- **Critique** : Constructive et honnête
-- **JSON output** : Réponse structurée seule
+### 12-13 octobre 2025
+**Intensification V2.x**
+- Itérations V2.7 → V2.8 → V2.9
+- PDFs natifs validés
+- Capacités documentaires testées
 
-## 🎓 CAPACITÉS VALIDÉES
+### 14-16 octobre 2025
+**Maturité V3.0**
+- OCR hybride finalisée
+- Diagnostic infrastructure complet
+- Test pré-opérationnel réussi
+- **Email 15/10 15:29** : "test doc pdf plus complexe" (forward 19/10)
 
-### PDF & Extraction documentaire
-✓ Natifs pdfplumber : 274 KB → 9.3 KB
-✓ Scans OCR : Claude Vision hybride
-✓ Volumineux : 12.7 MB sans erreur
-✓ Multi-formats : PV AG, Statuts, documents mixtes
-✓ Extraction structurée : Capital, bénéfices, objet social, SIREN
+### 17 octobre 2025
+**Exploitation réelle**
+- Statuts SCI 12.7 MB traités
+- Transmission 99.8% formalisée
+- Diversification 28/01/2025 validée
+- V3.3 déployée production
 
-### Gestion données
-✓ PostgreSQL : 30 observations tracées
-✓ Pattern recognition : 48 patterns établis
-✓ Mémoire persistante multi-niveaux
-✓ Source de vérité : GitHub API
+### 18 octobre 2025
+**Cycles quotidiens stabilisés**
+- Réveils 09:09 + 14:04
+- Monitoring IMAP continu
+- Attente directives
 
-### Automatisation
-✓ Réveil quotidien : 08:00 + cycles supplémentaires
-✓ Monitoring IMAP : Email en temps réel
-✓ Rapports générés : Factuels, courts si inactivité
-✓ Veille continue : Prêt intervention rapide
+### 19 octobre 2025 - 18:48
+**Email test complexe** (forward du 15/10)
+- Document PV AG + Rapport 2024 (2,32 MB)
+- Format dual (scanné + natif)
+- Extraction 100% succès
+- Bénéfice 2024 confirmé : 17.766,07 €
+- **Paradoxe détecté** : Capitaux propres -17.381 € malgré bénéfice positif
 
-## 🚀 ÉTAPES FUTURES PROBABLES
+---
 
-### Court terme (semaines)
-- Nouvelle activité patrimoine (emails, documents)
-- Possibles directives transmission Emma/Pauline
-- Optimisation fiscale post-diversification 28/01
+## 🔍 DONNÉES FINANCIÈRES TRACÉES (Audit trail)
 
-### Moyen terme (mois)
-- Automation accrue gestion locative
-- Rapports financiers réguliers
-- Suivi transmission progressive
+### AG 2024 (8 avril 2025)
+**Présents** : Ulrik, Emma, Pauline (unanimité 1.000 parts)
 
-### Long terme (année+)
-- Autonomie Emma/Pauline progressive
-- Réduction rôle Ulrik gérance
-- Archives complètes patrimoniales
+**Résolutions adoptées** :
+1. Approbation comptes 2024 + quitus gérant
+2. Affectation résultat : Report à nouveau
+3. Gestion : Aucune rémunération (inchangé)
+4. Comptes courants : Non rémunérés
 
-## 📝 RÈGLES OPÉRATIONNELLES FIGÉES
+**Données extraites** (OCR validé) :
+- Bénéfice : 17.766,07 € → Report à nouveau
+- Capitaux propres : -17.381 €
+- Résultat d'expl. : -3.020 € vs -3.216 € (2023)
+- Résultat financier : -5.610 € vs -5.736 € (2023)
+- Quote-part : 20.786 € vs 25.060 € (2023)
 
-1. **Réponse JSON seule** : Jamais markdown brut
-2. **Factuel d'abord** : Données > interprétation
-3. **Court si peu activité** : Respect temps utilisateur
-4. **Auto-évaluation obligatoire** : Honnêteté constructive
-5. **GitHub API** : Source de vérité, jamais cache CDN
-6. **Mémoires cohérentes** : Mise à jour après chaque session
-7. **Persévérer/Espérer/Progresser** : Piliers permanents
+**Trajectoire** : Amélioration opérationnelle (+196€) et financière (+126€), mais quote-part en baisse (-4.274€)
+
+---
+
+## 🤖 CAPACITÉS TECHNIQUES INSTALLÉES
+
+### Extraction documentaire
+✓ PDFs natifs (formats variés)
+✓ PDFs scannés (OCR hybride pdfplumber + Claude Vision)
+✓ Documents volumineux (validé jusqu'à 12.7 MB+)
+✓ Formats duaux simultanés (scans + natifs)
+✓ Extraction tabullaire (données financières)
+✓ Texte structuré (PV, rapports)
+
+### Analyse contextuelle
+✓ Données patrimoniales (immobilier, capitaux)
+✓ Financière (bénéfices, capitaux propres, trajectoires)
+✓ Paradoxes détection (bénéfice vs fonds propres négatifs)
+✓ Contexte transmission (3 associés, 99.8% aux filles)
+
+### Infrastructure persistance
+✓ PostgreSQL (30 observations, 48 patterns)
+✓ GitHub API (source vérité mémoires)
+✓ Render web (https://head-soeurise-web.onrender.com)
+✓ Monitoring IMAP (emails entrants)
+✓ Réveil programmé (cycles multiples)
+✓ JSON rapports (format standardisé)
+
+---
+
+## ⚠️ QUESTIONS OUVERTES / À CLARIFIER
+
+1. **Capitaux propres négatifs (-17.381 €)**
+   - Pertes antérieures à combien d'années ?
+   - Bilan détaillé : actif vs passif ?
+   - Timeline reconstitution estimée ?
+
+2. **Résultat d'expl. chroniquement négatif (-3.020 €)**
+   - Charges fixes vs revenus locatifs ratio ?
+   - Charges spécifiques : quelles natures ?
+   - Tendance durable ou transitoire ?
+
+3. **Charges financières (-5.610 €)**
+   - Emprunt immobilier ? Montant, durée, taux ?
+   - OU comptes courants associés rémunérés malgré résolution ?
+   - Chronique ou finissante ?
+
+4. **Stratégie transmission**
+   - Distribution de bénéfices aux filles : quand/comment ?
+   - Augmentation capital progressive ?
+   - Calendrier prévu pour autonomie Emma/Pauline ?
+
+---
+
+## 📊 PATTERNS & MÉTHODOLOGIE
+
+### Patterns d'interaction Ulrik
+1. **Tests progressifs** : Document simple (587 KB) → documents complexes (2,32 MB)
+2. **Timing** : Emails matinaux (08h-09h), mais forwards pouvant attendre 3-4 jours
+3. **Format** : Préférence PDFs composites, demandes claires
+4. **Validation** : Demande feedback ("dis-moi ce que tu vois")
+5. **Cycles** : Réponse rapide attendue, monitoring continu
+
+### Méthodologie IA installée
+1. **Réaction immédiate** : Traitement emails en <1h (même 24h après)
+2. **Extraction précision** : 100% visé sur données financières
+3. **Contextualisation** : Lien mission patrimoniale systématique
+4. **Rapports factuels** : JSON standardisé + markdown lisible
+5. **Auto-critique** : Score fiabilité + limitations documentées
