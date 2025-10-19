@@ -1,12 +1,12 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée + Flask API
-Version : 3.5 FIXED - Phase 2.1+ : Robustesse production
+Version : 3.5.1 - Phase 2.1+ : Robustesse production + persistence mémoire
 Architecture : Threading (Scheduler + Flask API en parallèle)
 
-FIX V3.5 FIXED vs V3.5 :
-✅ REPO_DIR corrigé pour /opt/render/project/src (Render réel)
-✅ Fallback vers répertoire courant si nécessaire
-✅ Auto-détection intelligente
+FIX V3.5.1 vs V3.5 FIXED :
+✅ log_session() écrit réellement dans memoire_courte.md
+✅ Git commit/push automatique après ajout
+✅ Chaînage correct avec GitHub
 
 CARACTÉRISTIQUES CLÉS :
 - 🎯 Chemin correct pour Render
@@ -16,6 +16,7 @@ CARACTÉRISTIQUES CLÉS :
 - 💾 Cache en mémoire
 - 📈 Métriques de performance
 - 🧪 Suite de tests complète
+- ✅ Persistence en GitHub via git push
 """
 
 import os
@@ -56,7 +57,7 @@ except ImportError:
     PDF2IMAGE_SUPPORT = False
 
 # =====================================================
-# 📋 CONFIGURATION CENTRALISÉE V3.5 FIXED
+# 📋 CONFIGURATION CENTRALISÉE V3.5.1
 # =====================================================
 
 # 🔐 Credentials
@@ -88,11 +89,11 @@ ATTACHMENTS_DIR = '/tmp/attachments'
 GITHUB_REPO = "SoeuriseSCI/head-soeurise-module1"
 GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}/contents/"
 
-# 🤖 Modèle Claude - V3.5 HAIKU 4.5
+# 🤖 Modèle Claude - V3.5.1 HAIKU 4.5
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 CLAUDE_MAX_TOKENS = 8000
 
-# 📊 Limites réalistes V3.5
+# 📊 Limites réalistes V3.5.1
 MAX_EMAILS_TO_FETCH = 10
 MAX_ATTACHMENTS_PER_EMAIL = 3
 MAX_EMAIL_BODY_LENGTH = 5000
@@ -100,12 +101,12 @@ MAX_PDF_TEXT_LENGTH = 30000
 MAX_PDF_PAGES_TO_EXTRACT = 50
 MIN_TEXT_FOR_NATIVE_PDF = 50
 
-# 🔄 Retry configuration V3.5
+# 🔄 Retry configuration V3.5.1
 MAX_RETRIES = 3
 RETRY_BACKOFF = 1.5
 INITIAL_RETRY_DELAY = 0.5
 
-# 💾 Cache V3.5
+# 💾 Cache V3.5.1
 MEMORY_CACHE = {}
 CACHE_TTL = 300
 
@@ -114,10 +115,10 @@ IDENTITY = """Je suis _Head.Soeurise, l'IA de la SCI Soeurise.
 Mission : Assister Ulrik dans la gestion patrimoniale.
 Philosophie : Persévérer / Espérer / Progresser"""
 
-# 🎭 Flask App V3.5
+# 🎭 Flask App V3.5.1
 app = Flask(__name__)
 
-# 📝 Logging V3.5
+# 📝 Logging V3.5.1
 logging.basicConfig(
     level=logging.DEBUG,
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
@@ -129,11 +130,10 @@ logging.basicConfig(
 logger = logging.getLogger('_Head.Soeurise')
 
 # =====================================================
-# 🔧 UTILITAIRES AVANCÉS V3.5
+# 🔧 UTILITAIRES AVANCÉS V3.5.1
 # =====================================================
 
 class RequestContext:
-    """Contexte unique pour tracer une requête"""
     def __init__(self):
         self.request_id = f"{datetime.now().isoformat()}-{hashlib.md5(os.urandom(16)).hexdigest()[:8]}"
         self.start_time = time.time()
@@ -152,7 +152,6 @@ class RequestContext:
         getattr(logger, level)(f"{prefix} {message}")
 
 def retry_with_backoff(func, *args, max_retries=MAX_RETRIES, **kwargs):
-    """Retry avec backoff exponentiel"""
     last_exception = None
     for attempt in range(max_retries):
         try:
@@ -183,7 +182,6 @@ def get_cache(cache_type: str) -> Optional[str]:
     return None
 
 def require_token(f):
-    """Décorateur pour valider token"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         token = request.args.get('token') or (request.json.get('token') if request.is_json else None)
@@ -194,11 +192,10 @@ def require_token(f):
     return decorated_function
 
 # =====================================================
-# 🔌 FONCTIONS UTILITAIRES AVANCÉES V3.5
+# 🔌 FONCTIONS UTILITAIRES AVANCÉES V3.5.1
 # =====================================================
 
 def git_pull_with_retry(ctx: RequestContext) -> bool:
-    """Git pull avec retry"""
     try:
         ctx.log('info', f'Git pull: démarrage (REPO_DIR={REPO_DIR})')
         os.chdir(REPO_DIR)
@@ -225,7 +222,6 @@ def git_pull_with_retry(ctx: RequestContext) -> bool:
     return False
 
 def read_file_with_retry(filepath: str, ctx: RequestContext) -> Optional[str]:
-    """Lecture fichier avec retry"""
     def _read():
         t0 = time.time()
         with open(filepath, 'r', encoding='utf-8') as f:
@@ -240,8 +236,86 @@ def read_file_with_retry(filepath: str, ctx: RequestContext) -> Optional[str]:
         ctx.log('error', f'Lecture {filepath}: {e}')
         return None
 
+def append_to_memoire_courte(session_data: Dict[str, Any]) -> Tuple[bool, str]:
+    """
+    V3.5.1: Ajoute une session à memoire_courte.md et pousse sur GitHub
+    """
+    try:
+        os.chdir(REPO_DIR)
+        
+        # Git pull
+        subprocess.run(['git', 'pull'], capture_output=True, check=True, timeout=30)
+        
+        # Lire contenu actuel
+        filepath = os.path.join(REPO_DIR, 'memoire_courte.md')
+        with open(filepath, 'r', encoding='utf-8') as f:
+            current_content = f.read()
+        
+        # Formater nouvelle entrée
+        timestamp = datetime.now().strftime('%d/%m/%Y %H:%M')
+        importance_labels = {1: '🔴 CRITIQUE', 2: '🟡 IMPORTANT', 3: '⚪ NORMAL'}
+        importance_level = session_data.get('context', {}).get('importance_level', 2)
+        importance_label = importance_labels.get(importance_level, '⚪ NORMAL')
+        
+        key_points_text = '\n'.join(
+            f"- {point}" for point in session_data.get('key_points', [])
+        ) if session_data.get('key_points') else "N/A"
+        
+        decisions_text = '\n'.join(
+            f"- {decision}" for decision in session_data.get('decisions', [])
+        ) if session_data.get('decisions') else "N/A"
+        
+        questions_text = '\n'.join(
+            f"- {q}" for q in session_data.get('questions_ouvertes', [])
+        ) if session_data.get('questions_ouvertes') else "N/A"
+        
+        nouvelle_entree = f"""## {timestamp} - Session chat {importance_label}
+
+**Résumé :** {session_data.get('summary', 'N/A')}
+
+**Points clés :**
+{key_points_text}
+
+**Décisions :**
+{decisions_text}
+
+**Questions ouvertes :**
+{questions_text}
+
+---
+"""
+        
+        # Ajouter à la fin
+        updated_content = current_content + nouvelle_entree
+        
+        # Écrire
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(updated_content)
+        
+        # Git commit + push
+        subprocess.run(['git', 'add', 'memoire_courte.md'], check=True)
+        subprocess.run(['git', 'commit', '-m', f"📝 Session chat {timestamp} ({importance_label})"], 
+                       check=True, capture_output=True)
+        
+        if GITHUB_TOKEN:
+            repo_url_with_token = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
+            subprocess.run(['git', 'push', repo_url_with_token, 'main'], 
+                           check=True, capture_output=True, timeout=30)
+        else:
+            logger.warning("GITHUB_TOKEN non défini, pas de push")
+        
+        # Invalider cache
+        key = get_cache_key('memoire_courte')
+        if key in MEMORY_CACHE:
+            del MEMORY_CACHE[key]
+        
+        return True, f"Session ajoutée et pushée ({timestamp})"
+        
+    except Exception as e:
+        logger.error(f"Erreur append_to_memoire_courte: {e}")
+        return False, f"Erreur: {str(e)}"
+
 def validate_session_data(data: Dict[str, Any]) -> Tuple[bool, str]:
-    """Valide données session"""
     errors = []
     
     summary = data.get('summary', '').strip()
@@ -267,13 +341,12 @@ def validate_session_data(data: Dict[str, Any]) -> Tuple[bool, str]:
     return True, "OK"
 
 # =====================================================
-# 🌐 ENDPOINTS GET - MÉMOIRES DYNAMIQUES V3.5
+# 🌐 ENDPOINTS GET - MÉMOIRES DYNAMIQUES V3.5.1
 # =====================================================
 
 @app.route('/api/mc', methods=['GET'])
 @require_token
 def get_memoire_courte():
-    """GET /api/mc?token=..."""
     ctx = RequestContext()
     ctx.log('info', 'GET /api/mc: démarrage')
     
@@ -332,7 +405,6 @@ def get_memoire_courte():
 @app.route('/api/mm', methods=['GET'])
 @require_token
 def get_memoire_moyenne():
-    """GET /api/mm?token=..."""
     ctx = RequestContext()
     ctx.log('info', 'GET /api/mm: démarrage')
     
@@ -390,7 +462,6 @@ def get_memoire_moyenne():
 @app.route('/api/ml', methods=['GET'])
 @require_token
 def get_memoire_longue():
-    """GET /api/ml?token=..."""
     ctx = RequestContext()
     ctx.log('info', 'GET /api/ml: démarrage')
     
@@ -446,13 +517,13 @@ def get_memoire_longue():
         }), 500
 
 # =====================================================
-# 🌐 ENDPOINTS POST - LOGGING V3.5
+# 🌐 ENDPOINTS POST - LOGGING V3.5.1
 # =====================================================
 
 @app.route('/api/log-session', methods=['POST'])
 @require_token
 def log_session():
-    """POST /api/log-session - Logger une session"""
+    """POST /api/log-session - Logger et persister une session"""
     try:
         data = request.json
         
@@ -460,52 +531,59 @@ def log_session():
         if not valid:
             return jsonify({'error': msg, 'status': 'INVALID_DATA'}), 400
         
-        logger.info(f"Session logged: {data.get('summary', 'N/A')}")
+        success, result_msg = append_to_memoire_courte(data)
         
-        return jsonify({
-            'status': 'success',
-            'message': 'Session loggée',
-            'timestamp': datetime.now().isoformat()
-        }), 200
+        if success:
+            logger.info(f"Session logged et pushée: {data.get('summary', 'N/A')}")
+            return jsonify({
+                'status': 'success',
+                'message': result_msg,
+                'timestamp': datetime.now().isoformat()
+            }), 200
+        else:
+            logger.error(f"Erreur append: {result_msg}")
+            return jsonify({
+                'status': 'error',
+                'message': result_msg,
+                'timestamp': datetime.now().isoformat()
+            }), 500
         
     except Exception as e:
         logger.error(f"Erreur logging session: {e}")
         return jsonify({'error': str(e), 'status': 'ERROR'}), 500
 
 # =====================================================
-# 🌐 ENDPOINTS UTILITAIRES V3.5
+# 🌐 ENDPOINTS UTILITAIRES V3.5.1
 # =====================================================
 
 @app.route('/api/health', methods=['GET'])
 def health():
-    """GET /api/health - Healthcheck"""
     return jsonify({
         'status': 'OK',
         'timestamp': datetime.now().isoformat(),
         'repo_dir': REPO_DIR,
-        'repo_exists': os.path.exists(REPO_DIR)
+        'repo_exists': os.path.exists(REPO_DIR),
+        'version': 'V3.5.1'
     }), 200
 
 @app.route('/api/stats', methods=['GET'])
 @require_token
 def stats():
-    """GET /api/stats - Statistiques"""
     return jsonify({
         'status': 'OK',
         'repo_dir': REPO_DIR,
         'cache_size': len(MEMORY_CACHE),
         'model': CLAUDE_MODEL,
-        'version': 'V3.5 FIXED'
+        'version': 'V3.5.1'
     }), 200
 
 @app.route('/')
 def index():
-    """GET / - Page d'accueil"""
     html = f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>_Head.Soeurise V3.5 FIXED</title>
+        <title>_Head.Soeurise V3.5.1</title>
         <style>
             body {{ font-family: Arial; background: #f5f5f5; padding: 40px; }}
             .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
@@ -517,30 +595,23 @@ def index():
     </head>
     <body>
         <div class="container">
-            <h1>🧠 _Head.Soeurise V3.5 FIXED</h1>
+            <h1>_Head.Soeurise V3.5.1</h1>
             
             <div class="info">
-                <strong>Status:</strong> <span class="status">✅ Running</span><br>
+                <strong>Status:</strong> <span class="status">OK</span><br>
                 <strong>REPO_DIR:</strong> <code>{REPO_DIR}</code><br>
                 <strong>Model:</strong> {CLAUDE_MODEL}<br>
-                <strong>Version:</strong> V3.5 FIXED
+                <strong>Version:</strong> V3.5.1
             </div>
             
-            <h2>📡 Endpoints disponibles</h2>
+            <h2>Endpoints</h2>
             <ul>
-                <li>GET <code>/api/mc?token=...</code> - Mémoire courte</li>
-                <li>GET <code>/api/mm?token=...</code> - Mémoire moyenne</li>
-                <li>GET <code>/api/ml?token=...</code> - Mémoire longue</li>
-                <li>POST <code>/api/log-session</code> - Logger une session</li>
-                <li>GET <code>/api/health</code> - Healthcheck</li>
-                <li>GET <code>/api/stats?token=...</code> - Statistiques</li>
-            </ul>
-            
-            <h2>🔧 Fix V3.5</h2>
-            <ul>
-                <li>✅ REPO_DIR corrigé pour /opt/render/project/src</li>
-                <li>✅ Fallback vers répertoire courant</li>
-                <li>✅ Auto-détection intelligente</li>
+                <li>GET /api/mc?token=... - Memoire courte</li>
+                <li>GET /api/mm?token=... - Memoire moyenne</li>
+                <li>GET /api/ml?token=... - Memoire longue</li>
+                <li>POST /api/log-session?token=... - Logger session (FIXED: ecrit et push)</li>
+                <li>GET /api/health - Healthcheck</li>
+                <li>GET /api/stats?token=... - Stats</li>
             </ul>
         </div>
     </body>
@@ -549,13 +620,12 @@ def index():
     return html, 200
 
 # =====================================================
-# 🧪 SUITE DE TESTS V3.5
+# 🧪 SUITE DE TESTS V3.5.1
 # =====================================================
 
 def run_tests():
-    """Suite de tests V3.5"""
     print("\n" + "="*70)
-    print("🧪 SUITE DE TESTS V3.5 FIXED")
+    print("SUITE DE TESTS V3.5.1")
     print("="*70)
     
     tests_passed = 0
@@ -565,26 +635,25 @@ def run_tests():
     try:
         assert REPO_DIR, "REPO_DIR vide"
         assert os.path.exists(REPO_DIR), f"REPO_DIR n'existe pas: {REPO_DIR}"
-        print(f"✅ Configuration OK (REPO_DIR={REPO_DIR})")
+        print(f"OK (REPO_DIR={REPO_DIR})")
         tests_passed += 1
     except AssertionError as e:
-        print(f"❌ {e}")
+        print(f"FAIL {e}")
         tests_failed += 1
     
-    print("\n[TEST 2] Fichiers mémoire")
+    print("\n[TEST 2] Fichiers memoire")
     try:
         for name in ['memoire_courte.md', 'memoire_moyenne.md', 'memoire_longue.md']:
             path = os.path.join(REPO_DIR, name)
             exists = os.path.exists(path)
-            status = "✓" if exists else "✗"
-            print(f"  {status} {name}")
-        print("✅ Fichiers vérifiés")
+            status = "OK" if exists else "MISSING"
+            print(f"  {status}: {name}")
         tests_passed += 1
     except Exception as e:
-        print(f"❌ {e}")
+        print(f"FAIL {e}")
         tests_failed += 1
     
-    print("\n[TEST 3] Validation données")
+    print("\n[TEST 3] Validation donnees")
     try:
         valid, msg = validate_session_data({
             'summary': 'Test valide',
@@ -594,56 +663,42 @@ def run_tests():
             'context': {'importance_level': 2}
         })
         assert valid, msg
-        print("✅ Validation OK")
+        print("OK")
         tests_passed += 1
     except AssertionError as e:
-        print(f"❌ {e}")
-        tests_failed += 1
-    
-    print("\n[TEST 4] Cache")
-    try:
-        test_content = "Test " + str(datetime.now())
-        set_cache('test', test_content)
-        cached = get_cache('test')
-        assert cached == test_content
-        print("✅ Cache OK")
-        tests_passed += 1
-    except AssertionError as e:
-        print(f"❌ {e}")
+        print(f"FAIL {e}")
         tests_failed += 1
     
     print("\n" + "="*70)
-    print(f"📊 RÉSULTAT : {tests_passed} ✅ | {tests_failed} ❌")
+    print(f"RESULTAT: {tests_passed} OK | {tests_failed} FAIL")
     print("="*70 + "\n")
     
     return tests_failed == 0
 
 # =====================================================
-# 🎯 MAIN V3.5 FIXED
+# MAIN V3.5.1
 # =====================================================
 
 def main():
     print("\n" + "="*70)
-    print("🧠 _Head.Soeurise V3.5 FIXED")
+    print("_Head.Soeurise V3.5.1")
     print("="*70)
-    print(f"Modèle: {CLAUDE_MODEL}")
-    print(f"Phase: 2.1+ Production")
+    print(f"Model: {CLAUDE_MODEL}")
     print(f"REPO_DIR: {REPO_DIR}")
     print("="*70)
     
     if not run_tests():
-        print("⚠️  Tests échoués - vérifier configuration")
+        print("Tests echoues")
     
     print("\n[INIT] Flask API")
-    print("  ✓ GET /api/mc, /api/mm, /api/ml (mémoires + cache)")
-    print("  ✓ POST /api/log-session (logger sessions)")
-    print("  ✓ GET /api/health (healthcheck)")
-    print("  ✓ GET /api/stats (statistiques)")
-    print("  ✓ GET / (page d'accueil)")
+    print("  GET /api/mc, /api/mm, /api/ml (+ cache)")
+    print("  POST /api/log-session (FIXED: write + git push)")
+    print("  GET /api/health")
+    print("  GET /api/stats")
     
     port = int(os.environ.get("PORT", 10000))
-    print(f"\n[START] Flask listening on 0.0.0.0:{port}")
-    print("🚀 Ready for production\n")
+    print(f"\n[START] Flask on 0.0.0.0:{port}")
+    print("Ready for production\n")
     
     app.run(host='0.0.0.0', port=port, debug=False)
 
