@@ -1,22 +1,6 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée + Flask API
-Version : 3.5.1 - Phase 2.1+ : Robustesse production + persistence mémoire
-Architecture : Threading (Scheduler + Flask API en parallèle)
-
-FIX V3.5.1 vs V3.5 FIXED :
-✅ log_session() écrit réellement dans memoire_courte.md
-✅ Git commit/push automatique après ajout
-✅ Chaînage correct avec GitHub
-
-CARACTÉRISTIQUES CLÉS :
-- 🎯 Chemin correct pour Render
-- 🔄 Retry logic avec backoff exponentiel
-- 📊 Logging structuré avec request_id unique
-- 🛡️ Validation stricte des données JSON
-- 💾 Cache en mémoire
-- 📈 Métriques de performance
-- 🧪 Suite de tests complète
-- ✅ Persistence en GitHub via git push
+Version : 3.5.1 FIXED - Correction detached HEAD
 """
 
 import os
@@ -57,10 +41,9 @@ except ImportError:
     PDF2IMAGE_SUPPORT = False
 
 # =====================================================
-# 📋 CONFIGURATION CENTRALISÉE V3.5.1
+# 📋 CONFIGURATION CENTRALISÉE V3.5.1 FIXED
 # =====================================================
 
-# 🔐 Credentials
 DB_URL = os.environ.get('DATABASE_URL', 'postgresql://default')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 SOEURISE_EMAIL = os.environ.get('SOEURISE_EMAIL', '')
@@ -72,7 +55,6 @@ GIT_USER_NAME = os.environ.get('GIT_USER_NAME', '_Head.Soeurise')
 GIT_USER_EMAIL = os.environ.get('GIT_USER_EMAIL', 'u6334452013@gmail.com')
 API_SECRET_TOKEN = os.environ.get('API_SECRET_TOKEN', 'HeadSoeurise2025!SecureToken#V3.3')
 
-# 📂 Répertoires - FIXED pour Render réel
 if os.path.exists('/opt/render/project/src'):
     REPO_DIR = '/opt/render/project/src'
     print("[INIT] REPO_DIR = /opt/render/project/src (Render)")
@@ -85,15 +67,12 @@ else:
 
 ATTACHMENTS_DIR = '/tmp/attachments'
 
-# 🌐 GitHub API
 GITHUB_REPO = "SoeuriseSCI/head-soeurise-module1"
 GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}/contents/"
 
-# 🤖 Modèle Claude - V3.5.1 HAIKU 4.5
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 CLAUDE_MAX_TOKENS = 8000
 
-# 📊 Limites réalistes V3.5.1
 MAX_EMAILS_TO_FETCH = 10
 MAX_ATTACHMENTS_PER_EMAIL = 3
 MAX_EMAIL_BODY_LENGTH = 5000
@@ -101,24 +80,19 @@ MAX_PDF_TEXT_LENGTH = 30000
 MAX_PDF_PAGES_TO_EXTRACT = 50
 MIN_TEXT_FOR_NATIVE_PDF = 50
 
-# 🔄 Retry configuration V3.5.1
 MAX_RETRIES = 3
 RETRY_BACKOFF = 1.5
 INITIAL_RETRY_DELAY = 0.5
 
-# 💾 Cache V3.5.1
 MEMORY_CACHE = {}
 CACHE_TTL = 300
 
-# 👤 Identité
 IDENTITY = """Je suis _Head.Soeurise, l'IA de la SCI Soeurise.
 Mission : Assister Ulrik dans la gestion patrimoniale.
 Philosophie : Persévérer / Espérer / Progresser"""
 
-# 🎭 Flask App V3.5.1
 app = Flask(__name__)
 
-# 📝 Logging V3.5.1
 logging.basicConfig(
     level=logging.DEBUG,
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
@@ -130,7 +104,7 @@ logging.basicConfig(
 logger = logging.getLogger('_Head.Soeurise')
 
 # =====================================================
-# 🔧 UTILITAIRES AVANCÉS V3.5.1
+# 🔧 UTILITAIRES
 # =====================================================
 
 class RequestContext:
@@ -192,34 +166,25 @@ def require_token(f):
     return decorated_function
 
 # =====================================================
-# 🔌 FONCTIONS UTILITAIRES AVANCÉES V3.5.1
+# GIT + FILE OPERATIONS
 # =====================================================
 
-def git_pull_with_retry(ctx: RequestContext) -> bool:
+def git_fetch_merge_with_retry(ctx: RequestContext) -> bool:
     try:
-        ctx.log('info', f'Git pull: démarrage (REPO_DIR={REPO_DIR})')
+        ctx.log('info', f'Git fetch+merge: démarrage')
         os.chdir(REPO_DIR)
         
         t0 = time.time()
-        result = subprocess.run(
-            ['git', 'pull'],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30
-        )
+        subprocess.run(['git', 'fetch'], capture_output=True, check=True, timeout=30)
+        subprocess.run(['git', 'merge', 'origin/main'], capture_output=True, timeout=30)
         duration = time.time() - t0
         ctx.metrics['git_pull_duration'] = duration
         
-        if result.returncode == 0:
-            ctx.log('info', f'Git pull: succès ({duration:.2f}s)')
-            return True
-    except subprocess.TimeoutExpired:
-        ctx.log('error', 'Git pull: timeout')
+        ctx.log('info', f'Git fetch+merge: succès ({duration:.2f}s)')
+        return True
     except Exception as e:
-        ctx.log('error', f'Git pull: {e}')
-    
-    return False
+        ctx.log('error', f'Git fetch+merge: {e}')
+        return False
 
 def read_file_with_retry(filepath: str, ctx: RequestContext) -> Optional[str]:
     def _read():
@@ -237,14 +202,12 @@ def read_file_with_retry(filepath: str, ctx: RequestContext) -> Optional[str]:
         return None
 
 def append_to_memoire_courte(session_data: Dict[str, Any]) -> Tuple[bool, str]:
-    """
-    V3.5.1: Ajoute une session à memoire_courte.md et pousse sur GitHub
-    """
     try:
         os.chdir(REPO_DIR)
         
-        # Git pull
-        subprocess.run(['git', 'pull'], capture_output=True, check=True, timeout=30)
+        # Git fetch + merge (fonctionne avec detached HEAD)
+        subprocess.run(['git', 'fetch'], capture_output=True, check=True, timeout=30)
+        subprocess.run(['git', 'merge', 'origin/main'], capture_output=True, timeout=30)
         
         # Lire contenu actuel
         filepath = os.path.join(REPO_DIR, 'memoire_courte.md')
@@ -341,7 +304,7 @@ def validate_session_data(data: Dict[str, Any]) -> Tuple[bool, str]:
     return True, "OK"
 
 # =====================================================
-# 🌐 ENDPOINTS GET - MÉMOIRES DYNAMIQUES V3.5.1
+# ENDPOINTS GET
 # =====================================================
 
 @app.route('/api/mc', methods=['GET'])
@@ -364,8 +327,8 @@ def get_memoire_courte():
                 'request_id': ctx.request_id
             }), 200
         
-        if not git_pull_with_retry(ctx):
-            ctx.log('warning', 'Git pull échoué')
+        if not git_fetch_merge_with_retry(ctx):
+            ctx.log('warning', 'Git fetch+merge échoué')
         
         filepath = os.path.join(REPO_DIR, 'memoire_courte.md')
         content = read_file_with_retry(filepath, ctx)
@@ -422,8 +385,8 @@ def get_memoire_moyenne():
                 'request_id': ctx.request_id
             }), 200
         
-        if not git_pull_with_retry(ctx):
-            ctx.log('warning', 'Git pull échoué')
+        if not git_fetch_merge_with_retry(ctx):
+            ctx.log('warning', 'Git fetch+merge échoué')
         
         filepath = os.path.join(REPO_DIR, 'memoire_moyenne.md')
         content = read_file_with_retry(filepath, ctx)
@@ -479,8 +442,8 @@ def get_memoire_longue():
                 'request_id': ctx.request_id
             }), 200
         
-        if not git_pull_with_retry(ctx):
-            ctx.log('warning', 'Git pull échoué')
+        if not git_fetch_merge_with_retry(ctx):
+            ctx.log('warning', 'Git fetch+merge échoué')
         
         filepath = os.path.join(REPO_DIR, 'memoire_longue.md')
         content = read_file_with_retry(filepath, ctx)
@@ -517,13 +480,12 @@ def get_memoire_longue():
         }), 500
 
 # =====================================================
-# 🌐 ENDPOINTS POST - LOGGING V3.5.1
+# ENDPOINTS POST
 # =====================================================
 
 @app.route('/api/log-session', methods=['POST'])
 @require_token
 def log_session():
-    """POST /api/log-session - Logger et persister une session"""
     try:
         data = request.json
         
@@ -553,7 +515,7 @@ def log_session():
         return jsonify({'error': str(e), 'status': 'ERROR'}), 500
 
 # =====================================================
-# 🌐 ENDPOINTS UTILITAIRES V3.5.1
+# ENDPOINTS UTILITAIRES
 # =====================================================
 
 @app.route('/api/health', methods=['GET'])
@@ -563,7 +525,7 @@ def health():
         'timestamp': datetime.now().isoformat(),
         'repo_dir': REPO_DIR,
         'repo_exists': os.path.exists(REPO_DIR),
-        'version': 'V3.5.1'
+        'version': 'V3.5.1 FIXED'
     }), 200
 
 @app.route('/api/stats', methods=['GET'])
@@ -574,7 +536,7 @@ def stats():
         'repo_dir': REPO_DIR,
         'cache_size': len(MEMORY_CACHE),
         'model': CLAUDE_MODEL,
-        'version': 'V3.5.1'
+        'version': 'V3.5.1 FIXED'
     }), 200
 
 @app.route('/')
@@ -583,7 +545,7 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>_Head.Soeurise V3.5.1</title>
+        <title>_Head.Soeurise V3.5.1 FIXED</title>
         <style>
             body {{ font-family: Arial; background: #f5f5f5; padding: 40px; }}
             .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
@@ -595,13 +557,13 @@ def index():
     </head>
     <body>
         <div class="container">
-            <h1>_Head.Soeurise V3.5.1</h1>
+            <h1>_Head.Soeurise V3.5.1 FIXED</h1>
             
             <div class="info">
                 <strong>Status:</strong> <span class="status">OK</span><br>
                 <strong>REPO_DIR:</strong> <code>{REPO_DIR}</code><br>
                 <strong>Model:</strong> {CLAUDE_MODEL}<br>
-                <strong>Version:</strong> V3.5.1
+                <strong>Version:</strong> V3.5.1 FIXED
             </div>
             
             <h2>Endpoints</h2>
@@ -609,7 +571,7 @@ def index():
                 <li>GET /api/mc?token=... - Memoire courte</li>
                 <li>GET /api/mm?token=... - Memoire moyenne</li>
                 <li>GET /api/ml?token=... - Memoire longue</li>
-                <li>POST /api/log-session?token=... - Logger session (FIXED: ecrit et push)</li>
+                <li>POST /api/log-session?token=... - Logger session (git fetch+merge fix)</li>
                 <li>GET /api/health - Healthcheck</li>
                 <li>GET /api/stats?token=... - Stats</li>
             </ul>
@@ -620,12 +582,12 @@ def index():
     return html, 200
 
 # =====================================================
-# 🧪 SUITE DE TESTS V3.5.1
+# TESTS
 # =====================================================
 
 def run_tests():
     print("\n" + "="*70)
-    print("SUITE DE TESTS V3.5.1")
+    print("SUITE DE TESTS V3.5.1 FIXED")
     print("="*70)
     
     tests_passed = 0
@@ -676,12 +638,12 @@ def run_tests():
     return tests_failed == 0
 
 # =====================================================
-# MAIN V3.5.1
+# MAIN
 # =====================================================
 
 def main():
     print("\n" + "="*70)
-    print("_Head.Soeurise V3.5.1")
+    print("_Head.Soeurise V3.5.1 FIXED")
     print("="*70)
     print(f"Model: {CLAUDE_MODEL}")
     print(f"REPO_DIR: {REPO_DIR}")
@@ -692,13 +654,13 @@ def main():
     
     print("\n[INIT] Flask API")
     print("  GET /api/mc, /api/mm, /api/ml (+ cache)")
-    print("  POST /api/log-session (FIXED: write + git push)")
+    print("  POST /api/log-session (git fetch+merge FIXED)")
     print("  GET /api/health")
     print("  GET /api/stats")
     
     port = int(os.environ.get("PORT", 10000))
     print(f"\n[START] Flask on 0.0.0.0:{port}")
-    print("Ready for production\n")
+    print("Ready\n")
     
     app.run(host='0.0.0.0', port=port, debug=False)
 
