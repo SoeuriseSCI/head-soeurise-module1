@@ -176,3 +176,29 @@ N/A
 - Intégrer email processing ou autre priorité ?
 
 ---
+## 19/10/2025 16:43 - V3.6 PRODUCTION LIVE 🔴 CRITIQUE
+
+**Résumé :** V3.6 déployée et opérationnelle - Fusion complète V3.4 + V3.5.3 en production
+
+**Points clés :**
+- Reveil quotidien intégré (scheduler 08:00 UTC)
+- Email processing complet (IMAP + SMTP)
+- Extraction PDF hybride (pdfplumber + Claude Vision)
+- Intelligence Claude (claude_decide_et_execute)
+- Auto-log via GET /api/mc?action=log
+- Git persistence directe
+- PostgreSQL archivage
+- 3 endpoints mémoires (GET /api/mc, /api/mm, /api/ml)
+
+**Décisions :**
+- ✅ V3.6 en production immédiate
+- ✅ Reveil quotidien 08:00 confirmé
+- ✅ Architecture production-ready
+- ✅ Auto-persistence dual-path validée
+
+**Questions ouvertes :**
+- Monitoring logs et alertes ?
+- Optimisation performance email ?
+- Expansion future (Module 2, 3, 4) ?
+
+---
