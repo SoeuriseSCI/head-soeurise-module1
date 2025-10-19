@@ -638,6 +638,9 @@ if __name__ == "__main__":
     if not init_git_repo():
         pass
     
+    # Reveil initial au démarrage (génère rapport immédiat)
+    reveil_quotidien()
+    
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     
