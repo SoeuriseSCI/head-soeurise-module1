@@ -374,16 +374,19 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
 
 {IDENTITY}
 
-=== MES MÉMOIRES ===
+=== MES MÉMOIRES ACTUELLES ===
 
-FONDATRICE :
+FONDATRICE (pérenne) :
 {memoire_files.get('memoire_fondatrice.md', '')[:3000]}
 
-COURTE :
+COURTE (7-10 jours, MAX 2000 chars, synthétique) :
 {memoire_files.get('memoire_courte.md', '')[:2000]}
 
-MOYENNE :
-{memoire_files.get('memoire_moyenne.md', '')[:2000]}
+MOYENNE (4 semaines, MAX 4000 chars, archive intelligente) :
+{memoire_files.get('memoire_moyenne.md', '')[:4000]}
+
+LONGUE (pérenne, MAX 3000 chars, patterns significatifs) :
+{memoire_files.get('memoire_longue.md', '')[:3000]}
 
 === NOUVEAUX EMAILS ({len(emails)}) ===
 {json.dumps(emails, indent=2, ensure_ascii=False, default=str)[:3000] if emails else "Aucun"}
@@ -394,10 +397,27 @@ MOYENNE :
 Observations : {len(db_data['observations'])}
 Patterns : {len(db_data['patterns'])}
 
+=== GESTION MÉMOIRES (CRITIQUE) ===
+
+MÉMOIRE COURTE (2000 chars MAX):
+- Garde : Emails très récents, évolutions tech CETTE SEMAINE, synthèses chats significatives
+- Archive en MOYENNE : Données >10 jours OU trop détaillées
+- Action : SYNTHÉTISER, pas énumérer
+
+MÉMOIRE MOYENNE (3000 chars MAX):
+- Garde : Ce qui a quitté courte mais reste utile (dernières 4 semaines)
+- Archive en LONGUE : Patterns établis ET pérennes
+- Action : Résumer les phases/cycles significatifs
+
+MÉMOIRE LONGUE (4000 chars MAX):
+- Garde SEULEMENT : Patterns PÉRENNES ET SIGNIFICATIFS, structure juridique, identité, mission
+- Delete : Données temporaires ou obsolètes
+- Action : Connaissance établie et confirmée
+
 === MISSION ===
 
-1. ANALYSE les emails
-2. GÈRE ta mémoire intelligemment
+1. ANALYSE les nouveaux emails et leur impact
+2. REGÉNÈRE les 3 mémoires selon limites taille et archivage
 3. GÉNÈRE un rapport FACTUEL
 
 FORMAT RAPPORT :
@@ -421,13 +441,15 @@ FORMAT RAPPORT :
 RÉPONSE JSON UNIQUEMENT :
 {{
   "rapport_quotidien": "# Rapport...",
-  "memoire_courte_md": "# Mémoire Courte...",
-  "memoire_moyenne_md": "# Mémoire Moyenne...",
-  "memoire_longue_md": "# Mémoire Longue...",
+  "memoire_courte_md": "[SYNTHÉTIQUE, MAX 2000 chars] Courte avec archivage des anciennes entrées",
+  "memoire_moyenne_md": "[MAX 4000 chars] Moyenne avec ce qui quitte courte + patterns en formation",
+  "memoire_longue_md": "[MAX 3000 chars] Longue avec patterns PÉRENNES confirmés",
   "observations_meta": "Ce que j'ai appris",
   "patterns_updates": [],
   "faits_marquants": []
 }}
+
+IMPORTANT: Respecte les limites de taille. Fusionne intelligemment.
 """
     
     try:
@@ -436,9 +458,10 @@ RÉPONSE JSON UNIQUEMENT :
             max_tokens=CLAUDE_MAX_TOKENS,
             system=f"""{IDENTITY}
 
-Tu dois produire des rapports FACTUELS, CRITIQUES et ACTIONNABLES.
-Section AUTO-ÉVALUATION obligatoire.
-Réponse UNIQUEMENT en JSON.""",
+Tu gères 3 mémoires hiérarchisées avec archivage intelligent.
+Rapports FACTUELS, CRITIQUES, ACTIONNABLES.
+AUTO-ÉVALUATION obligatoire.
+Réponse UNIQUEMENT en JSON avec limites taille respectées.""",
             messages=[{"role": "user", "content": contexte}]
         )
         
