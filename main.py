@@ -1,6 +1,6 @@
 """
 _Head.Soeurise - Réveil Quotidien avec Mémoire Hiérarchisée + Flask API
-Version : 3.5.1 FIXED - Correction detached HEAD
+Version : 3.5.2 - Phase 2.1+ : Robustesse production + fix push detached HEAD
 """
 
 import os
@@ -41,7 +41,7 @@ except ImportError:
     PDF2IMAGE_SUPPORT = False
 
 # =====================================================
-# 📋 CONFIGURATION CENTRALISÉE V3.5.1 FIXED
+# 📋 CONFIGURATION CENTRALISÉE V3.5.2
 # =====================================================
 
 DB_URL = os.environ.get('DATABASE_URL', 'postgresql://default')
@@ -266,7 +266,8 @@ def append_to_memoire_courte(session_data: Dict[str, Any]) -> Tuple[bool, str]:
         
         if GITHUB_TOKEN:
             repo_url_with_token = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
-            subprocess.run(['git', 'push', repo_url_with_token, 'main'], 
+            # V3.5.2 FIX: HEAD:main au lieu de main pour detached HEAD
+            subprocess.run(['git', 'push', repo_url_with_token, 'HEAD:main'], 
                            check=True, capture_output=True, timeout=30)
         else:
             logger.warning("GITHUB_TOKEN non défini, pas de push")
@@ -529,7 +530,7 @@ def health():
         'timestamp': datetime.now().isoformat(),
         'repo_dir': REPO_DIR,
         'repo_exists': os.path.exists(REPO_DIR),
-        'version': 'V3.5.1 FIXED'
+        'version': 'V3.5.2'
     }), 200
 
 @app.route('/api/stats', methods=['GET'])
@@ -540,7 +541,7 @@ def stats():
         'repo_dir': REPO_DIR,
         'cache_size': len(MEMORY_CACHE),
         'model': CLAUDE_MODEL,
-        'version': 'V3.5.1 FIXED'
+        'version': 'V3.5.2'
     }), 200
 
 @app.route('/')
@@ -549,7 +550,7 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>_Head.Soeurise V3.5.1 FIXED</title>
+        <title>_Head.Soeurise V3.5.2</title>
         <style>
             body {{ font-family: Arial; background: #f5f5f5; padding: 40px; }}
             .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
@@ -561,13 +562,13 @@ def index():
     </head>
     <body>
         <div class="container">
-            <h1>_Head.Soeurise V3.5.1 FIXED</h1>
+            <h1>_Head.Soeurise V3.5.2</h1>
             
             <div class="info">
                 <strong>Status:</strong> <span class="status">OK</span><br>
                 <strong>REPO_DIR:</strong> <code>{REPO_DIR}</code><br>
                 <strong>Model:</strong> {CLAUDE_MODEL}<br>
-                <strong>Version:</strong> V3.5.1 FIXED
+                <strong>Version:</strong> V3.5.2
             </div>
             
             <h2>Endpoints</h2>
@@ -575,7 +576,7 @@ def index():
                 <li>GET /api/mc?token=... - Memoire courte</li>
                 <li>GET /api/mm?token=... - Memoire moyenne</li>
                 <li>GET /api/ml?token=... - Memoire longue</li>
-                <li>POST /api/log-session?token=... - Logger session (git fetch+merge fix)</li>
+                <li>POST /api/log-session?token=... - Logger session (HEAD:main push fix)</li>
                 <li>GET /api/health - Healthcheck</li>
                 <li>GET /api/stats?token=... - Stats</li>
             </ul>
@@ -591,7 +592,7 @@ def index():
 
 def run_tests():
     print("\n" + "="*70)
-    print("SUITE DE TESTS V3.5.1 FIXED")
+    print("SUITE DE TESTS V3.5.2")
     print("="*70)
     
     tests_passed = 0
@@ -647,7 +648,7 @@ def run_tests():
 
 def main():
     print("\n" + "="*70)
-    print("_Head.Soeurise V3.5.1 FIXED")
+    print("_Head.Soeurise V3.5.2")
     print("="*70)
     print(f"Model: {CLAUDE_MODEL}")
     print(f"REPO_DIR: {REPO_DIR}")
@@ -658,7 +659,7 @@ def main():
     
     print("\n[INIT] Flask API")
     print("  GET /api/mc, /api/mm, /api/ml (+ cache)")
-    print("  POST /api/log-session (git fetch+merge FIXED)")
+    print("  POST /api/log-session (HEAD:main push fix)")
     print("  GET /api/health")
     print("  GET /api/stats")
     
