@@ -91,3 +91,20 @@ N/A
 N/A
 
 ---
+
+## 19/10/2025 16:25 - Test AUTO-LOG depuis Anthropic 🔴 CRITIQUE
+
+**Résumé :** Auto-persistence via GitHub token - TEST DIRECT depuis Claude Anthropic
+
+**Points clés :**
+- Git clone fonctionne avec token
+- Modification fichier prête
+- Push imminent
+
+**Décisions :**
+- Si ça marche = auto-persistence ACTIVÉE
+
+**Questions ouvertes :**
+- N/A
+
+---
