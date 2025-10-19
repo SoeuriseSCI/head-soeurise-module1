@@ -61,3 +61,18 @@ N/A
 N/A
 
 ---
+## 19/10/2025 09:08 - Session chat 🔴 CRITIQUE
+
+**Résumé :** V3.5.2 - Push HEAD:main fix pour detached HEAD
+
+**Points clés :**
+- Push HEAD:main au lieu de main
+- Doit persister sur GitHub
+
+**Décisions :**
+- V3.5.2 opérationnel
+
+**Questions ouvertes :**
+N/A
+
+---
