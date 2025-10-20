@@ -502,10 +502,22 @@ RÉPONSES: JSON uniquement, respecte limites taille.""",
         )
         
         response_text = response.content[0].text.strip()
+
+        # Nettoyer les backticks
         if response_text.startswith('```'):
             response_text = response_text.replace('```json\n', '').replace('```json', '').replace('\n```', '').replace('```', '').strip()
-        
-        resultat = json.loads(response_text)
+
+        # Extraire le JSON valide
+        json_start = response_text.find('{')
+        json_end = response_text.rfind('}')
+        if json_start >= 0 and json_end > json_start:
+            response_text = response_text[json_start:json_end+1]
+
+        try:
+            resultat = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            log_critical("CLAUDE_JSON_ERROR", str(e)[:50])
+            return None
         return resultat
     except Exception as e:
         log_critical("CLAUDE_ANALYSIS_ERROR", str(e)[:50])
