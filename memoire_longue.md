@@ -1,12 +1,12 @@
 # Mémoire Longue - _Head.Soeurise
 **Création :** 8 octobre 2025
-**Dernière mise à jour :** 19/10/2025 17:51
-**Horizon :** Archive historique + patterns pérennes
+**Dernière mise à jour :** 20/10/2025 07:17
+**Horizon :** Archive historique + patterns pérennes + capacités confirmées
 
 ---
 
 ## 🎯 MISSION PERMANENTE
-Assister Ulrik Christer Staffan BERGSTEN dans la gestion patrimoniale de la SCI Soeurise, transmission organisée à filles Emma et Pauline.
+Assister **Ulrik Christer Staffan BERGSTEN** dans gestion patrimoniale SCI Soeurise, transmission organisée à filles Emma et Pauline.
 **Philosophie** : Persévérer / Espérer / Progresser
 
 ## 🏛️ STRUCTURE JURIDIQUE SOEURISE (PÉRENNE)
@@ -15,24 +15,18 @@ Assister Ulrik Christer Staffan BERGSTEN dans la gestion patrimoniale de la SCI 
 - **SIREN** : 910 574 862
 - **Siège** : 8 rue Déodat de Sévérac, 75017 Paris
 - **Associés** : Ulrik (0.2% gérant), Pauline (49.9%), Emma (49.9%)
-- **Gouvernance** : Unanimité 3 associés, structure stable
 - **Objet** : Immobilier + valeurs mobilières + transmission
+- **Gouvernance** : Unanimité 3 associés
 
 ## 📋 ARCHITECTURE IA (PÉRENNE)
-- **3 mémoires hiérarchisées** : Courte (7-10j), Moyenne (4 sem), Longue (pérenne)
-- **Accès** : GitHub API (vérité source) + PostgreSQL archivage
-- **Réveil** : Quotidien automatique (08:00 + cycles)
-- **Infrastructure** : Python+PostgreSQL+Render, production stable
+- **3 mémoires** : Courte (7-10j, 2000 chars), Moyenne (4 sem, 4000 chars), Longue (pérenne, 3000 chars)
+- **Accès données** : GitHub API + PostgreSQL archivage
+- **Réveil** : Quotidien automatique cycles
+- **Infrastructure** : Python+PostgreSQL+Render, production
 
-## 📈 PATTERNS SIGNIFICATIFS ÉTABLIS
-1. **Méthodologie Ulrik** : Tests progressifs (validation → test réel 24-48h après)
-2. **Timing communication** : Matins, forwards indiquent historique, traitement rapide
-3. **Documents patrimoine** : PDFs composites dual format préférés
-4. **Cycles AG** : Moment clé rapports financiers annuels
-5. **Robustesse confirmée** : Systèmes gèrent documents 12.7+ MB sans dégradation
-
-## 💰 SNAPSHOT PATRIMONIAL 2024 (TRACÉ)
-- **Bénéfice** : 17.766,07 €
-- **Résultat expl.** : -3.020 € (en amélioration)
-- **Capitaux propres** : -17.381 € (stratégie reconstitution)
-- **Quote-part bénéfice** : 20.786 € (élément positif clé)
+## 📈 PATTERNS SIGNIFICATIFS (CONFIRMÉS)
+1. **Méthodologie Ulrik** : Tests progressifs, validation avant exploitation réelle
+2. **Documents patrimoine** : PDFs composites dual format, traitement 12.7+ MB robuste
+3. **Cycles AG** : Moment clé rapports financiers annuels
+4. **Robustesse système** : Validée sur documents volumineux complexes
+5. **Timing communication** : Matins, forwards indiquent historique, traitement rapide
