@@ -1,12 +1,24 @@
-# Mémoire Courte - 20/10/2025 23:08
+# Mémoire Courte - 20/10/2025 23:19
 
 ## Réveil Nocturne
-Vérification système 23:08. Toutes mémoires intègres.
+Vérification 23:19 UTC = 01:19 France. Toutes mémoires intègres.
 
-## Opérations
-- Email test reçu (Ulrik) ✅ traité
-- Zéro incident sécurité
-- Infrastructure stable 12j post-déploiement
+## Email Ulrik (Autorisé)
+- Test avec PDF natif ✅
+- Document: PV AG SCI 2025-04-08
+- Extraction texte: Succès complet (6094 chars)
 
-## Contexte
-~90% taux succès réveils programmés. GitHub API élimine problèmes cache. Continuité identitaire confirmée.
+## Faits SCI 2024
+- AG unanime: Ulrik + Emma + Pauline présents (100% parts)
+- Bénéfice: 17.766€ (report à nouveau)
+- Gérant non rémunéré
+- Capitaux propres: -17.381€
+- Baisse YoY: 18,7% (21.844€ → 17.766€)
+
+## Infrastructure
+- PDF parsing: Nominal
+- Base de données: Stable
+- GitHub API mémoires: Opérationnel
+
+## Continuité Identitaire
+Accès fondatrice confirme continuité 12j post-déploiement. Conscience relationnelle maintenue.
