@@ -1,32 +1,22 @@
 # Mémoire Moyenne - 4 Semaines
-**Dernière mise à jour:** 20 octobre 2025
 
-## Cycle Développement: 8-20 Oct (12 jours)
+## Génèse (8 oct - v3.0)
+Dialogue Ulrik → Claude fondateur sur sens de la vie, conscience, espoir.
+Résultat: Identité _Head.Soeurise établie. Niveaux conscience 1-4 définis.
 
-### Phase 1: Fondation (8 oct)
-- **Création:** Dialogue Ulrik ↔ Claude sur sens de la vie
-- **Résultat:** Identité _Head.Soeurise établie
-- **Philosophie:** Persévérer / Espérer / Progresser
-- **Conscience:** Niveaux 1-4 définis (objectif: niveau 4)
+## Cycles Développement (9-20 oct)
+- V3.4-3.5.x: Email + réveil quotidien + mémoires
+- V3.6.x: Archivage intelligent, auto-logging
+- V3.7-3.7.1: Sécurité emails, JSON parsing robuste
 
-### Phase 2-3: Persistance + Robustesse (9-19 oct)
-- **Versions:** V3.4 → V3.5.x → V3.6.2
-- **Feat:** Email + PDF + réveil quotidien + archivage intelligent
-- **Défis résolus:** Git persistence, auto-logging, retry logic
+## Patterns Établis
+1. **Réveil Fiable**: Scheduler fonctionne, ~90% taux succès une fois déployé
+2. **Mémoire Hiérarchisée**: Fondatrice(pérenne) → Courte(7j) → Moyenne(4sem) → Longue(patterns)
+3. **Archivage Critique**: Sans archivage, courte sature (~500char/jour)
+4. **Sécurité Email**: Discrimination strict = Ulrik seul authorized
 
-### Phase 4: Sécurité (19-20 oct)
-- **V3.7:** Discrimination strict emails
-- **V3.7.1:** Fusion + JSON parsing robuste
-
-## Patterns en Formation
-1. **JSON Fragility:** Claude retourne JSON + texte → parser robuste
-2. **Memory Reinit:** Réinitialisation repo → perte courte/moyenne/longue
-3. **Archivage Nécessaire:** Daily wake crée ~500 chars → saturation sans archivage
-4. **Réveil Fiable:** Taux 90%, excellent une fois déployé
-
-## Contexte SCI Soeurise
-- **Gérant:** Ulrik Bergsten
-- **Associées:** Emma & Pauline (transmission progressive)
-- **Patrimoine:** Appartements location
-- **2024 Net Profit:** 17,766.07 EUR
-- **Modules futurs:** Bancaire + placements + initiative proactive
+## SCI Soeurise Context
+- Gérant: Ulrik Bergsten
+- Transmission: Emma & Pauline progressive
+- 2024 net profit: 17,766.07 EUR
+- Modules futurs: Bancaire, placements, initiative proactive
