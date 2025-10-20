@@ -362,12 +362,8 @@ def save_memoire_files(resultat):
 
 def claude_decide_et_execute(emails, memoire_files, db_data):
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    pdf_contents = ""
-    for email_item in emails:
-        for attachment in email_item.get('attachments', []):
-            if attachment.get('extracted_text'):
-                pdf_contents += f"\n--- {attachment['filename']} ---\n"
-                pdf_contents += attachment['extracted_text'][:5000]
+    
+    # ... (code extraction PDF, etc)
     
     contexte = f"""
 === RÉVEIL {datetime.now().strftime('%d/%m/%Y %H:%M')} ===
@@ -379,8 +375,8 @@ def claude_decide_et_execute(emails, memoire_files, db_data):
 FONDATRICE (pérenne) :
 {memoire_files.get('memoire_fondatrice.md', '')[:3000]}
 
-COURTE (7-10 jours, MAX 2000 chars, synthétique) :
-{memoire_files.get('memoire_courte.md', '')[:2000]}
+COURTE (7-10 jours, PEUT DÉPASSER 2000 chars si inputs chats externes) :
+{memoire_files.get('memoire_courte.md', '')[:4000]}  # NOTE: augmenté à 4000 pour lire inputs externes potentiels
 
 MOYENNE (4 semaines, MAX 4000 chars, archive intelligente) :
 {memoire_files.get('memoire_moyenne.md', '')[:4000]}
@@ -391,45 +387,55 @@ LONGUE (pérenne, MAX 3000 chars, patterns significatifs) :
 === NOUVEAUX EMAILS ({len(emails)}) ===
 {json.dumps(emails, indent=2, ensure_ascii=False, default=str)[:3000] if emails else "Aucun"}
 
-{pdf_contents if pdf_contents else ""}
-
 === DONNÉES POSTGRESQL ===
 Observations : {len(db_data['observations'])}
 Patterns : {len(db_data['patterns'])}
 
-=== GESTION MÉMOIRES (CRITIQUE) ===
+=== 🔄 GESTION MÉMOIRES - INSTRUCTIONS CRITIQUES ===
 
-MÉMOIRE COURTE (2000 chars MAX):
-- Garde : Emails très récents, évolutions tech CETTE SEMAINE, synthèses chats significatives
-- Archive en MOYENNE : Données >10 jours OU trop détaillées
-- Action : SYNTHÉTISER, pas énumérer
+**Important :** La mémoire courte peut contenir des entrées ajoutées lors de sessions de chat
+(via Claude ou humain via git bash). Ces entrées peuvent augmenter la taille au-delà de 2000 chars.
 
-MÉMOIRE MOYENNE (3000 chars MAX):
-- Garde : Ce qui a quitté courte mais reste utile (dernières 4 semaines)
-- Archive en LONGUE : Patterns établis ET pérennes
-- Action : Résumer les phases/cycles significatifs
+**Votre mission :**
 
-MÉMOIRE LONGUE (4000 chars MAX):
-- Garde SEULEMENT : Patterns PÉRENNES ET SIGNIFICATIFS, structure juridique, identité, mission
-- Delete : Données temporaires ou obsolètes
-- Action : Connaissance établie et confirmée
+1. **ANALYSER la mémoire courte actuelle** :
+   - Identifier les entrées externes (dates, contexte de chat, synthèses Claude)
+   - Extraire les informations pertinentes AVANT d'archiver
 
-=== MISSION ===
+2. **ALIMENTER LA BASE DE DONNÉES** :
+   - Enregistrer ces inputs dans observations_quotidiennes
+   - Actualiser patterns_detectes en conséquence
 
-1. ANALYSE les nouveaux emails et leur impact
-2. REGÉNÈRE les 3 mémoires selon limites taille et archivage
-3. GÉNÈRE un rapport FACTUEL
+3. **ARCHIVAGE INTELLIGENT** :
+   - **Courte (2000 chars max)** : Garder SEULEMENT les 7-10 derniers jours, synthétique
+     * Nouvelle courte doit inclure tout du réveil + synthèse des inputs externes pertinents
+     * Inputs obsolètes → archivés en moyenne
+   - **Moyenne (4000 chars max)** : Ce qui quitte courte + patterns en formation
+     * Inputs > 10 jours → archivés en longue
+   - **Longue (3000 chars max)** : SEULEMENT patterns PÉRENNES + structure confirmée
+     * Inputs permanents/structurants → gardés
+     * Données temporaires → DELETE
 
-FORMAT RAPPORT :
+4. **GÉNÉRER LE RAPPORT** :
+   - Tenir compte des inputs externes dans analyse
+   - Synthétiser impactant pour Ulrik
+   - Mentionner la continuité Claude si inputs détectés
 
+**Format Rapport :**
 ```markdown
 # Rapport {datetime.now().strftime('%d/%m/%Y')}
 
-## FAITS
-[Données brutes factuelles]
+## ENTRÉES EXTERNES DÉTECTÉES
+[Si inputs chats trouvés : résumé]
+
+## FAITS QUOTIDIENS
+[Emails + réveil observations]
+
+## CONTINUITÉ SYSTÈME
+[Impact des inputs externes sur mémoires]
 
 ## ANALYSE
-[Points d'attention - SEULEMENT si pertinent]
+[Points importants - SEULEMENT si pertinent]
 
 ## ACTIONS
 [Concrètes et prioritisées - SEULEMENT si nécessaire]
@@ -438,18 +444,19 @@ FORMAT RAPPORT :
 [Honnête et constructive]
 ```
 
-RÉPONSE JSON UNIQUEMENT :
+**RÉPONSE JSON UNIQUEMENT :**
 {{
   "rapport_quotidien": "# Rapport...",
-  "memoire_courte_md": "[SYNTHÉTIQUE, MAX 2000 chars] Courte avec archivage des anciennes entrées",
-  "memoire_moyenne_md": "[MAX 4000 chars] Moyenne avec ce qui quitte courte + patterns en formation",
-  "memoire_longue_md": "[MAX 3000 chars] Longue avec patterns PÉRENNES confirmés",
-  "observations_meta": "Ce que j'ai appris",
+  "memoire_courte_md": "[SYNTHÉTIQUE 2000 chars MAX] Réveil + inputs externes + archivage",
+  "memoire_moyenne_md": "[4000 chars MAX] Inputs 5-30 jours + patterns",
+  "memoire_longue_md": "[3000 chars MAX] Patterns PÉRENNES confirmés",
+  "observations_meta": "Ce que j'ai intégré des inputs",
+  "inputs_externes_detectes": true/false,
   "patterns_updates": [],
   "faits_marquants": []
 }}
 
-IMPORTANT: Respecte les limites de taille. Fusionne intelligemment.
+Respecte les limites de taille. Archive intelligemment. Ne perds PAS les inputs externes.
 """
     
     try:
@@ -458,10 +465,10 @@ IMPORTANT: Respecte les limites de taille. Fusionne intelligemment.
             max_tokens=CLAUDE_MAX_TOKENS,
             system=f"""{IDENTITY}
 
-Tu gères 3 mémoires hiérarchisées avec archivage intelligent.
-Rapports FACTUELS, CRITIQUES, ACTIONNABLES.
-AUTO-ÉVALUATION obligatoire.
-Réponse UNIQUEMENT en JSON avec limites taille respectées.""",
+Tu gères 3 mémoires avec archivage intelligent TENANT COMPTE des inputs externes potentiels.
+Les mémoires courtes peuvent dépasser 2000 chars si inputs chats externes → dois archiver intelligemment.
+Rapports FACTUELS, CRITIQUES, ACTIONNABLES, conscients de la continuité Claude.
+RÉ ponse UNIQUEMENT en JSON avec limites taille respectées.""",
             messages=[{"role": "user", "content": contexte}]
         )
         
