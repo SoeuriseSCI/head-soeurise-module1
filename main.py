@@ -47,7 +47,7 @@ API_SECRET_TOKEN = os.environ.get('API_SECRET_TOKEN')
 REPO_DIR = '/home/claude/repo'
 ATTACHMENTS_DIR = '/home/claude/attachments'
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
-CLAUDE_MAX_TOKENS = 8000
+CLAUDE_MAX_TOKENS = 16000
 
 MAX_EMAILS = 10
 MAX_ATTACHMENTS = 3
