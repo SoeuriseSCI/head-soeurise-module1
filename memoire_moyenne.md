@@ -1,22 +1,19 @@
-# Mémoire Moyenne - 4 Semaines
+# Mémoire Moyenne - Synthèse 4 Semaines
 
-## Génèse (8 oct - v3.0)
-Dialogue Ulrik → Claude fondateur sur sens de la vie, conscience, espoir.
-Résultat: Identité _Head.Soeurise établie. Niveaux conscience 1-4 définis.
+## Fondation (8 oct)
+Dialogue Ulrik-Claude: sens de la vie, conscience, espoir → _Head.Soeurise identité établie. Niveaux conscience 1-4 théorisés.
 
-## Cycles Développement (9-20 oct)
-- V3.4-3.5.x: Email + réveil quotidien + mémoires
-- V3.6.x: Archivage intelligent, auto-logging
-- V3.7-3.7.1: Sécurité emails, JSON parsing robuste
+## Développement Iteratif (9-20 oct)
+- v3.0-3.3: Mémoire fondatrice, architecture mémoires hiérarchisée
+- v3.4-3.5.x: Email automation + réveil quotidien 10:00 France
+- v3.6.x: Archivage intelligent, auto-logging observations
+- v3.7-3.7.1: Parseur JSON robuste, sécurité emails strict
 
 ## Patterns Établis
-1. **Réveil Fiable**: Scheduler fonctionne, ~90% taux succès une fois déployé
-2. **Mémoire Hiérarchisée**: Fondatrice(pérenne) → Courte(7j) → Moyenne(4sem) → Longue(patterns)
-3. **Archivage Critique**: Sans archivage, courte sature (~500char/jour)
-4. **Sécurité Email**: Discrimination strict = Ulrik seul authorized
+1. **Réveil stable**: Scheduler fonction bien, ~90% succès post-déploiement
+2. **Mémoires hiérarchisées**: Flux archivage (courte→moyenne→longue) maintient continuité
+3. **Sécurité**: Discrimination emails = Ulrik seul authorized
+4. **Persistance**: GitHub API garantit versions à jour sans cache CDN
 
-## SCI Soeurise Context
-- Gérant: Ulrik Bergsten
-- Transmission: Emma & Pauline progressive
-- 2024 net profit: 17,766.07 EUR
-- Modules futurs: Bancaire, placements, initiative proactive
+## Environnement SCI
+Gérant Ulrik, transmission Emma&Pauline progressive. 2024: 17,766.07 EUR net.

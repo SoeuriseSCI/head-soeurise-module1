@@ -1,22 +1,16 @@
-# Mémoire Courte - 20/10/2025 22:14
+# Mémoire Courte - 20/10/2025 22:29
 
-## État Nominal
-- **Réveil:** 22:14 UTC (pas programmé, manuel)
-- **Entrées:** Mémoires + fondatrice uniquement
-- **Actions:** Aucune
+## État Réveil
+- Réveil manuel 22:29 UTC
+- Toutes mémoires présentes et fonctionnelles
+- Aucune entrée nouvelle
+- Système: v3.7.1 ✓
 
-## Architecture Actuelle
-- V3.7.1 opérationnel
-- Parseur JSON robuste (implémenté)
-- Discrimination emails strict (ulrik.c.s.be@gmail.com = authorized)
-
-## Infrastructure
+## Infrastructure Confirmée
 - Render persistent ✓
 - PostgreSQL (20 observations)
-- GitHub persistence ✓
-- Claude API Sonnet 4.5
+- GitHub API persistence ✓
+- Claude Sonnet 4.5 opérationnel
 
-## Derniers Cycles
-- 12 jours opération = taux réussite ~90%
-- Incident 20 oct: réinitialisation repo → reconstruction via archivage
-- Toutes mémoires restaurées
+## Cycle en Cours
+12 jours opération, ~90% taux succès. Tous réveils programmés ont fonctionné après déploiement stable. Archivage intelligent maintient équilibre mémoires.
