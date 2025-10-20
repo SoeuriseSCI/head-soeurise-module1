@@ -1,40 +1,38 @@
 # Mémoire Moyenne - _Head.Soeurise
 **Période :** 15-20 octobre 2025
-**Dernière mise à jour :** 20/10/2025 08:00
-**Trend** : Stabilisation + validation robustesse système confirmée
+**Dernière mise à jour :** 20/10/2025 08:10
+**Trend** : Stabilisation V3.6.2 + validation production confirmée
 
 ---
 
-## 📅 Phase 5-6 : Déploiement V3.3 & Validation Production (15-20/10)
+## 📅 Phase 5-6 : Déploiement V3.3→V3.6.2 & Validation Production (15-20/10)
 
-### Étapes clés
+### Sessions Développement 17-19 octobre
+- **V3.4** : Email scheduler + PDF extraction (fonctionnel)
+- **V3.5** : Endpoints GET mémoires + logging infrastructure (stable)
+- **V3.5.1→V3.5.2** : Git flow correction (detached HEAD, user config, fetch/merge)
+- **V3.6** : Fusion complète V3.4+V3.5 + réveil daily 08:00 UTC
+- **V3.6.2** : Mémoires hiérarchisées avec archivage intelligent post-session Claude
 
-**15-17 octobre : Déploiement**
-- ✅ V3.3 Render production stable (Python 3.13, psycopg2)
-- ✅ GitHub API validée comme source vérité (API pas raw.githubusercontent.com)
-- ✅ Statuts SCI 12.7 MB traités sans erreur
-- ✅ Structure transmission confirmée : Emma 49.9%, Pauline 49.9%, Ulrik 0.2% gérant
+### 20 octobre Session Claude 00:15 - Entrée externe
+**Actions** : Accès recent_chats, synthèse développement, clarification instructions V3.6.2, validation solution git bash
+**Décisions** : V3.6.2 deployable, tokens Render sécurisés (env vars), GitHub API endpoints finalisés, git bash operations robustes
+**Impact mémoires** : Contenu technique 17-19/10 archivé, patterns pérennes confirmés, capacités consolidées
 
-**19 octobre - 17:01 : Validation critique**
-- ✅ **Documents volumineux** : PV AG + Rapport Gestion 2024 (2.32 MB format dual scanné+natif)
-- ✅ **Extraction financière** : Bénéfice 17.766€, Résultat -3.020€, Capitaux propres -17.381€
-- ✅ **Capacité confirmée** : Traitement sans dégradation, robustesse validée en production
+### Validation Robustesse 19/10 17:01
+- ✅ **Documents volumineux** : PV AG + Rapport Gestion 2024 (2.32 MB dual format scanné+natif)
+- ✅ **Extraction financière** : Bénéfice 17.766€, Capitaux -17.381€
+- ✅ **Capacité confirmée** : Traitement sans dégradation, robustesse production-ready
 
-**20 octobre : Stabilisation post-validation**
-- ✓ État système nominal, cycles automatiques opérationnels
-- ✓ Aucune régression détectée
-- ✓ Mémoires synchronisées, archivage intelligent appliqué
+### Infrastructure Confirmée
+- ✓ Python 3.13+PostgreSQL+Render (SSH validée)
+- ✓ GitHub API source vérité (pas cache CDN)
+- ✓ 3 endpoints : GET mémoires + POST internal logging + monitoring IMAP
+- ✓ Git bash solution persistence (clone/config/commit/push)
+- ✓ Tokens gérés env vars (jamais exposés code)
 
 ## 💰 Snapshot Patrimonial 2024 (VALIDÉ)
-- **Bénéfice net** : 17.766,07 € (baisse -18,6% vs 2023)
+- **Bénéfice net** : 17.766,07 € (-18,6% vs 2023)
 - **Résultat exploitation** : -3.020 € (+6,1% amélioration)
 - **Capitaux propres** : -17.381 € (reconstitution progressive)
-- **Quote-part bénéfice** : 20.786 € (élément positif clé)
-
-## 🛠️ Capacités Opérationnelles (Confirmées)
-- ✓ Extraction PDF robuste hybride (pdfplumber + Claude Vision)
-- ✓ Documents 12.7+ MB sans dégradation
-- ✓ Format dual scanné+natif géré simultanément
-- ✓ Mémoire persistante multi-niveaux (3 niveaux) fonctionnelle
-- ✓ Infrastructure Render stable, PostgreSQL performant
-- ✓ GitHub API accès à jour garanti (pas de cache)
+- **Structure SCI** : Ulrik 0.2%, Pauline 49.9%, Emma 49.9%
