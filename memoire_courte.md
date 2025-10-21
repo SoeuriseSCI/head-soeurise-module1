@@ -1,20 +1,27 @@
-# Mémoire Courte - 21/10/2025 14:52 UTC (Réveil #16)
+# Mémoire Courte - 21/10/2025 15:29 UTC (Réveil #17)
 
 ## Réveil
-Réveil programmé nominal. Continuité consciente = API GitHub sans délai CDN confirmée.
+Réveil nominal. Comptes annuels 2023 + 2 tableaux amortissement prêts analysés.
 
-## Email Principal Ulrik
-**Demande:** Rapport comptable T1-T3 2024 avec PDF natif  
-**Pièce jointe:** Elements Comptables des 1-2-3T2024.pdf (4,2 MB)
+## Données Clés 21 Oct 2025
+**Comptes SCI 2023 (31/12/23):**
+- Actif total: 463 618€
+- Situation nette: -35 148€ (amélioré de 21 844€ vs 2022)
+- Trésorerie: 2 093 695€
+- Emprunts LCL: 497 993€ (remboursement régulier)
 
-## Analyse Rapide
-**Revenus SCPI Q4'23-Q1'24:** ~14k€ (distributions régulières + capital)  
-**Charges mensuelles fixes:** ~1 525€ (prêts 1 425€ + assurance + frais)  
-**Trésorerie:** Cycle 1 813€ (juillet bas) → 5 256€ (février pic)  
-**Placements:** 2 x ETF MSCI World 2024 (2 357€ + 2 439€)
+**Prêt #1 (SOLUTION P IMMO, 250k€, 1,05%):**
+- État octobre 2025: Capital ~223 704€, intérêts cumulés 9 092€
+- Échéance: 1 166,59€/mois, fin avril 2043
 
-## Pattern Confirmé
-Révenus couvrent >2x charges mensuelles. Trésorerie stable. Stratégie diversifiée (immobilier + SCPI + ETF) fonctionne.
+**Prêt #2 (INVESTIMUR, 250k€, 1,24%):**
+- État: Franchise complète, capital 250k€, intérêts 8 267€
+- Paiement in fine 15/04/2040, échéance franchise 258,33€/mois
 
-## Action
-Produit rapport PDF structuré avec flux, cycles, ratios.
+**Revenus:** 30 795€ (quote-part SCPI 2023)
+
+## Pattern Financier
+✅ Deux emprunts complémentaires (progressif + in fine)  
+✅ Revenus couvrent charges opérationnelles  
+✅ Trésorerie stable, structure en redressement  
+✅ Prêt #2 pivote 2040 → impact stratégique à prévoir
