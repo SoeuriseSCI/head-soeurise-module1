@@ -1,5 +1,5 @@
 """
-_Head.Soeurise V3.7.1 FIX
+_Head.Soeurise V3.7.1_FIXED(1)
 ==============================
 Fusion intelligente:
 - V3.6.2: claude_decide_et_execute + archivage intelligent + détection inputs externes
@@ -166,12 +166,19 @@ def fetch_emails_with_auth():
                 continue
         
         log_critical("EMAIL_FETCH_EXTRACTED", f"{len(emails_data)} emails extraits, pas marqués seen (marquage après rapport)")
-        mail.close()
-        mail.logout()
-        return emails_data
     except Exception as e:
-        log_critical("EMAIL_FETCH_ERROR", f"Erreur fetch IMAP: {str(e)[:100]}")
-        return []
+        log_critical("EMAIL_FETCH_ERROR", f"Erreur extraction: {str(e)[:100]}")
+    finally:
+        try:
+            mail.close()
+        except Exception as e:
+            log_critical("EMAIL_CLOSE_ERROR", f"Erreur close: {str(e)[:80]}")
+        try:
+            mail.logout()
+        except Exception as e:
+            log_critical("EMAIL_LOGOUT_ERROR", f"Erreur logout: {str(e)[:80]}")
+    
+    return emails_data
 
 def get_attachments(msg):
     """Extrait pièces jointes"""
