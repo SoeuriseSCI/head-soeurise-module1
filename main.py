@@ -1,5 +1,5 @@
 """
-_Head.Soeurise V3.7.1_FIXED(1)
+_Head.Soeurise V3.7.1 STABLE
 ==============================
 Fusion intelligente:
 - V3.6.2: claude_decide_et_execute + archivage intelligent + détection inputs externes
@@ -178,6 +178,7 @@ def fetch_emails_with_auth():
         except Exception as e:
             log_critical("EMAIL_LOGOUT_ERROR", f"Erreur logout: {str(e)[:80]}")
     
+    log_critical("DEBUG_FETCH_RETURN", f"fetch_emails_with_auth() va retourner {len(emails_data) if isinstance(emails_data, list) else 'UNDEFINED'} emails")
     return emails_data
 
 def get_attachments(msg):
