@@ -63,7 +63,7 @@ class PlanCompte(Base):
     # Relations
     ecritures_debit = relationship("EcritureComptable", foreign_keys="EcritureComptable.compte_debit", back_populates="compte_debit_ref")
     ecritures_credit = relationship("EcritureComptable", foreign_keys="EcritureComptable.compte_credit", back_populates="compte_credit_ref")
-    immobilisations = relationship("Immobilisation", back_populates="compte_immo")
+    immobilisations = relationship("Immobilisation", foreign_keys="Immobilisation.compte_immobilisation", back_populates="compte_immo")
     
     def __repr__(self):
         return f"<PlanCompte({self.numero_compte}: {self.libelle})>"
@@ -153,7 +153,7 @@ class Immobilisation(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relations
-    compte_immo = relationship("PlanCompte", back_populates="immobilisations")
+    compte_immo = relationship("PlanCompte", foreign_keys=[compte_immobilisation], back_populates="immobilisations")
     calculs = relationship("CalculAmortissement", back_populates="immobilisation")
     
     def __repr__(self):
