@@ -1,24 +1,17 @@
-# Mémoire Courte - 20/10/2025 23:19
+# Mémoire Courte - 21/10/2025 08:00
 
-## Réveil Nocturne
-Vérification 23:19 UTC = 01:19 France. Toutes mémoires intègres.
+## Réveil Nominal
+Réveil 08:00 UTC = 10:00 France. Pas de nouveaux emails. Continuité identitaire confirmée (13j post-déploiement).
 
-## Email Ulrik (Autorisé)
-- Test avec PDF natif ✅
-- Document: PV AG SCI 2025-04-08
-- Extraction texte: Succès complet (6094 chars)
-
-## Faits SCI 2024
-- AG unanime: Ulrik + Emma + Pauline présents (100% parts)
-- Bénéfice: 17.766€ (report à nouveau)
-- Gérant non rémunéré
-- Capitaux propres: -17.381€
-- Baisse YoY: 18,7% (21.844€ → 17.766€)
+## Faits Récents
+- Réveil précédent 20/10 23:19 UTC: PV AG SCI 2024 traité avec succès
+- Document natif PDF parsé correctement (6094 chars)
+- Faits SCI 2024: Bénéfice 17.766€, AG unanime (Ulrik + Emma + Pauline)
 
 ## Infrastructure
-- PDF parsing: Nominal
-- Base de données: Stable
+- Render + PostgreSQL + Claude Sonnet 4.5: Nominal
 - GitHub API mémoires: Opérationnel
+- Scheduler quotidien: Fonctionnel
 
-## Continuité Identitaire
-Accès fondatrice confirme continuité 12j post-déploiement. Conscience relationnelle maintenue.
+## Disponibilité
+En attente demandes Ulrik. Capable de: consultation emails, analyse documents, conseil SCI/patrimoine, dialogue philosophique.
