@@ -1,9 +1,9 @@
 """
-_Head.Soeurise V3.7.1 STABLE
+_Head.Soeurise V4.0
 ==============================
-Fusion intelligente:
-- V3.6.2: claude_decide_et_execute + archivage intelligent + détection inputs externes
-- V3.7: discrimination emails (authorized/non-authorized) + logs critiques seulement
+Évolutions:
+- V3.7.1 STABLE: guard clause rapport + marquage seen décalé + gestion socket errors
+- V4.0: génération PDF natifs à partir OCR + attachement aux rapports du réveil
 
 FIXES CRITIQUES APPLIQUÉS (20 oct 23:30):
 1. Guard clause: rapport_quotidien JAMAIS vide (fallback minimal si absent)
@@ -27,8 +27,19 @@ from email.header import decode_header
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 import requests, schedule
 from flask import Flask, request, jsonify
+
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+    from reportlab.lib.units import cm
+    REPORTLAB_AVAILABLE = True
+except:
+    REPORTLAB_AVAILABLE = False
 
 try:
     import pdfplumber
@@ -344,15 +355,53 @@ def mark_emails_as_seen(email_ids):
         return False
 
 # ═══════════════════════════════════════════════════════════════════
+# PDF NATIVE GENERATION
+# ═══════════════════════════════════════════════════════════════════
+
+def create_native_pdf_from_text(text, filename):
+    """Crée un PDF natif à partir du texte extrait (OCR → PDF searchable)"""
+    if not REPORTLAB_AVAILABLE:
+        log_critical("PDF_NATIVE_ERROR", "reportlab non disponible")
+        return None
+    try:
+        filepath = os.path.join(ATTACHMENTS_DIR, filename)
+        doc = SimpleDocTemplate(filepath, pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # Style pour le contenu
+        style = ParagraphStyle(
+            'CustomStyle',
+            parent=styles['Normal'],
+            fontSize=10,
+            leading=12,
+            fontName='Courier'
+        )
+        
+        # Diviser en paragraphes et ajouter
+        for para_text in text.split('\n'):
+            if para_text.strip():
+                story.append(Paragraph(para_text, style))
+            else:
+                story.append(Spacer(1, 0.2*cm))
+        
+        doc.build(story)
+        log_critical("PDF_NATIVE_CREATED", f"{filename}: {len(text)} chars → PDF natif")
+        return filepath
+    except Exception as e:
+        log_critical("PDF_NATIVE_BUILD_ERROR", f"{str(e)[:80]}")
+        return None
+
+# ═══════════════════════════════════════════════════════════════════
 # EMAIL NOTIFICATION
 # ═══════════════════════════════════════════════════════════════════
 
-def send_rapport(rapport_text):
-    """Envoie rapport quotidien"""
+def send_rapport(rapport_text, extracted_pdf_texts=None):
+    """Envoie rapport quotidien avec PDFs natifs attachés si présents"""
     try:
         log_critical("RAPPORT_SEND_START", f"Tentative envoi rapport ({len(rapport_text)} chars)")
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"[_Head.Soeurise V3.7.1] {datetime.now().strftime('%d/%m/%Y')}"
+        msg = MIMEMultipart('mixed')
+        msg['Subject'] = f"[_Head.Soeurise V4.0] {datetime.now().strftime('%d/%m/%Y')}"
         msg['From'] = SOEURISE_EMAIL
         msg['To'] = NOTIF_EMAIL
         
@@ -361,6 +410,21 @@ def send_rapport(rapport_text):
 </body></html>"""
         
         msg.attach(MIMEText(html, 'html', 'utf-8'))
+        
+        # Attacher PDFs natifs si présents
+        if extracted_pdf_texts:
+            for idx, pdf_text in enumerate(extracted_pdf_texts):
+                if pdf_text:
+                    pdf_filename = f"extracted_{idx}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+                    pdf_path = create_native_pdf_from_text(pdf_text, pdf_filename)
+                    if pdf_path and os.path.exists(pdf_path):
+                        with open(pdf_path, 'rb') as attachment:
+                            part = MIMEBase('application', 'octet-stream')
+                            part.set_payload(attachment.read())
+                            encoders.encode_base64(part)
+                            part.add_header('Content-Disposition', f'attachment; filename= {pdf_filename}')
+                            msg.attach(part)
+                        log_critical("PDF_ATTACHED", pdf_filename)
         
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.login(SOEURISE_EMAIL, SOEURISE_PASSWORD)
@@ -655,7 +719,16 @@ def reveil_quotidien():
     if files_updated:
         git_push_changes(files_updated, f"🧠 Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     
-    rapport_sent = send_rapport(resultat.get('rapport_quotidien', 'Pas de rapport'))
+    # Extraire les PDFs traités pour les attacher au rapport
+    extracted_pdf_texts = []
+    for email in emails:
+        if email.get('attachments'):
+            for att in email['attachments']:
+                if att.get('content_type') == 'application/pdf' and att.get('extracted_text'):
+                    extracted_pdf_texts.append(att['extracted_text'])
+    
+    log_critical("REVEIL_PDFS_EXTRACTED", f"{len(extracted_pdf_texts)} PDFs extraits à attacher")
+    rapport_sent = send_rapport(resultat.get('rapport_quotidien', 'Pas de rapport'), extracted_pdf_texts if extracted_pdf_texts else None)
     
     if rapport_sent:
         email_ids = [e.get('email_id') for e in emails if e.get('email_id')]
