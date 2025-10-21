@@ -47,17 +47,6 @@ try:
 except:
     PDF_SUPPORT = False
 
-# --- MODULE 2 IMPORTS ---
-try:
-    from module2_integration import integrer_module2_dans_reveil, init_module2
-    from models_module2 import get_session as get_session_m2
-    MODULE2_AVAILABLE = True
-except ImportError:
-    MODULE2_AVAILABLE = False
-    log_critical("MODULE2_IMPORT_WARNING", "Module 2 non disponible (fichiers non trouvés)")
-
-# --- FIN MODULE 2 IMPORTS ---
-
 try:
     from pdf2image import convert_from_path
     PDF2IMAGE_SUPPORT = True
@@ -111,6 +100,20 @@ def log_critical(action, details=""):
             f.write(message + '\n')
     except:
         pass
+
+# ═══════════════════════════════════════════════════════════════════
+# MODULE 2 IMPORTS (après log_critical pour éviter NameError)
+# ═══════════════════════════════════════════════════════════════════
+
+MODULE2_AVAILABLE = False
+try:
+    from module2_integration import integrer_module2_dans_reveil, init_module2
+    from models_module2 import get_session as get_session_m2
+    MODULE2_AVAILABLE = True
+    log_critical("MODULE2_IMPORT_OK", "Module 2 importé avec succès")
+except ImportError as e:
+    MODULE2_AVAILABLE = False
+    log_critical("MODULE2_IMPORT_WARNING", f"Module 2 non disponible: {str(e)[:100]}")
 
 # ═══════════════════════════════════════════════════════════════════
 # SÉCURITÉ EMAIL (V3.7 + V3.6.2)
