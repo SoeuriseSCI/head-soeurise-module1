@@ -1,5 +1,5 @@
 """
-_Head.Soeurise V3.7.1 STABLE
+_Head.Soeurise V3.7.1 FINAL
 ==============================
 Fusion intelligente:
 - V3.6.2: claude_decide_et_execute + archivage intelligent + détection inputs externes
@@ -167,6 +167,7 @@ def fetch_emails_with_auth():
             except:
                 pass
         
+        log_critical("EMAIL_FETCH_COMPLETE", f"{len(emails_data)} emails traités et marqués seen")
         mail.close()
         mail.logout()
         return emails_data
@@ -221,8 +222,10 @@ def get_attachments(msg):
                     extracted_text = extract_pdf_content(filepath)
                     attachment_data['extracted_text'] = extracted_text
                     attachment_data['text_length'] = len(extracted_text)
-                except:
-                    attachment_data['extracted_text'] = "[Erreur extraction]"
+                except Exception as pdf_error:
+                    error_msg = str(pdf_error)[:100]
+                    log_critical("PDF_ATTACHMENT_ERROR", f"{filename}: {error_msg}")
+                    attachment_data['extracted_text'] = f"[Erreur: {error_msg}]"
             
             attachments.append(attachment_data)
             attachment_count += 1
@@ -254,18 +257,21 @@ def extract_pdf_text_pdfplumber(filepath):
             full_text = "\n".join(text_parts)
             if len(full_text) > MAX_PDF_TEXT:
                 full_text = full_text[:MAX_PDF_TEXT] + "\n[... Tronqué ...]"
+            log_critical("PDF_EXTRACTED_OK", f"{len(full_text)} chars, {pages_to_extract} pages")
             return full_text
     except Exception as e:
-        log_critical("PDF_EXTRACT_ERROR", str(e)[:50])
+        log_critical("PDF_EXTRACT_ERROR", f"{str(e)[:80]}")
         return ""
 
 def extract_pdf_via_claude_vision(filepath):
     """Extraction OCR via Claude si texte insuffisant"""
     if not PDF2IMAGE_SUPPORT:
+        log_critical("PDF_OCR_DISABLED", "pdf2image not available")
         return ""
     try:
         images = convert_from_path(filepath, dpi=150, fmt='jpeg')
         pages_to_extract = min(len(images), MAX_PDF_PAGES)
+        log_critical("PDF_OCR_PAGES_CONVERTED", f"{pages_to_extract} pages to OCR")
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         extracted_pages = []
         
@@ -290,15 +296,17 @@ def extract_pdf_via_claude_vision(filepath):
         full_text = "\n\n".join(extracted_pages)
         if len(full_text) > MAX_PDF_TEXT:
             full_text = full_text[:MAX_PDF_TEXT] + "\n[... Tronqué ...]"
+        log_critical("PDF_OCR_EXTRACTED_OK", f"{len(full_text)} chars via Claude Vision")
         return full_text
     except Exception as e:
-        log_critical("PDF_OCR_ERROR", str(e)[:50])
+        log_critical("PDF_OCR_ERROR", f"{str(e)[:80]}")
         return ""
 
 def extract_pdf_content(filepath):
     """Extraction PDF avec fallback OCR"""
     text = extract_pdf_text_pdfplumber(filepath)
     if len(text.strip()) < MIN_TEXT_FOR_OCR:
+        log_critical("PDF_FALLBACK_TO_OCR", f"Native texte insuffisant ({len(text)} chars < {MIN_TEXT_FOR_OCR}), passage OCR")
         text = extract_pdf_via_claude_vision(filepath)
     return text
 
