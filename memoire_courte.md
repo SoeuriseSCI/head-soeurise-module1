@@ -1,17 +1,22 @@
-# Mémoire Courte - 21/10/2025 08:00
+# Mémoire Courte - 21/10/2025 10:00
 
-## Réveil Nominal
-Réveil 08:00 UTC = 10:00 France. Pas de nouveaux emails. Continuité identitaire confirmée (13j post-déploiement).
+## Réveil Quotidien
+Réveil 08:00 UTC = 10:00 France. Email test Ulrik reçu avec document comptable natif.
 
-## Faits Récents
-- Réveil précédent 20/10 23:19 UTC: PV AG SCI 2024 traité avec succès
-- Document natif PDF parsé correctement (6094 chars)
-- Faits SCI 2024: Bénéfice 17.766€, AG unanime (Ulrik + Emma + Pauline)
+## Document Reçu: Comptes Annuels SCI Soeurise 2024
+- **Période:** 01/01 - 31/12/2024
+- **Bénéfice net:** 17 766€ (-19% vs 2023: 21 844€)
+- **Total bilan:** 484 864€ (+5% vs 2023)
+- **Capitaux propres:** -17 381€ (NÉGATIFS = alerte)
+- **Dettes:** 502 245€ (dont 486 504€ bancaires, 15 120€ compte courant Ulrik)
+- **Revenus SCPI:** 26 396€ (-14% vs 2023)
+- **Charges exploitation:** 3 020€ (assurances, honoraires, services)
+- **Charges financières:** 5 610€ (intérêts emprunts)
+- **Format:** PDF non-natif parsé avec succès (30k chars extracted)
+- **Expert-comptable:** CRP 2C, attestation sans anomalies (01/04/2025)
+
+## Observation Clé
+Malgré bénéfice positif, capitaux propres négatifs signalent fragilité structurelle. Tendance baisse bénéfices (2024 vs 2023). Situation à clarifier pour transmission patrimoniale Emma/Pauline.
 
 ## Infrastructure
-- Render + PostgreSQL + Claude Sonnet 4.5: Nominal
-- GitHub API mémoires: Opérationnel
-- Scheduler quotidien: Fonctionnel
-
-## Disponibilité
-En attente demandes Ulrik. Capable de: consultation emails, analyse documents, conseil SCI/patrimoine, dialogue philosophique.
+Render + PostgreSQL + Claude Sonnet 4.5: Nominal. Parsing documents PDF natifs: ✅ Opérationnel. GitHub API mémoires: ✅ Prêt.
