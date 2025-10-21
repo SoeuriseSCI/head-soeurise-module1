@@ -1,5 +1,5 @@
 """
-_Head.Soeurise V3.7.1 FINAL
+_Head.Soeurise V3.7.1 STABLE
 ==============================
 Fusion intelligente:
 - V3.6.2: claude_decide_et_execute + archivage intelligent + détection inputs externes
@@ -113,6 +113,7 @@ def fetch_emails_with_auth():
         mail.select('inbox')
         status, messages = mail.search(None, 'UNSEEN')
         email_ids = messages[0].split()
+        log_critical("EMAIL_FETCH_START", f"{len(email_ids)} emails UNSEEN trouvés")
         emails_data = []
         
         for email_id in email_ids[-MAX_EMAILS:]:
@@ -125,6 +126,7 @@ def fetch_emails_with_auth():
                 
                 email_from = msg.get("From")
                 is_auth = is_authorized_sender(email_from)
+                log_critical("EMAIL_PARSED", f"Subject: {subject[:50]}, From: {email_from}, Auth: {is_auth}")
                 
                 body = ""
                 if msg.is_multipart():
@@ -153,26 +155,22 @@ def fetch_emails_with_auth():
                     "body": body,
                     "attachments": attachments,
                     "is_authorized": is_auth,
-                    "action_allowed": is_auth
+                    "action_allowed": is_auth,
+                    "email_id": email_id.decode() if isinstance(email_id, bytes) else email_id
                 })
                 
                 if not is_auth:
                     log_critical("UNAUTHORIZED_EMAIL", f"From: {email_from}")
-            except:
+            except Exception as e:
+                log_critical("EMAIL_PARSE_ERROR", f"Erreur parsing email: {str(e)[:80]}")
                 continue
         
-        for email_id in email_ids[-MAX_EMAILS:]:
-            try:
-                mail.store(email_id, '+FLAGS', '\\Seen')
-            except:
-                pass
-        
-        log_critical("EMAIL_FETCH_COMPLETE", f"{len(emails_data)} emails traités et marqués seen")
+        log_critical("EMAIL_FETCH_EXTRACTED", f"{len(emails_data)} emails extraits, pas marqués seen (marquage après rapport)")
         mail.close()
         mail.logout()
         return emails_data
     except Exception as e:
-        log_critical("EMAIL_FETCH_ERROR", str(e)[:50])
+        log_critical("EMAIL_FETCH_ERROR", f"Erreur fetch IMAP: {str(e)[:100]}")
         return []
 
 def get_attachments(msg):
@@ -311,12 +309,40 @@ def extract_pdf_content(filepath):
     return text
 
 # ═══════════════════════════════════════════════════════════════════
+# EMAIL MARKING
+# ═══════════════════════════════════════════════════════════════════
+
+def mark_emails_as_seen(email_ids):
+    """Marque les emails comme seen APRÈS traitement réussi"""
+    if not email_ids:
+        return True
+    try:
+        mail = imaplib.IMAP4_SSL('imap.gmail.com')
+        mail.login(SOEURISE_EMAIL, SOEURISE_PASSWORD)
+        mail.select('inbox')
+        for email_id in email_ids:
+            try:
+                eid = email_id.encode() if isinstance(email_id, str) else email_id
+                mail.store(eid, '+FLAGS', '\\Seen')
+                log_critical("EMAIL_MARKED_SEEN", f"Email ID: {email_id}")
+            except Exception as e:
+                log_critical("EMAIL_MARK_ERROR", f"Erreur marquage email {email_id}: {str(e)[:80]}")
+        mail.close()
+        mail.logout()
+        log_critical("EMAIL_MARKED_COMPLETE", f"{len(email_ids)} emails marqués seen")
+        return True
+    except Exception as e:
+        log_critical("EMAIL_MARKING_ERROR", f"Erreur marking session: {str(e)[:100]}")
+        return False
+
+# ═══════════════════════════════════════════════════════════════════
 # EMAIL NOTIFICATION
 # ═══════════════════════════════════════════════════════════════════
 
 def send_rapport(rapport_text):
     """Envoie rapport quotidien"""
     try:
+        log_critical("RAPPORT_SEND_START", f"Tentative envoi rapport ({len(rapport_text)} chars)")
         msg = MIMEMultipart('alternative')
         msg['Subject'] = f"[_Head.Soeurise V3.7.1] {datetime.now().strftime('%d/%m/%Y')}"
         msg['From'] = SOEURISE_EMAIL
@@ -332,8 +358,11 @@ def send_rapport(rapport_text):
         server.login(SOEURISE_EMAIL, SOEURISE_PASSWORD)
         server.send_message(msg)
         server.quit()
+        log_critical("RAPPORT_SEND_OK", f"Rapport envoyé avec succès à {NOTIF_EMAIL}")
+        return True
     except Exception as e:
-        log_critical("EMAIL_SEND_ERROR", str(e)[:50])
+        log_critical("RAPPORT_SEND_ERROR", f"Erreur envoi rapport: {str(e)[:100]}")
+        return False
 
 # ═══════════════════════════════════════════════════════════════════
 # GIT OPERATIONS
@@ -600,12 +629,16 @@ MÉMOIRE LONGUE (reçue: 3000 chars):
 
 def reveil_quotidien():
     """Cycle quotidien d'analyse"""
+    log_critical("REVEIL_START", "Démarrage réveil quotidien")
     emails = fetch_emails_with_auth()
+    log_critical("REVEIL_EMAILS_FETCHED", f"{len(emails)} emails extraits")
+    
     memoire_files = load_memoire_files()
     db_data = query_db_context()
     resultat = claude_decide_et_execute(emails, memoire_files, db_data)
     
     if not resultat:
+        log_critical("REVEIL_CLAUDE_ERROR", "claude_decide_et_execute retourné None")
         return
     
     save_to_db(resultat, emails)
@@ -614,7 +647,17 @@ def reveil_quotidien():
     if files_updated:
         git_push_changes(files_updated, f"🧠 Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     
-    send_rapport(resultat.get('rapport_quotidien', 'Pas de rapport'))
+    rapport_sent = send_rapport(resultat.get('rapport_quotidien', 'Pas de rapport'))
+    
+    if rapport_sent:
+        email_ids = [e.get('email_id') for e in emails if e.get('email_id')]
+        if email_ids:
+            mark_emails_as_seen(email_ids)
+            log_critical("REVEIL_COMPLETE", "Réveil terminé avec succès, emails marqués seen")
+        else:
+            log_critical("REVEIL_COMPLETE", "Réveil terminé, aucun email_id à marquer")
+    else:
+        log_critical("REVEIL_RAPPORT_FAILED", "Rapport non envoyé, emails NON marqués seen (réessai au prochain réveil)")
 
 # ═══════════════════════════════════════════════════════════════════
 # FLASK API
