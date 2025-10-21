@@ -1,5 +1,5 @@
 """
-_Head.Soeurise V4.0
+_Head.Soeurise V4.1
 ==============================
 Évolutions:
 - V3.7.1 STABLE: guard clause rapport + marquage seen décalé + gestion socket errors
@@ -46,6 +46,17 @@ try:
     PDF_SUPPORT = True
 except:
     PDF_SUPPORT = False
+
+# --- MODULE 2 IMPORTS ---
+try:
+    from module2_integration import integrer_module2_dans_reveil, init_module2
+    from models_module2 import get_session as get_session_m2
+    MODULE2_AVAILABLE = True
+except ImportError:
+    MODULE2_AVAILABLE = False
+    log_critical("MODULE2_IMPORT_WARNING", "Module 2 non disponible (fichiers non trouvés)")
+
+# --- FIN MODULE 2 IMPORTS ---
 
 try:
     from pdf2image import convert_from_path
@@ -728,6 +739,27 @@ def reveil_quotidien():
                     extracted_pdf_texts.append(att['extracted_text'])
     
     log_critical("REVEIL_PDFS_EXTRACTED", f"{len(extracted_pdf_texts)} PDFs extraits à attacher")
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # MODULE 2 - COMPTABILITÉ
+    # ════════════════════════════════════════════════════════════════════════════
+    if MODULE2_AVAILABLE:
+        try:
+            log_critical("MODULE2_START", "Démarrage Module 2")
+            rapport_m2 = integrer_module2_dans_reveil(emails, DB_URL)
+            
+            if rapport_m2['rapport']:
+                resultat['rapport_quotidien'] += "\n\n" + rapport_m2['rapport']
+            
+            log_critical("MODULE2_SUCCESS", 
+                        f"{rapport_m2['data'].get('nb_ecritures_creees', 0)} écritures")
+        
+        except Exception as e:
+            log_critical("MODULE2_ERROR", f"Erreur: {str(e)[:100]}")
+            # Ajouter erreur au rapport mais ne pas interrompre
+            resultat['rapport_quotidien'] += f"\n\n❌ Module 2 - Erreur: {str(e)[:50]}"
+    # ════════════════════════════════════════════════════════════════════════════
+
     rapport_sent = send_rapport(resultat.get('rapport_quotidien', 'Pas de rapport'), extracted_pdf_texts if extracted_pdf_texts else None)
     
     if rapport_sent:
@@ -843,6 +875,20 @@ def run_scheduler():
 # ═══════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # INITIALISER MODULE 2
+    # ════════════════════════════════════════════════════════════════════════════
+    if MODULE2_AVAILABLE:
+        try:
+            log_critical("MODULE2_INIT_START", "Initialisation Module 2")
+            init_module2(DB_URL)
+            log_critical("MODULE2_INIT_OK", "Module 2 prêt")
+        except Exception as e:
+            log_critical("MODULE2_INIT_ERROR", f"Erreur: {str(e)[:100]}")
+            # Continuer sans Module 2 si erreur
+    # ════════════════════════════════════════════════════════════════════════════
+
     init_git_repo()
     reveil_quotidien()
     
