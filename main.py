@@ -1,5 +1,5 @@
 """
-_Head.Soeurise V3.7.1 STABLE
+_Head.Soeurise V3.7.1 FIX
 ==============================
 Fusion intelligente:
 - V3.6.2: claude_decide_et_execute + archivage intelligent + détection inputs externes
