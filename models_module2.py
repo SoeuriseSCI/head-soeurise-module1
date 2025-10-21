@@ -6,8 +6,9 @@ Représente les tables comptables en Python
 
 from sqlalchemy import (
     Column, Integer, String, Numeric, Date, DateTime, Boolean, 
-    Text, ForeignKey, JSONB, ARRAY, Enum, CheckConstraint, UniqueConstraint
+    Text, ForeignKey, Enum, CheckConstraint, UniqueConstraint
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
