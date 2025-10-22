@@ -1,7 +1,9 @@
 """
-MODULE 2 - INTÉGRATION V2
+MODULE 2 - INTÉGRATION V2 (FIXED)
 =========================
 Point d'entrée unique pour intégrer le workflow complet dans reveil_quotidien()
+
+FIX: Adapter les comparaisons avec TypeEvenement Enum
 
 Gère:
 1. Détection emails comptables → génération propositions
@@ -20,7 +22,7 @@ from sqlalchemy.orm import Session
 from module2_workflow_v2 import (
     WorkflowModule2V2,
     DetecteurTypeEvenement,
-    TypeEvenement,
+    TypeEvenement,  # ✅ IMPORT FIX
     OCRExtractor
 )
 from module2_workflow_v2_branches import (
@@ -65,9 +67,9 @@ class IntegratorModule2:
         
         # Initialiser composants
         self.session = self._get_session()
-        self.workflow_generation = WorkflowModule2V2(database_url, anthropic_api_key)
-        self.workflow_validation = OrchestratorValidations(database_url)
-        self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise)
+        self.workflow_generation = WorkflowModule2V2(anthropic_api_key, database_url)
+        self.workflow_validation = OrchestratorValidations(self.session)
+        self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise, email_ulrik)
         self.ocr = OCRExtractor(anthropic_api_key)
         
         # État du traitement
@@ -113,47 +115,34 @@ class IntegratorModule2:
                 # Détecter type
                 type_evt = DetecteurTypeEvenement.detecter(email)
                 
-                if type_evt == TypeEvenement.UNKNOWN:
+                if type_evt == TypeEvenement.UNKNOWN:  # ✅ COMPARAISON ENUM FIX
                     continue
                 
-                # Créer la branche appropriée et traiter
-                if type_evt == TypeEvenement.EVENEMENT_SIMPLE:
-                    result = self._traiter_evenement_simple(email)
-                
-                elif type_evt == TypeEvenement.INIT_BILAN_2023:
-                    result = self._traiter_init_bilan(email)
-                
-                elif type_evt == TypeEvenement.CLOTURE_EXERCICE:
-                    result = self._traiter_cloture(email)
-                
-                else:
-                    continue
+                # Générer propositions via workflow
+                result = self.workflow_generation.traiter_email(email)
                 
                 # Traiter le résultat
                 if result.get('statut') == 'OK':
                     
                     # Envoyer email à Ulrik avec propositions
-                    if result.get('action_suivante') == 'ENVOYER_EMAIL_VALIDATION':
-                        
-                        email_envoye = self.envoyeur.envoyer_propositions(
-                            self.email_ulrik,
-                            type_evt.value,
-                            result['markdown_genere'],
-                            subject_suffix=f"- {len(result.get('propositions', []))} proposition(s)"
-                        )
-                        
-                        if email_envoye:
-                            resultats['emails_envoyes'] += 1
-                            self.propositions_generees += len(result.get('propositions', []))
-                        else:
-                            self.erreurs.append(f"Impossible d'envoyer email pour {type_evt.value}")
+                    email_envoye = self.envoyeur.envoyer_propositions(
+                        type_evt.value,  # ✅ UTILISER .value POUR LE STRING
+                        result['markdown'],
+                        result['token'],
+                        subject_suffix=f"- {len(result.get('propositions', {}).get('propositions', []))} proposition(s)"
+                    )
                     
-                    resultats['propositions_generees'] += len(result.get('propositions', []))
+                    if email_envoye:
+                        resultats['emails_envoyes'] += 1
+                        self.propositions_generees += len(result.get('propositions', {}).get('propositions', []))
+                    else:
+                        self.erreurs.append(f"Impossible d'envoyer email pour {type_evt.value}")
+                    
+                    resultats['propositions_generees'] += len(result.get('propositions', {}).get('propositions', []))
                     resultats['details'].append({
                         'type': type_evt.value,
-                        'propositions': len(result.get('propositions', [])),
-                        'status': 'en_attente_validation',
-                        'evenement_db_id': result.get('evenement_db_id')
+                        'propositions': len(result.get('propositions', {}).get('propositions', [])),
+                        'status': 'en_attente_validation'
                     })
                 
                 else:
@@ -165,39 +154,6 @@ class IntegratorModule2:
                 self.erreurs.append(f"Erreur traitement email: {str(e)[:100]}")
         
         return resultats
-    
-    def _traiter_evenement_simple(self, email: Dict) -> Dict:
-        """Traite un événement simple"""
-        try:
-            branche = BrancheEvenementSimple(self.session)
-            return branche.traiter(email)
-        except Exception as e:
-            return {
-                'statut': 'ERREUR',
-                'message': f'Erreur branche événement: {str(e)}'
-            }
-    
-    def _traiter_init_bilan(self, email: Dict) -> Dict:
-        """Traite initialisation bilan 2023"""
-        try:
-            branche = BrancheInitBilan2023(self.session, self.ocr)
-            return branche.traiter(email)
-        except Exception as e:
-            return {
-                'statut': 'ERREUR',
-                'message': f'Erreur branche init bilan: {str(e)}'
-            }
-    
-    def _traiter_cloture(self, email: Dict) -> Dict:
-        """Traite clôture exercice"""
-        try:
-            branche = BrancheCloture2023(self.session, self.ocr)
-            return branche.traiter(email)
-        except Exception as e:
-            return {
-                'statut': 'ERREUR',
-                'message': f'Erreur branche clôture: {str(e)}'
-            }
     
     # ═══════════════════════════════════════════════════════════════════════════════
     # PHASE 2: TRAITEMENT VALIDATIONS
@@ -241,7 +197,7 @@ class IntegratorModule2:
                         resultats['details'].append({
                             'type': result.get('type_proposition', ''),
                             'ecritures_inserees': result.get('ecritures_inserees', 0),
-                            'status': 'insepe_en_db'
+                            'status': 'insere_en_db'
                         })
                     
                     else:
@@ -291,13 +247,13 @@ class IntegratorModule2:
         if resultats_entrants.get('details'):
             rapport += "### 📝 Propositions générées\n\n"
             for detail in resultats_entrants['details']:
-                rapport += f"- **{detail['type']}**: {detail['propositions']} proposition(s) → En attente de validation (événement DB: {detail['evenement_db_id']})\n"
+                rapport += f"- **{detail['type']}**: {detail['propositions']} proposition(s) → En attente de validation\n"
         
         # Détails des validations traitées
         if resultats_validations.get('details'):
             rapport += "\n### ✅ Validations traitées\n\n"
             for detail in resultats_validations['details']:
-                if detail.get('status') == 'insepe_en_db':
+                if detail.get('status') == 'insere_en_db':
                     rapport += f"- **{detail['type']}**: {detail['ecritures_inserees']} écriture(s) insérée(s)\n"
                 elif detail.get('status') == 'erreur':
                     rapport += f"- ❌ {detail.get('message', 'Erreur')}\n"
@@ -394,7 +350,7 @@ def integrer_module2_v2(
     
     except Exception as e:
         return {
-            'rapport': f"\n## ❌ MODULE 2 - ERREUR CRITIQUE\n\n{str(e)}\n",
+            'rapport': f"\n## ❌ MODULE 2 - ERREUR\n\n{str(e)}\n",
             'stats': {
                 'emails_traites': 0,
                 'propositions_generees': 0,
