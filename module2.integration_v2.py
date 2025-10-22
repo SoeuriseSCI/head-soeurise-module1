@@ -124,11 +124,12 @@ class IntegratorModule2:
                 # Traiter le résultat
                 if result.get('statut') == 'OK':
                     
-                    # Envoyer email à Ulrik avec propositions
+                    # Envoyer email à Ulrik avec propositions ✅ FIX: Passer email_to en premier
                     email_envoye = self.envoyeur.envoyer_propositions(
-                        type_evt.value,  # ✅ UTILISER .value POUR LE STRING
-                        result['markdown'],
-                        result['token'],
+                        self.email_ulrik,  # ✅ email_to
+                        type_evt.value,  # ✅ type_evt
+                        result['markdown'],  # ✅ markdown
+                        result['token'],  # ✅ token
                         subject_suffix=f"- {len(result.get('propositions', {}).get('propositions', []))} proposition(s)"
                     )
                     
