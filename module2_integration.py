@@ -1,553 +1,416 @@
 """
-MODULE 2 - INTÉGRATION AU WORKFLOW QUOTIDIEN
-============================================
-Comment Module 2 s'intègre dans le reveil_quotidien() de main_V4.0.py
+MODULE 2 - INTÉGRATION V2
+=========================
+Point d'entrée unique pour intégrer le workflow complet dans reveil_quotidien()
 
-WORKFLOW:
-1. Email reçu (autorisé ou non)
-2. Créer EvenementComptable EN_ATTENTE
-3. Si autorisé + comptable → analyser et créer écritures
-4. Générer rapports (Bilan 2024, Résultat...)
-5. Inclure dans rapport quotidien
+Gère:
+1. Détection emails comptables → génération propositions
+2. Détection validations → insertion en DB
+3. Rapport formaté pour inclusion dans rapport quotidien
 """
 
-from datetime import datetime, date
-from decimal import Decimal
 import json
-import re
-from typing import List, Dict, Tuple
+import os
+from typing import Dict, List, Tuple
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-# Imports Module 2
-from models_module2 import (
-    ExerciceComptable, PlanCompte, EcritureComptable, EvenementComptable,
-    Immobilisation, CalculAmortissement, BalanceMensuelle, RapportComptable,
-    get_session, init_module2
+# Imports workflows
+from module2_workflow_v2 import (
+    WorkflowModule2V2,
+    DetecteurTypeEvenement,
+    TypeEvenement,
+    OCRExtractor
+)
+from module2_workflow_v2_branches import (
+    EnvoyeurMarkdown,
+    BrancheEvenementSimple,
+    BrancheInitBilan2023,
+    BrancheCloture2023
+)
+from module2_validations import (
+    OrchestratorValidations,
+    DetecteurValidations
 )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ÉTAPE 1: DÉTECTEUR D'ÉVÉNEMENTS COMPTABLES
+# ORCHESTRATEUR PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class DetecteurEvenementsComptables:
+class IntegratorModule2:
     """
-    Analyse un email pour détecter s'il contient des événements comptables
+    Intégrateur principal pour module 2 dans le reveil quotidien
+    
+    Gère:
+    - Traitement emails entrants (génération propositions)
+    - Traitement emails validations (insertion DB)
+    - Génération rapport quotidien
     """
     
-    PATTERNS = {
-        'loyer': {
-            'keywords': ['loyer', 'paiement locataire', 'encaissement', 'location'],
-            'type': 'LOYER',
-            'compte_credit': '701',  # Loyers
-        },
-        'charge_entretien': {
-            'keywords': ['entretien', 'réparation', 'maintenance', 'reparation'],
-            'type': 'CHARGE',
-            'compte_charge': '614',  # Entretien et réparations
-        },
-        'assurance': {
-            'keywords': ['assurance', 'prime assurance', 'police'],
-            'type': 'CHARGE',
-            'compte_charge': '615',  # Assurances
-        },
-        'taxe': {
-            'keywords': ['taxe foncière', 'tf', 'impôt', 'taxe'],
-            'type': 'CHARGE',
-            'compte_charge': '631',  # Impôts taxes
-        },
-        'charge_copropriete': {
-            'keywords': ['charge copropriété', 'charges communes', 'syndic'],
-            'type': 'CHARGE',
-            'compte_charge': '614',  # Entretien et réparations (ou créer compte)
-        },
-        'amortissement': {
-            'keywords': ['amortissement', 'dotation', 'immobilisation'],
-            'type': 'AMORTISSEMENT',
-        },
-        'interet_emprunt': {
-            'keywords': ['intérêt', 'emprunt', 'interet', 'pret'],
-            'type': 'CHARGE',
-            'compte_charge': '661',  # Intérêts emprunts
-        }
-    }
+    def __init__(
+        self,
+        database_url: str,
+        anthropic_api_key: str,
+        email_soeurise: str,
+        password_soeurise: str,
+        email_ulrik: str
+    ):
+        self.database_url = database_url
+        self.api_key = anthropic_api_key
+        self.email_soeurise = email_soeurise
+        self.password_soeurise = password_soeurise
+        self.email_ulrik = email_ulrik
+        
+        # Initialiser composants
+        self.session = self._get_session()
+        self.workflow_generation = WorkflowModule2V2(database_url, anthropic_api_key)
+        self.workflow_validation = OrchestratorValidations(database_url)
+        self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise)
+        self.ocr = OCRExtractor(anthropic_api_key)
+        
+        # État du traitement
+        self.emails_traites = 0
+        self.propositions_generees = 0
+        self.validations_traitees = 0
+        self.ecritures_inserees = 0
+        self.erreurs = []
+        self.actions_email = []  # Emails à envoyer
     
-    def __init__(self, session: Session):
-        self.session = session
+    def _get_session(self) -> Session:
+        """Récupère une session DB"""
+        from models_module2 import get_session
+        return get_session(self.database_url)
     
-    def analyser_email(self, body: str, date_email: date, from_email: str) -> List[Dict]:
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # PHASE 1: TRAITEMENT EMAILS ENTRANTS
+    # ═══════════════════════════════════════════════════════════════════════════════
+    
+    def traiter_emails_entrants(self, emails: List[Dict]) -> Dict:
         """
-        Analyse un email et retourne les événements comptables détectés
+        Traite les emails entrants pour détecter événements comptables
         
         Returns:
-            [
-                {
-                    'type': 'LOYER',
-                    'montant': 1000.00,
-                    'date': date,
-                    'description': '...',
-                    'pattern': 'loyer',
-                    'confidence': 0.95
-                }
-            ]
-        """
-        events = []
-        body_lower = body.lower()
-        
-        # Chercher montants
-        montants = self._extraire_montants(body)
-        
-        # Chercher patterns
-        for pattern_name, pattern_config in self.PATTERNS.items():
-            keywords = pattern_config['keywords']
-            if any(kw in body_lower for kw in keywords):
-                
-                # Pour loyer: chercher montant associé
-                if pattern_name == 'loyer' and montants:
-                    for montant in montants:
-                        events.append({
-                            'type': pattern_config['type'],
-                            'montant': montant,
-                            'date': date_email,
-                            'description': f"Loyer {montant}€ - {from_email}",
-                            'pattern': pattern_name,
-                            'confidence': 0.9,
-                        })
-                
-                # Pour charges: un seul montant généralement
-                elif pattern_name in ['charge_entretien', 'assurance', 'taxe', 'charge_copropriete', 'interet_emprunt'] and montants:
-                    montant = montants[0]  # Prendre le premier montant trouvé
-                    events.append({
-                        'type': pattern_config['type'],
-                        'montant': montant,
-                        'date': date_email,
-                        'description': f"{pattern_name.replace('_', ' ').title()} - {montant}€",
-                        'pattern': pattern_name,
-                        'confidence': 0.85,
-                        'compte_charge': pattern_config.get('compte_charge'),
-                    })
-        
-        # Si aucun pattern trouvé mais il y a des montants → comptable?
-        if not events and montants:
-            events.append({
-                'type': 'AUTRE',
-                'montant': montants[0],
-                'date': date_email,
-                'description': f"Événement comptable potentiel - {montants[0]}€",
-                'pattern': 'montant_seul',
-                'confidence': 0.5,
-            })
-        
-        return events
-    
-    @staticmethod
-    def _extraire_montants(text: str) -> List[float]:
-        """Extrait les montants (euros, montants numériques)"""
-        # Patterns: "1000€", "1000 €", "1 000€", "1,00", "1.00"
-        patterns = [
-            r'(\d{1,3}(?:\s?\d{3})*(?:[.,]\d{2})?)\s?€',  # avec €
-            r'€\s?(\d{1,3}(?:\s?\d{3})*(?:[.,]\d{2})?)',  # € avant
-            r'(\d+[.,]\d{2})\s?€?',  # décimales
-        ]
-        
-        montants = []
-        for pattern in patterns:
-            matches = re.findall(pattern, text)
-            for match in matches:
-                # Nettoyer: remplacer , par . et supprimer espaces
-                montant_str = match.replace(',', '.').replace(' ', '')
-                try:
-                    montant = float(montant_str)
-                    if 0 < montant < 1_000_000:  # Filtre raisonnable
-                        montants.append(montant)
-                except ValueError:
-                    continue
-        
-        return list(set(montants))  # Dédupliquer
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# ÉTAPE 2: PROCESSEUR D'ÉVÉNEMENTS (EMAIL → ÉCRITURES)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-class ProcesseurEvenementsComptables:
-    """
-    Convertit les événements détectés en écritures comptables
-    """
-    
-    COMPTEUR_ECRITURES = {}  # Mémoriser compteur par exercice
-    
-    def __init__(self, session: Session):
-        self.session = session
-        self.exercice_2024 = session.query(ExerciceComptable).filter_by(annee=2024).first()
-        if not self.exercice_2024:
-            raise ValueError("Exercice 2024 non trouvé!")
-    
-    def traiter_evenement(self, event: Dict, email_id: str, email_from: str, 
-                         email_date: datetime) -> Tuple[bool, str, List[int]]:
-        """
-        Traite un événement et crée les écritures correspondantes
-        
-        Returns:
-            (succès, message, [ids écritures créées])
-        """
-        try:
-            type_event = event['type']
-            montant = Decimal(str(event['montant']))
-            description = event.get('description', 'Opération comptable')
-            
-            # Créer numéro écriture unique
-            compteur = self.COMPTEUR_ECRITURES.get(self.exercice_2024.id, 0)
-            compteur += 1
-            self.COMPTEUR_ECRITURES[self.exercice_2024.id] = compteur
-            numero_ecriture = f"2024-{compteur:04d}"
-            
-            ecriture_ids = []
-            
-            if type_event == 'LOYER':
-                # Doublement: Débit 511 (Banques) - Crédit 701 (Loyers)
-                ecriture = EcritureComptable(
-                    exercice_id=self.exercice_2024.id,
-                    numero_ecriture=numero_ecriture,
-                    date_ecriture=event['date'],
-                    libelle_ecriture=f"Encaissement loyer - {description}",
-                    type_ecriture='LOYER',
-                    compte_debit='511',  # Banques
-                    compte_credit='701',  # Loyers
-                    montant=montant,
-                    source_email_id=email_id,
-                    source_email_date=email_date,
-                    source_email_from=email_from,
-                )
-                self.session.add(ecriture)
-                self.session.flush()
-                ecriture_ids.append(ecriture.id)
-            
-            elif type_event == 'CHARGE':
-                # Doublement: Débit compte charge - Crédit 401 (Fournisseurs)
-                compte_charge = event.get('compte_charge', '614')
-                ecriture = EcritureComptable(
-                    exercice_id=self.exercice_2024.id,
-                    numero_ecriture=numero_ecriture,
-                    date_ecriture=event['date'],
-                    libelle_ecriture=f"Charge - {description}",
-                    type_ecriture='CHARGE',
-                    compte_debit=compte_charge,
-                    compte_credit='401',  # Fournisseurs
-                    montant=montant,
-                    source_email_id=email_id,
-                    source_email_date=email_date,
-                    source_email_from=email_from,
-                )
-                self.session.add(ecriture)
-                self.session.flush()
-                ecriture_ids.append(ecriture.id)
-            
-            elif type_event == 'AMORTISSEMENT':
-                # Traité séparément (voir calculer_amortissements)
-                return True, f"Amortissement détecté (traitement spécialisé)", []
-            
-            else:
-                return False, f"Type événement {type_event} non traité", []
-            
-            self.session.commit()
-            return True, f"Écritures créées: {numero_ecriture}", ecriture_ids
-        
-        except Exception as e:
-            self.session.rollback()
-            return False, f"Erreur traitement: {str(e)}", []
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# ÉTAPE 3: GESTIONNAIRE WORKFLOW MODULE 2
-# ═══════════════════════════════════════════════════════════════════════════════
-
-class WorkflowModule2:
-    """
-    Orchestre le workflow complet:
-    Email (autorisé) → Détection événements → Écritures → Rapports
-    """
-    
-    def __init__(self, database_url: str):
-        self.session = get_session(database_url)
-        self.detecteur = DetecteurEvenementsComptables(self.session)
-        self.processeur = ProcesseurEvenementsComptables(self.session)
-    
-    def traiter_emails(self, emails: List[Dict]) -> Dict:
-        """
-        Traite une liste d'emails (issues de fetch_emails_with_auth)
-        
-        emails: [
             {
-                'subject': '...',
-                'from': '...',
-                'date': '2024-10-21T10:30:00',
-                'body': '...',
-                'is_authorized': True,
-                'action_allowed': True,
-                ...
+                'propositions_generees': int,
+                'details': [...]
             }
-        ]
         """
-        rapport_module2 = {
-            'nb_emails_traites': 0,
-            'nb_evenements_detectes': 0,
-            'nb_ecritures_creees': 0,
-            'erreurs': [],
-            'evenements': [],
-            'ecritures_creees': [],
+        
+        resultats = {
+            'propositions_generees': 0,
+            'details': [],
+            'emails_envoyes': 0
         }
         
         for email in emails:
+            # Skip si non autorisé
             if not email.get('is_authorized') or not email.get('action_allowed'):
-                continue  # Ignorer non-autorisés
+                continue
             
             try:
-                # Créer événement comptable EN_ATTENTE
-                email_date = datetime.fromisoformat(email['date'].replace('Z', '+00:00'))
+                # Détecter type
+                type_evt = DetecteurTypeEvenement.detecter(email)
                 
-                evenement = EvenementComptable(
-                    email_id=email.get('email_id'),
-                    email_from=email['from'],
-                    email_date=email_date,
-                    email_subject=email.get('subject', ''),
-                    email_body=email['body'],
-                    statut='EN_ATTENTE',
-                )
-                self.session.add(evenement)
-                self.session.flush()
+                if type_evt == TypeEvenement.UNKNOWN:
+                    continue
                 
-                # Détecter événements
-                events_detectes = self.detecteur.analyser_email(
-                    email['body'],
-                    email_date.date(),
-                    email['from']
-                )
+                # Créer la branche appropriée et traiter
+                if type_evt == TypeEvenement.EVENEMENT_SIMPLE:
+                    result = self._traiter_evenement_simple(email)
                 
-                if events_detectes:
-                    evenement.est_comptable = True
-                    evenement.type_evenement = ','.join(e['type'] for e in events_detectes)
-                    
-                    # Traiter chaque événement
-                    ecritures_ids = []
-                    for event in events_detectes:
-                        succes, msg, ecriture_ids = self.processeur.traiter_evenement(
-                            event, 
-                            evenement.email_id,
-                            evenement.email_from,
-                            evenement.email_date
-                        )
-                        
-                        if succes:
-                            ecritures_ids.extend(ecriture_ids)
-                            rapport_module2['evenements'].append({
-                                'type': event['type'],
-                                'montant': float(event['montant']),
-                                'confidence': event['confidence'],
-                            })
-                        else:
-                            rapport_module2['erreurs'].append(msg)
-                    
-                    # Marquer comme VALIDÉ
-                    evenement.statut = 'VALIDÉ'
-                    evenement.ecritures_creees = ecritures_ids
-                    rapport_module2['nb_ecritures_creees'] += len(ecritures_ids)
+                elif type_evt == TypeEvenement.INIT_BILAN_2023:
+                    result = self._traiter_init_bilan(email)
+                
+                elif type_evt == TypeEvenement.CLOTURE_EXERCICE:
+                    result = self._traiter_cloture(email)
                 
                 else:
-                    evenement.est_comptable = False
+                    continue
                 
-                self.session.commit()
-                rapport_module2['nb_emails_traites'] += 1
-                rapport_module2['nb_evenements_detectes'] += len(events_detectes)
+                # Traiter le résultat
+                if result.get('statut') == 'OK':
+                    
+                    # Envoyer email à Ulrik avec propositions
+                    if result.get('action_suivante') == 'ENVOYER_EMAIL_VALIDATION':
+                        
+                        email_envoye = self.envoyeur.envoyer_propositions(
+                            self.email_ulrik,
+                            type_evt.value,
+                            result['markdown_genere'],
+                            subject_suffix=f"- {len(result.get('propositions', []))} proposition(s)"
+                        )
+                        
+                        if email_envoye:
+                            resultats['emails_envoyes'] += 1
+                            self.propositions_generees += len(result.get('propositions', []))
+                        else:
+                            self.erreurs.append(f"Impossible d'envoyer email pour {type_evt.value}")
+                    
+                    resultats['propositions_generees'] += len(result.get('propositions', []))
+                    resultats['details'].append({
+                        'type': type_evt.value,
+                        'propositions': len(result.get('propositions', [])),
+                        'status': 'en_attente_validation',
+                        'evenement_db_id': result.get('evenement_db_id')
+                    })
+                
+                else:
+                    self.erreurs.append(result.get('message', 'Erreur inconnue'))
+                
+                self.emails_traites += 1
             
             except Exception as e:
-                self.session.rollback()
-                rapport_module2['erreurs'].append(f"Erreur email {email.get('subject')}: {str(e)}")
+                self.erreurs.append(f"Erreur traitement email: {str(e)[:100]}")
         
-        return rapport_module2
+        return resultats
     
-    def generer_rapports_2024(self) -> Dict:
+    def _traiter_evenement_simple(self, email: Dict) -> Dict:
+        """Traite un événement simple"""
+        try:
+            branche = BrancheEvenementSimple(self.session)
+            return branche.traiter(email)
+        except Exception as e:
+            return {
+                'statut': 'ERREUR',
+                'message': f'Erreur branche événement: {str(e)}'
+            }
+    
+    def _traiter_init_bilan(self, email: Dict) -> Dict:
+        """Traite initialisation bilan 2023"""
+        try:
+            branche = BrancheInitBilan2023(self.session, self.ocr)
+            return branche.traiter(email)
+        except Exception as e:
+            return {
+                'statut': 'ERREUR',
+                'message': f'Erreur branche init bilan: {str(e)}'
+            }
+    
+    def _traiter_cloture(self, email: Dict) -> Dict:
+        """Traite clôture exercice"""
+        try:
+            branche = BrancheCloture2023(self.session, self.ocr)
+            return branche.traiter(email)
+        except Exception as e:
+            return {
+                'statut': 'ERREUR',
+                'message': f'Erreur branche clôture: {str(e)}'
+            }
+    
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # PHASE 2: TRAITEMENT VALIDATIONS
+    # ═══════════════════════════════════════════════════════════════════════════════
+    
+    def traiter_validations(self, emails: List[Dict]) -> Dict:
         """
-        Génère les rapports comptables 2024 (Bilan, Compte de résultat)
+        Traite les réponses de validation [_Head] VALIDE:
+        
+        Returns:
+            {
+                'validations_traitees': int,
+                'ecritures_inserees': int,
+                'details': [...]
+            }
         """
-        rapports = {
-            'bilan': self._generer_bilan_2024(),
-            'resultat': self._generer_resultat_2024(),
+        
+        resultats = {
+            'validations_traitees': 0,
+            'ecritures_inserees': 0,
+            'details': []
         }
-        return rapports
-    
-    def _generer_bilan_2024(self) -> str:
-        """Génère le bilan 2024 simplifié"""
-        # Récupérer les soldes finaux
-        ecritures = self.session.query(EcritureComptable).join(
-            ExerciceComptable
-        ).filter(ExerciceComptable.annee == 2024).all()
         
-        # Calculer par compte
-        soldes = {}
-        for ec in ecritures:
-            if ec.compte_debit not in soldes:
-                soldes[ec.compte_debit] = {'debit': Decimal(0), 'credit': Decimal(0)}
-            if ec.compte_credit not in soldes:
-                soldes[ec.compte_credit] = {'debit': Decimal(0), 'credit': Decimal(0)}
+        for email in emails:
+            # Chercher tag [_Head] VALIDE:
+            if '[_head] valide:' not in email.get('body', '').lower():
+                continue
             
-            soldes[ec.compte_debit]['debit'] += ec.montant
-            soldes[ec.compte_credit]['credit'] += ec.montant
-        
-        # Formater
-        bilan = "BILAN SCI SOEURISE - 2024\n"
-        bilan += "=" * 50 + "\n\n"
-        bilan += "ACTIF\n"
-        bilan += "-" * 50 + "\n"
-        
-        for compte_num, solde in sorted(soldes.items()):
-            compte = self.session.query(PlanCompte).filter_by(numero_compte=compte_num).first()
-            if compte and compte.type_compte == 'ACTIF':
-                montant_net = solde['debit'] - solde['credit']
-                if montant_net > 0:
-                    bilan += f"{compte.numero_compte} {compte.libelle:40} {montant_net:15,.2f}\n"
-        
-        bilan += "\nPASSIF\n"
-        bilan += "-" * 50 + "\n"
-        
-        for compte_num, solde in sorted(soldes.items()):
-            compte = self.session.query(PlanCompte).filter_by(numero_compte=compte_num).first()
-            if compte and compte.type_compte == 'PASSIF':
-                montant_net = solde['credit'] - solde['debit']
-                if montant_net > 0:
-                    bilan += f"{compte.numero_compte} {compte.libelle:40} {montant_net:15,.2f}\n"
-        
-        return bilan
-    
-    def _generer_resultat_2024(self) -> str:
-        """Génère le compte de résultat 2024"""
-        ecritures = self.session.query(EcritureComptable).join(
-            ExerciceComptable
-        ).filter(ExerciceComptable.annee == 2024).all()
-        
-        # Calculer par compte
-        soldes = {}
-        for ec in ecritures:
-            if ec.compte_debit not in soldes:
-                soldes[ec.compte_debit] = {'debit': Decimal(0), 'credit': Decimal(0)}
-            if ec.compte_credit not in soldes:
-                soldes[ec.compte_credit] = {'debit': Decimal(0), 'credit': Decimal(0)}
+            try:
+                result = self.workflow_validation.traiter_email_validation(email)
+                
+                if result.get('validation_detectee'):
+                    
+                    if result.get('statut') == 'OK':
+                        self.validations_traitees += 1
+                        self.ecritures_inserees += result.get('ecritures_inserees', 0)
+                        
+                        resultats['validations_traitees'] += 1
+                        resultats['ecritures_inserees'] += result.get('ecritures_inserees', 0)
+                        
+                        resultats['details'].append({
+                            'type': result.get('type_proposition', ''),
+                            'ecritures_inserees': result.get('ecritures_inserees', 0),
+                            'status': 'insepe_en_db'
+                        })
+                    
+                    else:
+                        self.erreurs.append(f"Validation échouée: {result.get('message')}")
+                        resultats['details'].append({
+                            'status': 'erreur',
+                            'message': result.get('message')
+                        })
             
-            soldes[ec.compte_debit]['debit'] += ec.montant
-            soldes[ec.compte_credit]['credit'] += ec.montant
+            except Exception as e:
+                self.erreurs.append(f"Erreur traitement validation: {str(e)[:100]}")
         
-        # Formater
-        resultat = "COMPTE DE RÉSULTAT SCI SOEURISE - 2024\n"
-        resultat += "=" * 50 + "\n\n"
-        resultat += "PRODUITS\n"
-        resultat += "-" * 50 + "\n"
+        return resultats
+    
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # GÉNÉRATION RAPPORT
+    # ═══════════════════════════════════════════════════════════════════════════════
+    
+    def generer_rapport(
+        self,
+        resultats_entrants: Dict,
+        resultats_validations: Dict
+    ) -> str:
+        """Génère le rapport pour inclusion dans rapport quotidien"""
         
-        total_produits = Decimal(0)
-        for compte_num, solde in sorted(soldes.items()):
-            compte = self.session.query(PlanCompte).filter_by(numero_compte=compte_num).first()
-            if compte and compte.type_compte == 'PRODUIT':
-                montant = solde['credit'] - solde['debit']
-                if montant > 0:
-                    resultat += f"{compte.numero_compte} {compte.libelle:40} {montant:15,.2f}\n"
-                    total_produits += montant
+        rapport = """
+## 📊 MODULE 2 - COMPTABILITÉ
+
+### État du traitement
+
+**Emails entrants traités:** {}
+- Propositions générées: {}
+- Emails de validation envoyés: {}
+
+**Validations reçues:** {}
+- Écritures insérées en BD: {}
+
+""".format(
+            self.emails_traites,
+            resultats_entrants.get('propositions_generees', 0),
+            resultats_entrants.get('emails_envoyes', 0),
+            resultats_validations.get('validations_traitees', 0),
+            resultats_validations.get('ecritures_inserees', 0)
+        )
         
-        resultat += "\nCHARGES\n"
-        resultat += "-" * 50 + "\n"
+        # Détails des propositions générées
+        if resultats_entrants.get('details'):
+            rapport += "### 📝 Propositions générées\n\n"
+            for detail in resultats_entrants['details']:
+                rapport += f"- **{detail['type']}**: {detail['propositions']} proposition(s) → En attente de validation (événement DB: {detail['evenement_db_id']})\n"
         
-        total_charges = Decimal(0)
-        for compte_num, solde in sorted(soldes.items()):
-            compte = self.session.query(PlanCompte).filter_by(numero_compte=compte_num).first()
-            if compte and compte.type_compte == 'CHARGE':
-                montant = solde['debit'] - solde['credit']
-                if montant > 0:
-                    resultat += f"{compte.numero_compte} {compte.libelle:40} {montant:15,.2f}\n"
-                    total_charges += montant
+        # Détails des validations traitées
+        if resultats_validations.get('details'):
+            rapport += "\n### ✅ Validations traitées\n\n"
+            for detail in resultats_validations['details']:
+                if detail.get('status') == 'insepe_en_db':
+                    rapport += f"- **{detail['type']}**: {detail['ecritures_inserees']} écriture(s) insérée(s)\n"
+                elif detail.get('status') == 'erreur':
+                    rapport += f"- ❌ {detail.get('message', 'Erreur')}\n"
         
-        resultat += "\n" + "=" * 50 + "\n"
-        resultat += f"RÉSULTAT EXERCICE: {total_produits - total_charges:15,.2f}\n"
+        # Résumé erreurs
+        if self.erreurs:
+            rapport += f"\n### ⚠️ Erreurs ({len(self.erreurs)})\n\n"
+            for erreur in self.erreurs[:5]:  # Limiter à 5
+                rapport += f"- {erreur}\n"
+            if len(self.erreurs) > 5:
+                rapport += f"- ... et {len(self.erreurs) - 5} autre(s) erreur(s)\n"
         
-        return resultat
+        # Résumé final
+        rapport += f"\n### 📊 Résumé\n\n"
+        rapport += f"- Total emails traités: {self.emails_traites}\n"
+        rapport += f"- Total propositions: {self.propositions_generees}\n"
+        rapport += f"- Total validations: {self.validations_traitees}\n"
+        rapport += f"- Total écritures insérées: {self.ecritures_inserees}\n"
+        
+        return rapport
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# INTÉGRATION DANS main_V4.0.py
+# POINT D'ENTRÉE UNIQUE POUR reveil_quotidien()
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def integrer_module2_dans_reveil(emails, database_url):
+def integrer_module2_v2(
+    emails: List[Dict],
+    database_url: str,
+    anthropic_api_key: str,
+    email_soeurise: str,
+    password_soeurise: str,
+    email_ulrik: str
+) -> Dict:
     """
-    À appeler DANS reveil_quotidien() de main_V4.0.py, APRÈS fetch_emails_with_auth()
+    Point d'entrée unique à appeler depuis reveil_quotidien()
     
-    # Dans main_V4.0.py:
+    Usage dans main_V4_2.py:
+        
+        rapport_module2 = integrer_module2_v2(
+            emails,
+            os.environ['DATABASE_URL'],
+            os.environ['ANTHROPIC_API_KEY'],
+            os.environ['SOEURISE_EMAIL'],
+            os.environ['SOEURISE_PASSWORD'],
+            os.environ['NOTIF_EMAIL']
+        )
+        
+        # Inclure dans rapport quotidien:
+        rapport_quotidien += rapport_module2['rapport']
     
-    def reveil_quotidien():
-        emails = fetch_emails_with_auth()
-        
-        # ← AJOUTER ICI:
-        rapport_module2 = integrer_module2_dans_reveil(emails, os.environ['DATABASE_URL'])
-        
-        # Inclure rapport_module2 dans le rapport quotidien...
+    Returns:
+        {
+            'rapport': str (à inclure dans rapport_quotidien),
+            'stats': {
+                'emails_traites': int,
+                'propositions_generees': int,
+                'validations_traitees': int,
+                'ecritures_inserees': int
+            }
+        }
     """
+    
     try:
-        workflow = WorkflowModule2(database_url)
+        # Initialiser intégrateur
+        integrator = IntegratorModule2(
+            database_url,
+            anthropic_api_key,
+            email_soeurise,
+            password_soeurise,
+            email_ulrik
+        )
         
-        # Traiter les emails
-        rapport = workflow.traiter_emails(emails)
+        # Phase 1: Traiter emails entrants (génération propositions)
+        resultats_entrants = integrator.traiter_emails_entrants(emails)
         
-        # Générer rapports comptables
-        rapports_comptables = workflow.generer_rapports_2024()
+        # Phase 2: Traiter validations (insertion BD)
+        resultats_validations = integrator.traiter_validations(emails)
         
-        # Formater pour inclusion dans rapport quotidien
-        rapport_formaté = f"""
-### MODULE 2 - COMPTABILITÉ
-
-**Emails traités:** {rapport['nb_emails_traites']}
-**Événements détectés:** {rapport['nb_evenements_detectes']}
-**Écritures créées:** {rapport['nb_ecritures_creees']}
-
-#### Événements traités:
-"""
-        for evt in rapport['evenements']:
-            rapport_formaté += f"- {evt['type']}: {evt['montant']}€ (confiance {evt['confidence']:.0%})\n"
-        
-        if rapport['erreurs']:
-            rapport_formaté += "\n#### ⚠️ Erreurs:\n"
-            for erreur in rapport['erreurs']:
-                rapport_formaté += f"- {erreur}\n"
-        
-        rapport_formaté += "\n#### Bilan 2024:\n```\n"
-        rapport_formaté += rapports_comptables['bilan']
-        rapport_formaté += "\n```\n"
-        
-        rapport_formaté += "\n#### Compte de Résultat 2024:\n```\n"
-        rapport_formaté += rapports_comptables['resultat']
-        rapport_formaté += "\n```\n"
+        # Générer rapport
+        rapport = integrator.generer_rapport(resultats_entrants, resultats_validations)
         
         return {
-            'rapport': rapport_formaté,
-            'data': rapport,
-            'rapports_comptables': rapports_comptables
+            'rapport': rapport,
+            'stats': {
+                'emails_traites': integrator.emails_traites,
+                'propositions_generees': integrator.propositions_generees,
+                'validations_traitees': integrator.validations_traitees,
+                'ecritures_inserees': integrator.ecritures_inserees,
+                'erreurs': len(integrator.erreurs)
+            },
+            'success': True
         }
     
     except Exception as e:
         return {
-            'rapport': f"❌ Module 2 - Erreur: {str(e)}",
-            'data': {},
-            'rapports_comptables': {}
+            'rapport': f"\n## ❌ MODULE 2 - ERREUR CRITIQUE\n\n{str(e)}\n",
+            'stats': {
+                'emails_traites': 0,
+                'propositions_generees': 0,
+                'validations_traitees': 0,
+                'ecritures_inserees': 0,
+                'erreurs': 1
+            },
+            'success': False
         }
 
 
-if __name__ == "__main__":
-    # Test
-    import os
-    
-    db_url = os.environ.get('DATABASE_URL')
-    if not db_url:
-        print("DATABASE_URL non défini!")
-        exit(1)
-    
-    init_module2(db_url)
-    
-    # Exemple
-    workflow = WorkflowModule2(db_url)
-    print("✅ Module 2 initialisé et prêt")
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPORT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+__all__ = [
+    'IntegratorModule2',
+    'integrer_module2_v2',
+]
