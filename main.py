@@ -1,5 +1,5 @@
 """
-_Head.Soeurise V4.1 FIXED
+_Head.Soeurise V4.2
 ==============================
 FIXES APPLIQUÉS:
 1. ✅ Module2 imports après log_critical (NameError fixé)
@@ -7,7 +7,7 @@ FIXES APPLIQUÉS:
 3. ✅ emails_data initialisée AVANT le try (NameError: 'emails_data' not defined - FIXÉ)
 4. ✅ Module2 exception handling robuste (NoneType crash - FIXÉ)
 
-VERSION: 4.1 STABLE - Production-ready
+VERSION: 4.2 - Production-ready
 Zéro régression acceptée
 """
 
@@ -45,6 +45,15 @@ try:
     PDF2IMAGE_SUPPORT = True
 except:
     PDF2IMAGE_SUPPORT = False
+
+# Module 2 V2
+try:
+    from module2_integration_v2 import integrer_module2_v2
+    MODULE2_V2_AVAILABLE = True
+    log_critical("MODULE2_V2_IMPORT_OK", "Module 2 V2 importé avec succès")
+except ImportError as e:
+    MODULE2_V2_AVAILABLE = False
+    log_critical("MODULE2_V2_IMPORT_WARNING", f"Module 2 V2 non disponible: {str(e)[:100]}")
 
 # ═══════════════════════════════════════════════════════════════════
 # CONFIG
@@ -707,11 +716,15 @@ MÉMOIRE LONGUE (reçue: 3000 chars):
 # ═══════════════════════════════════════════════════════════════════
 
 def reveil_quotidien():
-    """Cycle quotidien d'analyse"""
+    """Cycle quotidien d'analyse - AVEC MODULE 2 V2"""
+    
     log_critical("REVEIL_START", "Démarrage réveil quotidien")
+    
+    # Étape 1: Récupérer emails
     emails = fetch_emails_with_auth()
     log_critical("REVEIL_EMAILS_FETCHED", f"{len(emails)} emails extraits")
     
+    # Étape 2: Analyse Claude (comme avant)
     memoire_files = load_memoire_files()
     db_data = query_db_context()
     resultat = claude_decide_et_execute(emails, memoire_files, db_data)
@@ -726,7 +739,53 @@ def reveil_quotidien():
     if files_updated:
         git_push_changes(files_updated, f"🧠 Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     
-    # Extraire les PDFs traités pour les attacher au rapport
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # NOUVEAU: Module 2 V2 - Traitement comptable
+    # ═══════════════════════════════════════════════════════════════════════════════
+    
+    rapport_module2 = {
+        'rapport': '',
+        'stats': {}
+    }
+    
+    if MODULE2_V2_AVAILABLE:
+        try:
+            log_critical("MODULE2_V2_START", "Démarrage traitement comptable Module 2 V2")
+            
+            rapport_module2 = integrer_module2_v2(
+                emails,
+                DB_URL,
+                ANTHROPIC_API_KEY,
+                SOEURISE_EMAIL,
+                SOEURISE_PASSWORD,
+                NOTIF_EMAIL
+            )
+            
+            if rapport_module2.get('success'):
+                stats = rapport_module2.get('stats', {})
+                log_critical(
+                    "MODULE2_V2_SUCCESS",
+                    f"Propositions: {stats.get('propositions_generees', 0)}, "
+                    f"Validations: {stats.get('validations_traitees', 0)}, "
+                    f"Écritures: {stats.get('ecritures_inserees', 0)}"
+                )
+            else:
+                log_critical("MODULE2_V2_ERROR", "Erreur traitement comptable")
+        
+        except Exception as e:
+            log_critical("MODULE2_V2_EXCEPTION", f"Exception: {str(e)[:100]}")
+            rapport_module2['rapport'] = f"\n## ❌ MODULE 2 - ERREUR\n\n{str(e)}\n"
+    
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # Inclure rapport Module 2 dans le rapport quotidien
+    # ═══════════════════════════════════════════════════════════════════════════════
+    
+    rapport_final = resultat.get('rapport_quotidien', '')
+    
+    if rapport_module2.get('rapport'):
+        rapport_final += rapport_module2['rapport']
+    
+    # Extraire les PDFs traitées pour les attacher
     extracted_pdf_texts = []
     for email in emails:
         if email.get('attachments'):
@@ -734,46 +793,21 @@ def reveil_quotidien():
                 if att.get('content_type') == 'application/pdf' and att.get('extracted_text'):
                     extracted_pdf_texts.append(att['extracted_text'])
     
-    log_critical("REVEIL_PDFS_EXTRACTED", f"{len(extracted_pdf_texts)} PDFs extraits à attacher")
-
-    # ════════════════════════════════════════════════════════════════════════════
-    # MODULE 2 - COMPTABILITÉ (✅ ROBUSTIFIÉ - BUG #4 FIX)
-    # ════════════════════════════════════════════════════════════════════════════
-    if MODULE2_AVAILABLE:
-        try:
-            log_critical("MODULE2_START", "Démarrage Module 2")
-            rapport_m2 = integrer_module2_dans_reveil(emails, DB_URL)
-            
-            # ✅ ROBUSTES: Vérifier que rapport_m2 existe et a les bonnes clés
-            if rapport_m2 and isinstance(rapport_m2, dict):
-                if rapport_m2.get('rapport'):
-                    resultat['rapport_quotidien'] += "\n\n" + rapport_m2['rapport']
-                
-                nb_ecritures = 0
-                if rapport_m2.get('data') and isinstance(rapport_m2['data'], dict):
-                    nb_ecritures = rapport_m2['data'].get('nb_ecritures_creees', 0)
-                
-                log_critical("MODULE2_SUCCESS", f"{nb_ecritures} écritures créées")
-            else:
-                log_critical("MODULE2_WARNING", f"Retour Module 2 invalide: {type(rapport_m2)}")
-        
-        except Exception as e:
-            log_critical("MODULE2_ERROR", f"Erreur: {str(e)[:100]}")
-            # Ajouter erreur au rapport mais ne pas interrompre
-            resultat['rapport_quotidien'] += f"\n\n❌ Module 2 - Erreur: {str(e)[:50]}"
-    # ════════════════════════════════════════════════════════════════════════════
-
-    rapport_sent = send_rapport(resultat.get('rapport_quotidien', 'Pas de rapport'), extracted_pdf_texts if extracted_pdf_texts else None)
+    log_critical("REVEIL_PDFS_EXTRACTED", f"{len(extracted_pdf_texts)} PDFs extraits")
+    
+    # Envoyer le rapport final
+    rapport_sent = send_rapport(rapport_final, extracted_pdf_texts if extracted_pdf_texts else None)
     
     if rapport_sent:
         email_ids = [e.get('email_id') for e in emails if e.get('email_id')]
         if email_ids:
             mark_emails_as_seen(email_ids)
-            log_critical("REVEIL_COMPLETE", "Réveil terminé avec succès, emails marqués seen")
+            log_critical("REVEIL_COMPLETE", "Réveil terminé avec succès")
         else:
-            log_critical("REVEIL_COMPLETE", "Réveil terminé, aucun email_id à marquer")
+            log_critical("REVEIL_COMPLETE", "Réveil terminé, aucun email à marquer")
     else:
-        log_critical("REVEIL_RAPPORT_FAILED", "Rapport non envoyé, emails NON marqués seen (réessai au prochain réveil)")
+        log_critical("REVEIL_RAPPORT_FAILED", "Rapport non envoyé, emails NON marqués seen")
+
 
 # ═══════════════════════════════════════════════════════════════════
 # FLASK API
