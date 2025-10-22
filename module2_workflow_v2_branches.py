@@ -1,5 +1,5 @@
 """
-MODULE 2 WORKFLOW BRANCHES V2 - LES 3 BRANCHES DE TRAITEMENT
+MODULE 2 WORKFLOW BRANCHES V2 - LES 3 BRANCHES DE TRAITEMENT (FIXED)
 =============================================================
 
 Branche 1: Événements simples (loyer/charge)
@@ -8,13 +8,19 @@ Branche 3: Clôture exercice 2023
 
 Rôle: Encapsuler la logique spécifique à chaque type d'événement
 Gère aussi: Envoi d'emails Markdown, parsing JSON depuis Markdown
+
+FIX: Corriger EnvoyeurMarkdown pour accepter email_to et attacher Markdown
 """
 
 import json
 import re
 import smtplib
+import os
+import tempfile
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 from abc import ABC, abstractmethod
@@ -267,67 +273,129 @@ class BrancheCloture2023:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 4. ENVOYEUR MARKDOWN
+# 4. ENVOYEUR MARKDOWN (FIXED - Attache le Markdown en pièce jointe)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class EnvoyeurMarkdown:
-    """Envoie les propositions par email en Markdown formaté"""
+    """Envoie les propositions par email en Markdown formaté + pièce jointe"""
     
-    def __init__(self, email_from: str, email_password: str, email_to: str):
+    def __init__(self, email_from: str, email_password: str, email_to: str = None):
         self.email_from = email_from
         self.email_password = email_password
         self.email_to = email_to
     
-    def envoyer_propositions(self, type_evt: str, markdown: str, token: str) -> bool:
+    def envoyer_propositions(
+        self,
+        email_to: str,
+        type_evt: str,
+        markdown: str,
+        token: str,
+        subject_suffix: str = ""
+    ) -> bool:
         """
         Envoie les propositions à Ulrik pour validation
         
-        Sujet: [_Head] PROPOSITIONS - Type d'événement
-        Body: Markdown lisible
+        ✅ FIX: Accepte email_to, subject_suffix, attache Markdown
+        
+        Sujet: [_Head] PROPOSITIONS - Type d'événement [suffix]
+        Body: JSON avec token + instructions
+        Pièce jointe: Markdown avec propositions
+        
         Instructions: Tag [_Head] VALIDE: dans la réponse pour valider
         """
         
         try:
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = f"[_Head] PROPOSITIONS - {type_evt}"
+            msg = MIMEMultipart('mixed')
+            msg['Subject'] = f"[_Head] PROPOSITIONS - {type_evt} {subject_suffix}".strip()
             msg['From'] = self.email_from
-            msg['To'] = self.email_to
+            msg['To'] = email_to
             
-            # Convertir Markdown → HTML simple
-            html = self._markdown_to_html(markdown)
+            # 1. BODY TEXTE: JSON + Token + Instructions
             
-            # Body HTML
-            html_part = MIMEText(html, 'html', 'utf-8')
-            msg.attach(html_part)
-            
-            # Ajouter instructions
-            instructions = f"""
+            body_text = f"""
+Propositions comptables pour validation
+
+**Type d'événement:** {type_evt}
+**Date de génération:** {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
+**Token MD5 de sécurité:** {token}
+
 ---
 
-**INSTRUCTIONS POUR ULRIK:**
+## STRUCTURE JSON DES PROPOSITIONS
 
-1. Examinez les propositions ci-dessus
-2. Si correct, répondez avec le tag **[_Head] VALIDE:** dans votre email
-3. Vous pouvez modifier le fichier Markdown si besoin
-4. Joignez le fichier modifié (optionnel)
+```json
+{json.dumps(
+    {
+        "type_evenement": type_evt,
+        "token": token,
+        "generee_at": datetime.now().isoformat()
+    },
+    indent=2
+)}
+```
 
-**Token de validation:** `{token}`
+---
 
-_Head.Soeurise attendra votre réponse au prochain réveil quotidien (10h).
+## INSTRUCTIONS POUR VALIDATION
+
+1. **Examinez les propositions** dans le fichier Markdown ci-joint
+2. **Vérifiez l'exactitude** des comptes, montants, dates
+3. **Pour valider**, répondez à cet email avec le tag suivant dans votre message:
+
+   **[_Head] VALIDE:**
+
+4. Vous pouvez modifier le fichier Markdown avant de répondre (optionnel)
+5. Joignez le fichier modifié si vous avez apporté des corrections
+
+---
+
+**⏰ _Head attendra votre réponse au prochain réveil automatique.**
+
+Merci,
+_Head.Soeurise
 """
             
-            msg_text = MIMEText(instructions, 'plain', 'utf-8')
-            msg.attach(msg_text)
+            msg.attach(MIMEText(body_text, 'plain', 'utf-8'))
             
-            # Envoyer
+            # 2. PIÈCE JOINTE: Markdown avec propositions ✅ FIX
+            
+            try:
+                # Créer fichier Markdown temporaire
+                md_filename = f"propositions_{type_evt}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+                md_filepath = os.path.join(tempfile.gettempdir(), md_filename)
+                
+                with open(md_filepath, 'w', encoding='utf-8') as f:
+                    f.write(markdown)
+                
+                # Attacher le fichier
+                with open(md_filepath, 'rb') as attachment:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(attachment.read())
+                    encoders.encode_base64(part)
+                    part.add_header('Content-Disposition', f'attachment; filename= {md_filename}')
+                    msg.attach(part)
+                
+                # Nettoyer le fichier temporaire
+                try:
+                    os.remove(md_filepath)
+                except:
+                    pass
+            
+            except Exception as e:
+                print(f"⚠️ Erreur création pièce jointe Markdown: {str(e)[:100]}")
+                # Continuer sans pièce jointe si erreur
+            
+            # 3. ENVOYER L'EMAIL
+            
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
                 server.login(self.email_from, self.email_password)
                 server.send_message(msg)
             
+            print(f"✅ Email de propositions envoyé à {email_to} ({type_evt})")
             return True
         
         except Exception as e:
-            print(f"❌ Erreur envoi email: {str(e)}")
+            print(f"❌ Erreur envoi email propositions: {str(e)[:100]}")
             return False
     
     @staticmethod
@@ -459,4 +527,4 @@ class ParseurMarkdownJSON:
 
 if __name__ == "__main__":
     
-    print("✅ Module 2 Branches V2 chargé et prêt")
+    print("✅ Module 2 Branches V2 (FIXED) chargé et prêt")
