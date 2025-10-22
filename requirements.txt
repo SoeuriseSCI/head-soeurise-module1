@@ -1,10 +1,9 @@
-anthropic==0.40.0
-psycopg2-binary==2.9.9
-schedule==1.2.0
-requests==2.31.0
-pdfplumber==0.11.0
-pdf2image==1.17.0
-flask==3.1.0
-reportlab==4.0.9
-sqlalchemy>=2.0
-psycopg2-binary>=2.9
+anthropic==0.40.0              # Claude API
+sqlalchemy>=2.0                # ORM
+psycopg2-binary==2.9.9         # PostgreSQL
+pdf2image==1.17.0              # PDF → Images (OCR)
+pdfplumber==0.11.0             # PDF extraction fallback
+reportlab==4.0.9               # PDF generation
+flask==3.1.0                   # Web API
+requests==2.31.0               # HTTP
+schedule==1.2.0                # Scheduling
