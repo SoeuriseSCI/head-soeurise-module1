@@ -1,7 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-MODULE 2 - MODÈLES SQLALCHEMY (ORM)
+MODULE 2 - MODELES SQLALCHEMY (ORM)
 ===============================
 Représente les tables comptables en Python
+
+CORRECTION: Encodage UTF-8 + noms de tables vérifiés
 """
 
 from sqlalchemy import (
@@ -70,7 +74,7 @@ class PlanCompte(Base):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ÉCRITURES COMPTABLES
+# ECRITURES COMPTABLES
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class EcritureComptable(Base):
@@ -114,11 +118,11 @@ class EcritureComptable(Base):
     compte_credit_ref = relationship("PlanCompte", foreign_keys=[compte_credit], back_populates="ecritures_credit")
     
     def __repr__(self):
-        return f"<EcritureComptable({self.numero_ecriture}: {self.montant} {self.compte_debit}→{self.compte_credit})>"
+        return f"<EcritureComptable({self.numero_ecriture}: {self.montant} {self.compte_debit}->{self.compte_credit})>"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# IMMOBILISATIONS (BIENS À AMORTIR)
+# IMMOBILISATIONS (BIENS A AMORTIR)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class Immobilisation(Base):
@@ -141,8 +145,8 @@ class Immobilisation(Base):
     
     # Amortissement
     methode_amortissement = Column(String(50), nullable=False)  # LINEAIRE, DEGRESSIF
-    duree_amortissement = Column(Integer, nullable=False)  # en années
-    taux_degressif = Column(Numeric(5, 2))  # si méthode dégressive
+    duree_amortissement = Column(Integer, nullable=False)  # en annees
+    taux_degressif = Column(Numeric(5, 2))  # si methode degressive
     
     # Traçabilité
     source_email_id = Column(String(255))
@@ -181,7 +185,7 @@ class CalculAmortissement(Base):
     taux_applique = Column(Numeric(5, 2), nullable=False)
     montant_amortissement = Column(Numeric(12, 2), nullable=False)
     
-    # Écriture générée
+    # Ecriture generee
     ecriture_id = Column(Integer, ForeignKey('ecritures_comptables.id'))
     
     notes = Column(Text)
@@ -196,7 +200,7 @@ class CalculAmortissement(Base):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# QUEUE D'ÉVÉNEMENTS COMPTABLES (EMAIL → TRAITEMENT)
+# QUEUE D'EVENEMENTS COMPTABLES (EMAIL -> TRAITEMENT)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class EvenementComptable(Base):
@@ -213,13 +217,13 @@ class EvenementComptable(Base):
     
     # Classification
     type_evenement = Column(String(100))
-    est_comptable = Column(Boolean)  # NULL = non traité, TRUE/FALSE = résultat
+    est_comptable = Column(Boolean)  # NULL = non traite, TRUE/FALSE = resultat
     
     # Traitement
-    statut = Column(String(50), default='EN_ATTENTE')  # EN_ATTENTE, VALIDÉ, REJETÉ, ERREUR
+    statut = Column(String(50), default='EN_ATTENTE')  # EN_ATTENTE, VALIDE, REJETE, ERREUR
     message_erreur = Column(Text)
     
-    # Écritures créées
+    # Ecritures creees
     ecritures_creees = Column(ARRAY(Integer))
     
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -264,7 +268,7 @@ class BalanceMensuelle(Base):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# RAPPORTS GÉNÉRÉS
+# RAPPORTS GENERES
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class RapportComptable(Base):
@@ -298,7 +302,7 @@ class RapportComptable(Base):
 
 def get_session(database_url):
     """
-    Crée une session SQLAlchemy
+    Cree une session SQLAlchemy
     
     Usage:
         session = get_session("postgresql://...")
@@ -314,7 +318,7 @@ def init_module2(database_url):
     """
     engine = create_engine(database_url)
     Base.metadata.create_all(engine)
-    print("✅ Tables Module 2 créées/vérifiées")
+    print("✅ Tables Module 2 creees/verifiees")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
