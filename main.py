@@ -46,6 +46,22 @@ try:
 except:
     PDF2IMAGE_SUPPORT = False
 
+# ═══════════════════════════════════════════════════════════════════
+# LOGGING CRITIQUE SEULEMENT (V3.7)
+# ═══════════════════════════════════════════════════════════════════
+
+def log_critical(action, details=""):
+    """Log uniquement les opérations critiques"""
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    message = f"[{timestamp}] {action}"
+    if details:
+        message += f": {details}"
+    try:
+        with open('/tmp/head_soeurise_critical.log', 'a') as f:
+            f.write(message + '\n')
+    except:
+        pass
+
 # Module 2 V2
 try:
     from module2_integration_v2 import integrer_module2_v2
@@ -86,22 +102,6 @@ MIN_TEXT_FOR_OCR = 50
 IDENTITY = "Je suis _Head.Soeurise, IA de la SCI Soeurise. Mission: Gestion patrimoniale. Philosophie: Persévérer / Espérer / Progresser"
 
 app = Flask(__name__)
-
-# ═══════════════════════════════════════════════════════════════════
-# LOGGING CRITIQUE SEULEMENT (V3.7)
-# ═══════════════════════════════════════════════════════════════════
-
-def log_critical(action, details=""):
-    """Log uniquement les opérations critiques"""
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    message = f"[{timestamp}] {action}"
-    if details:
-        message += f": {details}"
-    try:
-        with open('/tmp/head_soeurise_critical.log', 'a') as f:
-            f.write(message + '\n')
-    except:
-        pass
 
 # ═══════════════════════════════════════════════════════════════════
 # MODULE 2 IMPORTS (après log_critical pour éviter NameError)
