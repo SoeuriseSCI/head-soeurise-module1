@@ -882,11 +882,23 @@ if __name__ == "__main__":
     # ════════════════════════════════════════════════════════════════════════════
     # INITIALISER MODULE 2
     # ════════════════════════════════════════════════════════════════════════════
+    # ✅ AJOUTER ALEMBIC ICI
+    try:
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", DB_URL)
+        command.upgrade(alembic_cfg, "head")
+        log_critical("ALEMBIC_UPGRADE", "Migrations Alembic appliquées")
+    except Exception as e:
+        log_critical("ALEMBIC_ERROR", f"Erreur Alembic: {str(e)[:100]}")
+
+    # APRÈS: Module 2
     if MODULE2_AVAILABLE:
         try:
             log_critical("MODULE2_INIT_START", "Initialisation Module 2")
-            session_m2 = get_session_m2(DB_URL)  # ✅ Créer une session, pas passer DB_URL
-            init_module2(session_m2)  # ✅ Passer la session
+            session_m2 = get_session_m2(DB_URL)  
+            init_module2(session_m2)
             log_critical("MODULE2_INIT_OK", "Module 2 prêt")
         except Exception as e:
             log_critical("MODULE2_INIT_ERROR", f"Erreur: {str(e)[:100]}")
