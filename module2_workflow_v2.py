@@ -1,7 +1,9 @@
 """
-MODULE 2 WORKFLOW V2 - WORKFLOW COMPTABLE
+MODULE 2 WORKFLOW V2 - WORKFLOW COMPTABLE (FIXED)
 ==========================================
 Détection d'événements, parsing PDFs, génération propositions (7 phases du flux global)
+
+FIX: Ajouter Enum TypeEvenement pour résoudre import error
 
 Phases couverts par ce fichier:
 1️⃣ Fetch emails
@@ -19,6 +21,7 @@ import io
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional
 from decimal import Decimal
+from enum import Enum
 
 import anthropic
 
@@ -27,6 +30,18 @@ try:
     PDF2IMAGE_AVAILABLE = True
 except ImportError:
     PDF2IMAGE_AVAILABLE = False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TYPE ÉVÉNEMENT (ENUM) - FIX IMPORT ERROR
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TypeEvenement(Enum):
+    """Types d'événements comptables détectables"""
+    EVENEMENT_SIMPLE = "EVENEMENT_SIMPLE"
+    INIT_BILAN_2023 = "INIT_BILAN_2023"
+    CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
+    UNKNOWN = "UNKNOWN"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -104,19 +119,19 @@ class OCRExtractor:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 2. DÉTECTEUR TYPE ÉVÉNEMENT
+# 2. DÉTECTEUR TYPE ÉVÉNEMENT (RETOURNE ENUM)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class DetecteurTypeEvenement:
     """Détecte le type d'événement comptable depuis un email"""
     
     @staticmethod
-    def detecter(email: Dict) -> str:
+    def detecter(email: Dict) -> TypeEvenement:
         """
         Détecte le type d'événement
         
         Returns:
-            EVENEMENT_SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE | UNKNOWN
+            TypeEvenement enum (EVENEMENT_SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE | UNKNOWN)
         """
         body = (email.get('body', '') + ' ' + email.get('subject', '')).lower()
         subject = email.get('subject', '').lower()
@@ -124,27 +139,27 @@ class DetecteurTypeEvenement:
         
         # Détecteur CLOTURE_EXERCICE
         if any(kw in body for kw in ['cloture', 'clôture', 'amortissement_credit', 'reevaluation', 'réévaluation']):
-            return 'CLOTURE_EXERCICE'
+            return TypeEvenement.CLOTURE_EXERCICE
         
         if any(f['filename'].lower().endswith('.pdf') and any(kw in f['filename'].lower() 
                for kw in ['amortissement', 'credit', 'reevaluation', 'cloture'])
                for f in attachments if 'filename' in f):
-            return 'CLOTURE_EXERCICE'
+            return TypeEvenement.CLOTURE_EXERCICE
         
         # Détecteur INIT_BILAN_2023
         if any(kw in body for kw in ['bilan 2023', 'bilan_2023', 'bilan initial', 'initialisation comptable']):
-            return 'INIT_BILAN_2023'
+            return TypeEvenement.INIT_BILAN_2023
         
         if any(f['filename'].lower().endswith('.pdf') and 'bilan' in f['filename'].lower() and '2023' in f['filename'].lower()
                for f in attachments if 'filename' in f):
-            return 'INIT_BILAN_2023'
+            return TypeEvenement.INIT_BILAN_2023
         
         # Détecteur EVENEMENT_SIMPLE (loyer, charge, etc.)
         if any(kw in body for kw in ['loyer', 'location', 'paiement', 'charge', 'entretien', 
                                        'réparation', 'assurance', 'taxe', 'syndic', '€', 'eur']):
-            return 'EVENEMENT_SIMPLE'
+            return TypeEvenement.EVENEMENT_SIMPLE
         
-        return 'UNKNOWN'
+        return TypeEvenement.UNKNOWN
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -577,7 +592,7 @@ class WorkflowModule2V2:
         
         Returns:
             {
-              "type_detecte": "EVENEMENT_SIMPLE" | "INIT_BILAN_2023" | "CLOTURE_EXERCICE",
+              "type_detecte": TypeEvenement,
               "statut": "OK" | "ERREUR",
               "markdown": "...",
               "propositions": {...},
@@ -588,15 +603,15 @@ class WorkflowModule2V2:
         
         type_evt = DetecteurTypeEvenement.detecter(email)
         
-        if type_evt == 'EVENEMENT_SIMPLE':
+        if type_evt == TypeEvenement.EVENEMENT_SIMPLE:
             return self._traiter_evenement_simple(email)
-        elif type_evt == 'INIT_BILAN_2023':
+        elif type_evt == TypeEvenement.INIT_BILAN_2023:
             return self._traiter_init_bilan_2023(email)
-        elif type_evt == 'CLOTURE_EXERCICE':
+        elif type_evt == TypeEvenement.CLOTURE_EXERCICE:
             return self._traiter_cloture_2023(email)
         else:
             return {
-                "type_detecte": "UNKNOWN",
+                "type_detecte": TypeEvenement.UNKNOWN,
                 "statut": "ERREUR",
                 "message": "Impossible de détecter le type d'événement",
                 "markdown": "",
@@ -619,7 +634,7 @@ class WorkflowModule2V2:
             
             if not montant_match:
                 return {
-                    "type_detecte": "EVENEMENT_SIMPLE",
+                    "type_detecte": TypeEvenement.EVENEMENT_SIMPLE,
                     "statut": "ERREUR",
                     "message": "Impossible d'extraire le montant",
                     "markdown": "",
@@ -635,7 +650,7 @@ class WorkflowModule2V2:
             )
             
             return {
-                "type_detecte": "EVENEMENT_SIMPLE",
+                "type_detecte": TypeEvenement.EVENEMENT_SIMPLE,
                 "type_specifique": type_evt,
                 "statut": "OK",
                 "markdown": markdown,
@@ -646,7 +661,7 @@ class WorkflowModule2V2:
         
         except Exception as e:
             return {
-                "type_detecte": "EVENEMENT_SIMPLE",
+                "type_detecte": TypeEvenement.EVENEMENT_SIMPLE,
                 "statut": "ERREUR",
                 "message": f"Erreur traitement: {str(e)[:100]}",
                 "markdown": "",
@@ -662,7 +677,7 @@ class WorkflowModule2V2:
             
             if not pdf_files:
                 return {
-                    "type_detecte": "INIT_BILAN_2023",
+                    "type_detecte": TypeEvenement.INIT_BILAN_2023,
                     "statut": "ERREUR",
                     "message": "Aucun PDF trouvé en pièce jointe",
                     "markdown": "",
@@ -676,7 +691,7 @@ class WorkflowModule2V2:
             
             if not comptes:
                 return {
-                    "type_detecte": "INIT_BILAN_2023",
+                    "type_detecte": TypeEvenement.INIT_BILAN_2023,
                     "statut": "ERREUR",
                     "message": "Impossible d'extraire les comptes du bilan",
                     "markdown": "",
@@ -688,7 +703,7 @@ class WorkflowModule2V2:
             markdown, props, token = GenerateurPropositions.generer_propositions_init_bilan_2023(comptes)
             
             return {
-                "type_detecte": "INIT_BILAN_2023",
+                "type_detecte": TypeEvenement.INIT_BILAN_2023,
                 "statut": "OK",
                 "markdown": markdown,
                 "propositions": props,
@@ -698,7 +713,7 @@ class WorkflowModule2V2:
         
         except Exception as e:
             return {
-                "type_detecte": "INIT_BILAN_2023",
+                "type_detecte": TypeEvenement.INIT_BILAN_2023,
                 "statut": "ERREUR",
                 "message": f"Erreur parsing bilan: {str(e)[:100]}",
                 "markdown": "",
@@ -714,7 +729,7 @@ class WorkflowModule2V2:
             
             if len(pdf_files) < 2:
                 return {
-                    "type_detecte": "CLOTURE_EXERCICE",
+                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                     "statut": "ERREUR",
                     "message": f"Besoin au minimum 2 PDFs (crédit + SCPI), trouvé: {len(pdf_files)}",
                     "markdown": "",
@@ -737,7 +752,7 @@ class WorkflowModule2V2:
             
             if not credit_data and not scpi_data:
                 return {
-                    "type_detecte": "CLOTURE_EXERCICE",
+                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                     "statut": "ERREUR",
                     "message": "Impossible d'extraire les données de clôture",
                     "markdown": "",
@@ -751,7 +766,7 @@ class WorkflowModule2V2:
             )
             
             return {
-                "type_detecte": "CLOTURE_EXERCICE",
+                "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                 "statut": "OK",
                 "markdown": markdown,
                 "propositions": props,
@@ -761,7 +776,7 @@ class WorkflowModule2V2:
         
         except Exception as e:
             return {
-                "type_detecte": "CLOTURE_EXERCICE",
+                "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                 "statut": "ERREUR",
                 "message": f"Erreur traitement clôture: {str(e)[:100]}",
                 "markdown": "",
