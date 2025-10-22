@@ -1,27 +1,34 @@
 """
 MODULE 2 WORKFLOW V2 - WORKFLOW COMPTABLE (FIXED)
 ==========================================
-Détection d'événements, parsing PDFs, génération propositions (7 phases du flux global)
+DÃ©tection d'Ã©vÃ©nements, parsing PDFs, gÃ©nÃ©ration propositions (7 phases du flux global)
 
-FIX: Ajouter Enum TypeEvenement pour résoudre import error
+FIX: Ajouter Enum TypeEvenement pour rÃ©soudre import error
 
 Phases couverts par ce fichier:
-1️⃣ Fetch emails
-2️⃣ Détection type d'événement (SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE)
-3️⃣ Branche spécifique (parsing, extraction)
+1ï¸âƒ£ Fetch emails
+2ï¸âƒ£ DÃ©tection type d'Ã©vÃ©nement (SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE)
+3ï¸âƒ£ Branche spÃ©cifique (parsing, extraction)
 
 Sortie: Propositions Markdown + JSON + Token MD5
-(Pour envoi à Ulrik dans module2_workflow_v2_branches.py)
+(Pour envoi Ã  Ulrik dans module2_workflow_v2_branches.py)
 """
 
 import re
 import json
 import hashlib
 import io
+import os
+import smtplib
+import tempfile
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional
 from decimal import Decimal
 from enum import Enum
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 
 import anthropic
 
@@ -32,21 +39,21 @@ except ImportError:
     PDF2IMAGE_AVAILABLE = False
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# TYPE ÉVÉNEMENT (ENUM) - FIX IMPORT ERROR
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# TYPE Ã‰VÃ‰NEMENT (ENUM) - FIX IMPORT ERROR
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class TypeEvenement(Enum):
-    """Types d'événements comptables détectables"""
+    """Types d'Ã©vÃ©nements comptables dÃ©tectables"""
     EVENEMENT_SIMPLE = "EVENEMENT_SIMPLE"
     INIT_BILAN_2023 = "INIT_BILAN_2023"
     CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
     UNKNOWN = "UNKNOWN"
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # 1. OCR EXTRACTOR
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class OCRExtractor:
     """Extraction de texte depuis PDF via Claude Vision (si pdf2image dispo)"""
@@ -62,32 +69,32 @@ class OCRExtractor:
         
         Args:
             filepath: Chemin du PDF
-            prompt: Prompt personnalisé pour Claude (ex: "Extrait le tableau amortissement")
+            prompt: Prompt personnalisÃ© pour Claude (ex: "Extrait le tableau amortissement")
         
         Returns:
-            Texte OCRisé du PDF
+            Texte OCRisÃ© du PDF
         """
         if not PDF2IMAGE_AVAILABLE:
             raise ImportError("pdf2image non disponible - installer avec: pip install pdf2image pdf2image poppler-utils")
         
         try:
-            # Convertir PDF → images (JPEG)
+            # Convertir PDF â†’ images (JPEG)
             images = convert_from_path(filepath, dpi=150)
             
             if not images:
                 raise ValueError(f"PDF vide ou non lisible: {filepath}")
             
-            # On traite les 20 premières pages maximum
+            # On traite les 20 premiÃ¨res pages maximum
             max_pages = min(20, len(images))
             extracted_text = []
             
             for page_num, image in enumerate(images[:max_pages]):
-                # Convertir image PIL → JPEG base64
+                # Convertir image PIL â†’ JPEG base64
                 buffer = io.BytesIO()
                 image.save(buffer, format='JPEG')
                 image_base64 = __import__('base64').b64encode(buffer.getvalue()).decode()
                 
-                # Envoyer à Claude Vision
+                # Envoyer Ã  Claude Vision
                 user_prompt = prompt or "Extrait TOUT le texte visible. Format texte brut uniquement."
                 
                 response = self.client.messages.create(
@@ -118,17 +125,17 @@ class OCRExtractor:
             raise ValueError(f"Erreur OCR PDF {filepath}: {str(e)}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 2. DÉTECTEUR TYPE ÉVÉNEMENT (RETOURNE ENUM)
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# 2. DÃ‰TECTEUR TYPE Ã‰VÃ‰NEMENT (RETOURNE ENUM)
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class DetecteurTypeEvenement:
-    """Détecte le type d'événement comptable depuis un email"""
+    """DÃ©tecte le type d'Ã©vÃ©nement comptable depuis un email"""
     
     @staticmethod
     def detecter(email: Dict) -> TypeEvenement:
         """
-        Détecte le type d'événement
+        DÃ©tecte le type d'Ã©vÃ©nement
         
         Returns:
             TypeEvenement enum (EVENEMENT_SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE | UNKNOWN)
@@ -137,8 +144,8 @@ class DetecteurTypeEvenement:
         subject = email.get('subject', '').lower()
         attachments = email.get('attachments', [])
         
-        # Détecteur CLOTURE_EXERCICE
-        if any(kw in body for kw in ['cloture', 'clôture', 'amortissement_credit', 'reevaluation', 'réévaluation']):
+        # DÃ©tecteur CLOTURE_EXERCICE
+        if any(kw in body for kw in ['cloture', 'clÃ´ture', 'amortissement_credit', 'reevaluation', 'rÃ©Ã©valuation']):
             return TypeEvenement.CLOTURE_EXERCICE
         
         if any(f['filename'].lower().endswith('.pdf') and any(kw in f['filename'].lower() 
@@ -146,7 +153,7 @@ class DetecteurTypeEvenement:
                for f in attachments if 'filename' in f):
             return TypeEvenement.CLOTURE_EXERCICE
         
-        # Détecteur INIT_BILAN_2023
+        # DÃ©tecteur INIT_BILAN_2023
         if any(kw in body for kw in ['bilan 2023', 'bilan_2023', 'bilan initial', 'initialisation comptable']):
             return TypeEvenement.INIT_BILAN_2023
         
@@ -154,17 +161,17 @@ class DetecteurTypeEvenement:
                for f in attachments if 'filename' in f):
             return TypeEvenement.INIT_BILAN_2023
         
-        # Détecteur EVENEMENT_SIMPLE (loyer, charge, etc.)
+        # DÃ©tecteur EVENEMENT_SIMPLE (loyer, charge, etc.)
         if any(kw in body for kw in ['loyer', 'location', 'paiement', 'charge', 'entretien', 
-                                       'réparation', 'assurance', 'taxe', 'syndic', '€', 'eur']):
+                                       'rÃ©paration', 'assurance', 'taxe', 'syndic', 'â‚¬', 'eur']):
             return TypeEvenement.EVENEMENT_SIMPLE
         
         return TypeEvenement.UNKNOWN
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # 3. PARSEUR BILAN 2023
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class ParseurBilan2023:
     """Parse un PDF bilan 2023 et extrait les comptes avec soldes"""
@@ -182,7 +189,7 @@ class ParseurBilan2023:
         # OCRiser le PDF
         texte_brut = self.ocr.extract_from_pdf(
             filepath,
-            prompt="Extrait le tableau bilan 2023 avec colonnes: N° compte | Libellé | Solde"
+            prompt="Extrait le tableau bilan 2023 avec colonnes: NÂ° compte | LibellÃ© | Solde"
         )
         
         # Parser le texte
@@ -191,11 +198,11 @@ class ParseurBilan2023:
     
     @staticmethod
     def _parser_texte_bilan(texte: str) -> List[Dict]:
-        """Parse tableau bilan depuis texte OCRisé"""
+        """Parse tableau bilan depuis texte OCRisÃ©"""
         comptes = []
         
         # Pattern: "101  Capital    100000" ou "101 | Capital | 100000"
-        # On cherche des lignes avec: numéro (1-3 chiffres) | texte | nombre
+        # On cherche des lignes avec: numÃ©ro (1-3 chiffres) | texte | nombre
         pattern = r'(\d{1,3})\s+([A-Za-z\s]+?)\s+(\d+(?:[.,]\d+)*)'
         
         matches = re.finditer(pattern, texte)
@@ -217,12 +224,12 @@ class ParseurBilan2023:
         return comptes
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 4. PARSEUR AMORTISSEMENT CRÉDIT
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# 4. PARSEUR AMORTISSEMENT CRÃ‰DIT
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class ParseurAmortissementCredit:
-    """Parse tableau amortissement crédit et extrait totaux principal/intérêts"""
+    """Parse tableau amortissement crÃ©dit et extrait totaux principal/intÃ©rÃªts"""
     
     def __init__(self, ocr_extractor: OCRExtractor):
         self.ocr = ocr_extractor
@@ -240,7 +247,7 @@ class ParseurAmortissementCredit:
         """
         texte_brut = self.ocr.extract_from_pdf(
             filepath,
-            prompt=f"Extrait le tableau d'amortissement pour {annee} avec colonnes: Mois | Principal | Intérêts | Solde"
+            prompt=f"Extrait le tableau d'amortissement pour {annee} avec colonnes: Mois | Principal | IntÃ©rÃªts | Solde"
         )
         
         result = self._parser_tableau_amortissement(texte_brut, annee)
@@ -248,7 +255,7 @@ class ParseurAmortissementCredit:
     
     @staticmethod
     def _parser_tableau_amortissement(texte: str, annee: int) -> Dict:
-        """Parse tableau amortissement depuis texte OCRisé"""
+        """Parse tableau amortissement depuis texte OCRisÃ©"""
         details = []
         total_principal = Decimal('0')
         total_interets = Decimal('0')
@@ -287,29 +294,29 @@ class ParseurAmortissementCredit:
         }
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 5. PARSEUR RÉÉVALUATION SCPI
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# 5. PARSEUR RÃ‰Ã‰VALUATION SCPI
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class ParseurReevalorationSCPI:
-    """Parse tableau réévaluations SCPI et extrait gains/pertes par semestre"""
+    """Parse tableau rÃ©Ã©valuations SCPI et extrait gains/pertes par semestre"""
     
     def __init__(self, ocr_extractor: OCRExtractor):
         self.ocr = ocr_extractor
     
     def parse_from_pdf(self, filepath: str, annee: int = 2023) -> List[Dict]:
         """
-        Parse réévaluations SCPI depuis PDF
+        Parse rÃ©Ã©valuations SCPI depuis PDF
         
         Returns:
             [
               {"semestre": 1, "date": "juin 2023", "prix_marche": 120, "prix_comptable": 118, "gain": 2000},
-              {"semestre": 2, "date": "décembre 2023", "prix_marche": 119, "prix_comptable": 120, "perte": 1000}
+              {"semestre": 2, "date": "dÃ©cembre 2023", "prix_marche": 119, "prix_comptable": 120, "perte": 1000}
             ]
         """
         texte_brut = self.ocr.extract_from_pdf(
             filepath,
-            prompt=f"Extrait réévaluations SCPI {annee} avec colonnes: Date | Prix Marché | Prix Comptable | Gain/Perte"
+            prompt=f"Extrait rÃ©Ã©valuations SCPI {annee} avec colonnes: Date | Prix MarchÃ© | Prix Comptable | Gain/Perte"
         )
         
         result = self._parser_reevaluations(texte_brut, annee)
@@ -317,12 +324,12 @@ class ParseurReevalorationSCPI:
     
     @staticmethod
     def _parser_reevaluations(texte: str, annee: int) -> List[Dict]:
-        """Parse tableau réévaluations depuis texte OCRisé"""
+        """Parse tableau rÃ©Ã©valuations depuis texte OCRisÃ©"""
         reevals = []
         
-        # Pattern: "Juin 2023  120  118  2000" ou "Juni June  120€  118€  (2€ × 1000 parts)"
+        # Pattern: "Juin 2023  120  118  2000" ou "Juni June  120â‚¬  118â‚¬  (2â‚¬ Ã— 1000 parts)"
         # Cherche: (date/mois) | prix1 | prix2 | montant
-        pattern = r'(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|january|...|june|december|S1|S2|Semestre|1|2).*?(\d+(?:[.,]\d+)?)\s+(\d+(?:[.,]\d+)?)\s+([+-]?\d+(?:[.,]\d+)?)?'
+        pattern = r'(janvier|fÃ©vrier|mars|avril|mai|juin|juillet|aoÃ»t|septembre|octobre|novembre|dÃ©cembre|january|...|june|december|S1|S2|Semestre|1|2).*?(\d+(?:[.,]\d+)?)\s+(\d+(?:[.,]\d+)?)\s+([+-]?\d+(?:[.,]\d+)?)?'
         
         semestre_num = 1
         matches = re.finditer(pattern, texte, re.IGNORECASE)
@@ -334,8 +341,8 @@ class ParseurReevalorationSCPI:
                 prix_marche = Decimal(prix_marche_str)
                 prix_comptable = Decimal(prix_comptable_str)
                 
-                # Calcul: (prix_marche - prix_comptable) × nombre de parts
-                # Supposer 1000 parts par défaut
+                # Calcul: (prix_marche - prix_comptable) Ã— nombre de parts
+                # Supposer 1000 parts par dÃ©faut
                 nb_parts = 1000
                 difference_unitaire = prix_marche - prix_comptable
                 montant_total = difference_unitaire * nb_parts
@@ -355,22 +362,22 @@ class ParseurReevalorationSCPI:
         return reevals
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 6. GÉNÉRATEUR PROPOSITIONS
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# 6. GÃ‰NÃ‰RATEUR PROPOSITIONS
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class GenerateurPropositions:
-    """Génère propositions Markdown + JSON + Token MD5"""
+    """GÃ©nÃ¨re propositions Markdown + JSON + Token MD5"""
     
     @staticmethod
     def generer_propositions_evenement_simple(email: Dict, montant: float, type_evt: str) -> Tuple[str, Dict, str]:
         """
-        Génère propositions pour événement simple (loyer/charge)
+        GÃ©nÃ¨re propositions pour Ã©vÃ©nement simple (loyer/charge)
         
         Returns:
             (markdown_propre, propositions_dict, token_md5)
         """
-        # Mapper type → comptes
+        # Mapper type â†’ comptes
         mapping = {
             'LOYER': {'debit': '511', 'credit': '701', 'libelle': 'Encaissement loyer'},
             'CHARGE': {'debit': '614', 'credit': '401', 'libelle': 'Charge'},
@@ -385,21 +392,21 @@ class GenerateurPropositions:
                 "compte_debit": config['debit'],
                 "compte_credit": config['credit'],
                 "montant": montant,
-                "libelle": f"{config['libelle']} - {montant}€"
+                "libelle": f"{config['libelle']} - {montant}â‚¬"
             }
         ]
         
-        # Générer token
+        # GÃ©nÃ©rer token
         token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
         
-        # Générer Markdown
+        # GÃ©nÃ©rer Markdown
         markdown = GenerateurPropositions._generer_markdown_propositions(propositions, type_evt)
         
         return markdown, {"propositions": propositions, "token": token}, token
     
     @staticmethod
     def generer_propositions_init_bilan_2023(comptes: List[Dict]) -> Tuple[str, Dict, str]:
-        """Génère propositions pour initialisation bilan 2023"""
+        """GÃ©nÃ¨re propositions pour initialisation bilan 2023"""
         
         propositions = []
         for i, compte in enumerate(comptes, 1):
@@ -407,7 +414,7 @@ class GenerateurPropositions:
                 "numero_ecriture": f"2023-INIT-{i:04d}",
                 "type": "INIT_BILAN_2023",
                 "compte_debit": compte["compte"],
-                "compte_credit": "899",  # Compte équilibre temporaire
+                "compte_credit": "899",  # Compte Ã©quilibre temporaire
                 "montant": compte["solde"],
                 "libelle": f"Ouverture: {compte['libelle']}"
             })
@@ -419,40 +426,40 @@ class GenerateurPropositions:
     
     @staticmethod
     def generer_propositions_cloture_2023(credit_data: Dict, scpi_data: List[Dict]) -> Tuple[str, Dict, str]:
-        """Génère propositions pour clôture exercice 2023"""
+        """GÃ©nÃ¨re propositions pour clÃ´ture exercice 2023"""
         
         propositions = []
         
-        # Intérêts crédit
+        # IntÃ©rÃªts crÃ©dit
         if credit_data.get('total_interets_payes', 0) > 0:
             propositions.append({
                 "numero_ecriture": "2023-CLOTURE-INTERETS",
-                "type": "INTÉRÊTS_CRÉDIT",
+                "type": "INTÃ‰RÃŠTS_CRÃ‰DIT",
                 "compte_debit": "661",
                 "compte_credit": "401",
                 "montant": credit_data['total_interets_payes'],
-                "libelle": f"Intérêts crédits 2023: {credit_data['total_interets_payes']}€"
+                "libelle": f"IntÃ©rÃªts crÃ©dits 2023: {credit_data['total_interets_payes']}â‚¬"
             })
         
-        # Réévaluations SCPI
+        # RÃ©Ã©valuations SCPI
         for i, reevals in enumerate(scpi_data, 1):
             if reevals['type'] == 'GAIN':
                 propositions.append({
                     "numero_ecriture": f"2023-CLOTURE-SCPI-GAIN-{i}",
-                    "type": "RÉÉVALUATION_SCPI_GAIN",
+                    "type": "RÃ‰Ã‰VALUATION_SCPI_GAIN",
                     "compte_debit": "440",
                     "compte_credit": "754",
                     "montant": reevals['montant'],
-                    "libelle": f"Rééval SCPI gain S{reevals['semestre']}: {reevals['montant']}€"
+                    "libelle": f"RÃ©Ã©val SCPI gain S{reevals['semestre']}: {reevals['montant']}â‚¬"
                 })
             else:
                 propositions.append({
                     "numero_ecriture": f"2023-CLOTURE-SCPI-PERTE-{i}",
-                    "type": "RÉÉVALUATION_SCPI_PERTE",
+                    "type": "RÃ‰Ã‰VALUATION_SCPI_PERTE",
                     "compte_debit": "654",
                     "compte_credit": "440",
                     "montant": reevals['montant'],
-                    "libelle": f"Rééval SCPI perte S{reevals['semestre']}: {reevals['montant']}€"
+                    "libelle": f"RÃ©Ã©val SCPI perte S{reevals['semestre']}: {reevals['montant']}â‚¬"
                 })
         
         token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
@@ -462,7 +469,7 @@ class GenerateurPropositions:
     
     @staticmethod
     def _generer_markdown_propositions(propositions: List[Dict], type_evt: str) -> str:
-        """Génère Markdown propre pour propositions simples"""
+        """GÃ©nÃ¨re Markdown propre pour propositions simples"""
         
         md = f"""# Propositions Comptables - {type_evt}
 
@@ -470,14 +477,14 @@ class GenerateurPropositions:
 
 ## Propositions
 
-| N° Écriture | Type | D/C | Compte | Montant | Libellé |
+| NÂ° Ã‰criture | Type | D/C | Compte | Montant | LibellÃ© |
 |-------------|------|-----|--------|---------|---------|
 """
         
         for prop in propositions:
             md += f"| {prop['numero_ecriture']} | {prop['type']} | "
             md += f"D: {prop['compte_debit']} / C: {prop['compte_credit']} | "
-            md += f"{prop['montant']}€ | {prop['libelle']} |\n"
+            md += f"{prop['montant']}â‚¬ | {prop['libelle']} |\n"
         
         md += """
 
@@ -497,30 +504,30 @@ class GenerateurPropositions:
     
     @staticmethod
     def _generer_markdown_init_bilan(propositions: List[Dict], comptes: List[Dict]) -> str:
-        """Génère Markdown pour initialisation bilan 2023"""
+        """GÃ©nÃ¨re Markdown pour initialisation bilan 2023"""
         
         md = """# Initialisation Bilan 2023
 
 **Date:** """ + datetime.now().strftime('%d/%m/%Y %H:%M') + """
 
-## Comptes Importés
+## Comptes ImportÃ©s
 
-| Compte | Libellé | Solde |
+| Compte | LibellÃ© | Solde |
 |--------|---------|-------|
 """
         
         for compte in comptes:
-            md += f"| {compte['compte']} | {compte['libelle']} | {compte['solde']}€ |\n"
+            md += f"| {compte['compte']} | {compte['libelle']} | {compte['solde']}â‚¬ |\n"
         
-        md += f"\n**Total:** {sum(c['solde'] for c in comptes)}€\n"
+        md += f"\n**Total:** {sum(c['solde'] for c in comptes)}â‚¬\n"
         md += f"**Nombre de comptes:** {len(comptes)}\n"
-        md += "\n## Écritures d'Ouverture\n\n"
+        md += "\n## Ã‰critures d'Ouverture\n\n"
         
-        for prop in propositions[:5]:  # Montrer les 5 premières
+        for prop in propositions[:5]:  # Montrer les 5 premiÃ¨res
             md += f"- {prop['numero_ecriture']}: {prop['libelle']}\n"
         
         if len(propositions) > 5:
-            md += f"- ... et {len(propositions) - 5} autres écritures\n"
+            md += f"- ... et {len(propositions) - 5} autres Ã©critures\n"
         
         md += "\n## JSON Structure\n\n```json\n"
         md += json.dumps({
@@ -535,25 +542,25 @@ class GenerateurPropositions:
     
     @staticmethod
     def _generer_markdown_cloture(propositions: List[Dict], credit_data: Dict, scpi_data: List[Dict]) -> str:
-        """Génère Markdown pour clôture exercice 2023"""
+        """GÃ©nÃ¨re Markdown pour clÃ´ture exercice 2023"""
         
-        md = """# Clôture Exercice 2023
+        md = """# ClÃ´ture Exercice 2023
 
 **Date:** """ + datetime.now().strftime('%d/%m/%Y %H:%M') + """
 
-## Éléments de Clôture
+## Ã‰lÃ©ments de ClÃ´ture
 
-### Crédits
-- Intérêts payés 2023: """
+### CrÃ©dits
+- IntÃ©rÃªts payÃ©s 2023: """
         
-        md += f"{credit_data.get('total_interets_payes', 0)}€\n"
-        md += f"- Principal payé 2023: {credit_data.get('total_principal_paye', 0)}€\n"
+        md += f"{credit_data.get('total_interets_payes', 0)}â‚¬\n"
+        md += f"- Principal payÃ© 2023: {credit_data.get('total_principal_paye', 0)}â‚¬\n"
         
-        md += "\n### Réévaluations SCPI\n\n"
+        md += "\n### RÃ©Ã©valuations SCPI\n\n"
         for reevals in scpi_data:
             md += f"- S{reevals['semestre']}: "
-            md += f"Marché {reevals['prix_marche']}€ vs Comptable {reevals['prix_comptable']}€ "
-            md += f"({reevals['type']}: {reevals['montant']}€)\n"
+            md += f"MarchÃ© {reevals['prix_marche']}â‚¬ vs Comptable {reevals['prix_comptable']}â‚¬ "
+            md += f"({reevals['type']}: {reevals['montant']}â‚¬)\n"
         
         md += "\n## Propositions\n\n"
         for prop in propositions:
@@ -571,12 +578,12 @@ class GenerateurPropositions:
         return md
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # 7. WORKFLOW MODULE 2 V2 - ORCHESTRATEUR PRINCIPAL
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class WorkflowModule2V2:
-    """Orchestre le workflow complet: détection → parsing → génération propositions"""
+    """Orchestre le workflow complet: dÃ©tection â†’ parsing â†’ gÃ©nÃ©ration propositions"""
     
     def __init__(self, api_key: str, database_url: str):
         self.api_key = api_key
@@ -613,22 +620,22 @@ class WorkflowModule2V2:
             return {
                 "type_detecte": TypeEvenement.UNKNOWN,
                 "statut": "ERREUR",
-                "message": "Impossible de détecter le type d'événement",
+                "message": "Impossible de dÃ©tecter le type d'Ã©vÃ©nement",
                 "markdown": "",
                 "propositions": {},
                 "token": ""
             }
     
     def _traiter_evenement_simple(self, email: Dict) -> Dict:
-        """Traite événement simple (loyer/charge)"""
+        """Traite Ã©vÃ©nement simple (loyer/charge)"""
         try:
             body = email.get('body', '')
             
-            # Détecter type
+            # DÃ©tecter type
             type_evt = 'LOYER' if 'loyer' in body.lower() else 'CHARGE'
             
             # Extraire montant
-            montant_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€', body)
+            montant_match = re.search(r'(\d+(?:[.,]\d+)?)\s*â‚¬', body)
             if not montant_match:
                 montant_match = re.search(r'(\d+(?:[.,]\d+)?)', body)
             
@@ -644,7 +651,7 @@ class WorkflowModule2V2:
             
             montant = float(montant_match.group(1).replace(',', '.'))
             
-            # Générer propositions
+            # GÃ©nÃ©rer propositions
             markdown, props, token = GenerateurPropositions.generer_propositions_evenement_simple(
                 email, montant, type_evt
             )
@@ -656,7 +663,7 @@ class WorkflowModule2V2:
                 "markdown": markdown,
                 "propositions": props,
                 "token": token,
-                "message": f"1 proposition générée ({type_evt}: {montant}€)"
+                "message": f"1 proposition gÃ©nÃ©rÃ©e ({type_evt}: {montant}â‚¬)"
             }
         
         except Exception as e:
@@ -679,7 +686,7 @@ class WorkflowModule2V2:
                 return {
                     "type_detecte": TypeEvenement.INIT_BILAN_2023,
                     "statut": "ERREUR",
-                    "message": "Aucun PDF trouvé en pièce jointe",
+                    "message": "Aucun PDF trouvÃ© en piÃ¨ce jointe",
                     "markdown": "",
                     "propositions": {},
                     "token": ""
@@ -699,7 +706,7 @@ class WorkflowModule2V2:
                     "token": ""
                 }
             
-            # Générer propositions
+            # GÃ©nÃ©rer propositions
             markdown, props, token = GenerateurPropositions.generer_propositions_init_bilan_2023(comptes)
             
             return {
@@ -708,7 +715,7 @@ class WorkflowModule2V2:
                 "markdown": markdown,
                 "propositions": props,
                 "token": token,
-                "message": f"{len(comptes)} comptes importés pour initialisation bilan 2023"
+                "message": f"{len(comptes)} comptes importÃ©s pour initialisation bilan 2023"
             }
         
         except Exception as e:
@@ -722,7 +729,7 @@ class WorkflowModule2V2:
             }
     
     def _traiter_cloture_2023(self, email: Dict) -> Dict:
-        """Traite clôture exercice 2023"""
+        """Traite clÃ´ture exercice 2023"""
         try:
             attachments = email.get('attachments', [])
             pdf_files = [a for a in attachments if a.get('content_type') == 'application/pdf']
@@ -731,13 +738,13 @@ class WorkflowModule2V2:
                 return {
                     "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                     "statut": "ERREUR",
-                    "message": f"Besoin au minimum 2 PDFs (crédit + SCPI), trouvé: {len(pdf_files)}",
+                    "message": f"Besoin au minimum 2 PDFs (crÃ©dit + SCPI), trouvÃ©: {len(pdf_files)}",
                     "markdown": "",
                     "propositions": {},
                     "token": ""
                 }
             
-            # Parser amortissements et réévaluations
+            # Parser amortissements et rÃ©Ã©valuations
             credit_data = {}
             scpi_data = []
             
@@ -754,13 +761,13 @@ class WorkflowModule2V2:
                 return {
                     "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                     "statut": "ERREUR",
-                    "message": "Impossible d'extraire les données de clôture",
+                    "message": "Impossible d'extraire les donnÃ©es de clÃ´ture",
                     "markdown": "",
                     "propositions": {},
                     "token": ""
                 }
             
-            # Générer propositions
+            # GÃ©nÃ©rer propositions
             markdown, props, token = GenerateurPropositions.generer_propositions_cloture_2023(
                 credit_data, scpi_data
             )
@@ -771,14 +778,14 @@ class WorkflowModule2V2:
                 "markdown": markdown,
                 "propositions": props,
                 "token": token,
-                "message": f"Clôture 2023: {len(props.get('propositions', []))} propositions générées"
+                "message": f"ClÃ´ture 2023: {len(props.get('propositions', []))} propositions gÃ©nÃ©rÃ©es"
             }
         
         except Exception as e:
             return {
                 "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                 "statut": "ERREUR",
-                "message": f"Erreur traitement clôture: {str(e)[:100]}",
+                "message": f"Erreur traitement clÃ´ture: {str(e)[:100]}",
                 "markdown": "",
                 "propositions": {},
                 "token": ""
@@ -792,8 +799,246 @@ if __name__ == "__main__":
     db_url = os.environ.get('DATABASE_URL')
     
     if not api_key or not db_url:
-        print("❌ ANTHROPIC_API_KEY ou DATABASE_URL non définis")
+        print("âŒ ANTHROPIC_API_KEY ou DATABASE_URL non dÃ©finis")
         exit(1)
     
     workflow = WorkflowModule2V2(api_key, db_url)
-    print("✅ Module 2 Workflow V2 chargé et prêt")
+    print("âœ… Module 2 Workflow V2 chargÃ© et prÃªt")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ENVOYEUR MARKDOWN (déplacé de module2_workflow_v2_branches.py)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class EnvoyeurMarkdown:
+    """Envoie les propositions par email en Markdown formaté + pièce jointe"""
+    
+    def __init__(self, email_from: str, email_password: str, email_to: str = None):
+        self.email_from = email_from
+        self.email_password = email_password
+        self.email_to = email_to
+    
+    def envoyer_propositions(
+        self,
+        email_to: str,
+        type_evt: str,
+        markdown: str,
+        token: str,
+        subject_suffix: str = ""
+    ) -> bool:
+        """
+        Envoie les propositions à Ulrik pour validation
+        
+        ✅ FIX: Accepte email_to, subject_suffix, attache Markdown
+        
+        Sujet: [_Head] PROPOSITIONS - Type d'événement [suffix]
+        Body: JSON avec token + instructions
+        Pièce jointe: Markdown avec propositions
+        
+        Instructions: Tag [_Head] VALIDE: dans la réponse pour valider
+        """
+        
+        try:
+            msg = MIMEMultipart('mixed')
+            msg['Subject'] = f"[_Head] PROPOSITIONS - {type_evt} {subject_suffix}".strip()
+            msg['From'] = self.email_from
+            msg['To'] = email_to
+            
+            # 1. BODY TEXTE: JSON + Token + Instructions
+            
+            body_text = f"""
+Propositions comptables pour validation
+
+**Type d'événement:** {type_evt}
+**Date de génération:** {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
+**Token MD5 de sécurité:** {token}
+
+---
+
+## STRUCTURE JSON DES PROPOSITIONS
+
+```json
+{json.dumps(
+    {
+        "type_evenement": type_evt,
+        "token": token,
+        "generee_at": datetime.now().isoformat()
+    },
+    indent=2
+)}
+```
+
+---
+
+## INSTRUCTIONS POUR VALIDATION
+
+1. **Examinez les propositions** dans le fichier Markdown ci-joint
+2. **Vérifiez l'exactitude** des comptes, montants, dates
+3. **Pour valider**, répondez à cet email avec le tag suivant dans votre message:
+
+   **[_Head] VALIDE:**
+
+4. Vous pouvez modifier le fichier Markdown avant de répondre (optionnel)
+5. Joignez le fichier modifié si vous avez apporté des corrections
+
+---
+
+**⏰ _Head attendra votre réponse au prochain réveil automatique.**
+
+Merci,
+_Head.Soeurise
+"""
+            
+            msg.attach(MIMEText(body_text, 'plain', 'utf-8'))
+            
+            # 2. PIÈCE JOINTE: Markdown avec propositions ✅ FIX
+            
+            try:
+                # Créer fichier Markdown temporaire
+                md_filename = f"propositions_{type_evt}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+                md_filepath = os.path.join(tempfile.gettempdir(), md_filename)
+                
+                with open(md_filepath, 'w', encoding='utf-8') as f:
+                    f.write(markdown)
+                
+                # Attacher le fichier
+                with open(md_filepath, 'rb') as attachment:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(attachment.read())
+                    encoders.encode_base64(part)
+                    part.add_header('Content-Disposition', f'attachment; filename= {md_filename}')
+                    msg.attach(part)
+                
+                # Nettoyer le fichier temporaire
+                try:
+                    os.remove(md_filepath)
+                except:
+                    pass
+            
+            except Exception as e:
+                print(f"⚠️ Erreur création pièce jointe Markdown: {str(e)[:100]}")
+                # Continuer sans pièce jointe si erreur
+            
+            # 3. ENVOYER L'EMAIL
+            
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(self.email_from, self.email_password)
+                server.send_message(msg)
+            
+            print(f"✅ Email de propositions envoyé à {email_to} ({type_evt})")
+            return True
+        
+        except Exception as e:
+            print(f"❌ Erreur envoi email propositions: {str(e)[:100]}")
+            return False
+    
+    @staticmethod
+    def _markdown_to_html(markdown: str) -> str:
+        """Conversion simple Markdown → HTML"""
+        
+        html = markdown
+        
+        # Headers
+        html = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html, flags=re.MULTILINE)
+        html = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html, flags=re.MULTILINE)
+        html = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html, flags=re.MULTILINE)
+        
+        # Bold/Italic
+        html = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html)
+        html = re.sub(r'\*(.+?)\*', r'<em>\1</em>', html)
+        
+        # Listes
+        html = re.sub(r'^- (.+)$', r'<li>\1</li>', html, flags=re.MULTILINE)
+        html = re.sub(r'(<li>.+</li>)', r'<ul>\1</ul>', html, flags=re.DOTALL)
+        
+        # Code blocks
+        html = re.sub(r'```(.+?)```', r'<pre><code>\1</code></pre>', html, flags=re.DOTALL)
+        
+        # Paragraphes
+        html = re.sub(r'\n\n', r'</p><p>', html)
+        html = f"<p>{html}</p>"
+        
+        return html
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PARSEUR MARKDOWN JSON (déplacé de module2_workflow_v2_branches.py)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ParseurMarkdownJSON:
+    """Parse JSON depuis bloc ```json...``` dans Markdown"""
+    
+    @staticmethod
+    def extraire_json(markdown_text: str) -> Optional[Dict]:
+        """
+        Extrait le bloc JSON ```json...```
+        
+        Returns:
+            Dict du JSON ou None si introuvable/invalide
+        """
+        
+        # Pattern: ```json...```
+        pattern = r'```json\s*\n(.*?)\n```'
+        match = re.search(pattern, markdown_text, re.DOTALL)
+        
+        if not match:
+            # Essayer sans backticks
+            if '{' in markdown_text and '}' in markdown_text:
+                # Chercher {...}
+                start = markdown_text.rfind('{')
+                end = markdown_text.find('}', start) + 1
+                if start >= 0 and end > start:
+                    try:
+                        return json.loads(markdown_text[start:end])
+                    except json.JSONDecodeError:
+                        pass
+            return None
+        
+        try:
+            json_str = match.group(1)
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            print(f"❌ Erreur parsing JSON: {str(e)}")
+            return None
+    
+    @staticmethod
+    def valider_structure_json(data: Dict, type_evt: str) -> Tuple[bool, str]:
+        """
+        Valide la structure JSON
+        
+        Returns:
+            (valide, message_erreur)
+        """
+        
+        # Vérifier présence clés obligatoires
+        if 'propositions' not in data:
+            return False, "Clé 'propositions' manquante"
+        
+        if 'token' not in data:
+            return False, "Clé 'token' manquante"
+        
+        if not isinstance(data['propositions'], list):
+            return False, "'propositions' doit être une liste"
+        
+        if len(data['propositions']) == 0:
+            return False, "Liste 'propositions' vide"
+        
+        # Valider chaque proposition
+        for i, prop in enumerate(data['propositions']):
+            if not isinstance(prop, dict):
+                return False, f"Proposition {i} n'est pas un dict"
+            
+            required_keys = ['numero_ecriture', 'type', 'compte_debit', 'compte_credit', 'montant', 'libelle']
+            for key in required_keys:
+                if key not in prop:
+                    return False, f"Proposition {i}: clé '{key}' manquante"
+            
+            # Valider montant
+            try:
+                montant = float(prop['montant'])
+                if montant <= 0:
+                    return False, f"Proposition {i}: montant doit être > 0"
+            except (ValueError, TypeError):
+                return False, f"Proposition {i}: montant invalide"
+        
+        return True, ""
