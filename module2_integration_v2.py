@@ -1,14 +1,14 @@
 """
-MODULE 2 - INTÃ‰GRATION V2 (FIXED)
+MODULE 2 - INTÉGRATION V2 (FIXED)
 =========================
-Point d'entrÃ©e unique pour intÃ©grer le workflow complet dans reveil_quotidien()
+Point d'entrée unique pour intégrer le workflow complet dans reveil_quotidien()
 
 FIX: Adapter les comparaisons avec TypeEvenement Enum
 
-GÃ¨re:
-1. DÃ©tection emails comptables â†’ gÃ©nÃ©ration propositions
-2. DÃ©tection validations â†’ insertion en DB
-3. Rapport formatÃ© pour inclusion dans rapport quotidien
+Gère:
+1. Détection emails comptables → génération propositions
+2. Détection validations → insertion en DB
+3. Rapport formaté pour inclusion dans rapport quotidien
 """
 
 import json
@@ -29,18 +29,18 @@ from module2_workflow_v2 import (
 from module2_validations import OrchestratorValidations
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
 # ORCHESTRATEUR PRINCIPAL
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
 
 class IntegratorModule2:
     """
-    IntÃ©grateur principal pour module 2 dans le reveil quotidien
+    Intégrateur principal pour module 2 dans le reveil quotidien
     
-    GÃ¨re:
-    - Traitement emails entrants (gÃ©nÃ©ration propositions)
+    Gère:
+    - Traitement emails entrants (génération propositions)
     - Traitement emails validations (insertion DB)
-    - GÃ©nÃ©ration rapport quotidien
+    - Génération rapport quotidien
     """
     
     def __init__(
@@ -64,26 +64,26 @@ class IntegratorModule2:
         self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise, email_ulrik)
         self.ocr = OCRExtractor(anthropic_api_key)
         
-        # Ã‰tat du traitement
+        # État du traitement
         self.emails_traites = 0
         self.propositions_generees = 0
         self.validations_traitees = 0
         self.ecritures_inserees = 0
         self.erreurs = []
-        self.actions_email = []  # Emails Ã  envoyer
+        self.actions_email = []  # Emails à envoyer
     
     def _get_session(self) -> Session:
-        """RÃ©cupÃ¨re une session DB"""
+        """Récupère une session DB"""
         from models_module2 import get_session
         return get_session(self.database_url)
     
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # ═══════════════════════════════════════════════════════════════════════════════
     # PHASE 1: TRAITEMENT EMAILS ENTRANTS
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # ═══════════════════════════════════════════════════════════════════════════════
     
     def traiter_emails_entrants(self, emails: List[Dict]) -> Dict:
         """
-        Traite les emails entrants pour dÃ©tecter Ã©vÃ©nements comptables
+        Traite les emails entrants pour détecter événements comptables
         
         Returns:
             {
@@ -99,29 +99,29 @@ class IntegratorModule2:
         }
         
         for email in emails:
-            # Skip si non autorisÃ©
+            # Skip si non autorisé
             if not email.get('is_authorized') or not email.get('action_allowed'):
                 continue
             
             try:
-                # DÃ©tecter type
+                # Détecter type
                 type_evt = DetecteurTypeEvenement.detecter(email)
                 
-                if type_evt == TypeEvenement.UNKNOWN:  # âœ… COMPARAISON ENUM FIX
+                if type_evt == TypeEvenement.UNKNOWN:  # ✅ COMPARAISON ENUM FIX
                     continue
                 
-                # GÃ©nÃ©rer propositions via workflow
+                # Générer propositions via workflow
                 result = self.workflow_generation.traiter_email(email)
                 
-                # Traiter le rÃ©sultat
+                # Traiter le résultat
                 if result.get('statut') == 'OK':
                     
-                    # Envoyer email Ã  Ulrik avec propositions âœ… FIX: Passer email_to en premier
+                    # Envoyer email à Ulrik avec propositions ✅ FIX: Passer email_to en premier
                     email_envoye = self.envoyeur.envoyer_propositions(
-                        self.email_ulrik,  # âœ… email_to
-                        type_evt.value,  # âœ… type_evt
-                        result['markdown'],  # âœ… markdown
-                        result['token'],  # âœ… token
+                        self.email_ulrik,  # ✅ email_to
+                        type_evt.value,  # ✅ type_evt
+                        result['markdown'],  # ✅ markdown
+                        result['token'],  # ✅ token
                         subject_suffix=f"- {len(result.get('propositions', {}).get('propositions', []))} proposition(s)"
                     )
                     
@@ -148,13 +148,13 @@ class IntegratorModule2:
         
         return resultats
     
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # ═══════════════════════════════════════════════════════════════════════════════
     # PHASE 2: TRAITEMENT VALIDATIONS
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # ═══════════════════════════════════════════════════════════════════════════════
     
     def traiter_validations(self, emails: List[Dict]) -> Dict:
         """
-        Traite les rÃ©ponses de validation [_Head] VALIDE:
+        Traite les réponses de validation [_Head] VALIDE:
         
         Returns:
             {
@@ -194,7 +194,7 @@ class IntegratorModule2:
                         })
                     
                     else:
-                        self.erreurs.append(f"Validation Ã©chouÃ©e: {result.get('message')}")
+                        self.erreurs.append(f"Validation échouée: {result.get('message')}")
                         resultats['details'].append({
                             'status': 'erreur',
                             'message': result.get('message')
@@ -205,28 +205,28 @@ class IntegratorModule2:
         
         return resultats
     
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    # GÃ‰NÃ‰RATION RAPPORT
-    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # GÉNÉRATION RAPPORT
+    # ═══════════════════════════════════════════════════════════════════════════════
     
     def generer_rapport(
         self,
         resultats_entrants: Dict,
         resultats_validations: Dict
     ) -> str:
-        """GÃ©nÃ¨re le rapport pour inclusion dans rapport quotidien"""
+        """Génère le rapport pour inclusion dans rapport quotidien"""
         
         rapport = """
-## ðŸ“Š MODULE 2 - COMPTABILITÃ‰
+## 📊 MODULE 2 - COMPTABILITÉ
 
-### Ã‰tat du traitement
+### État du traitement
 
-**Emails entrants traitÃ©s:** {}
-- Propositions gÃ©nÃ©rÃ©es: {}
-- Emails de validation envoyÃ©s: {}
+**Emails entrants traités:** {}
+- Propositions générées: {}
+- Emails de validation envoyés: {}
 
-**Validations reÃ§ues:** {}
-- Ã‰critures insÃ©rÃ©es en BD: {}
+**Validations reçues:** {}
+- Écritures insérées en BD: {}
 
 """.format(
             self.emails_traites,
@@ -236,42 +236,42 @@ class IntegratorModule2:
             resultats_validations.get('ecritures_inserees', 0)
         )
         
-        # DÃ©tails des propositions gÃ©nÃ©rÃ©es
+        # Détails des propositions générées
         if resultats_entrants.get('details'):
-            rapport += "### ðŸ“ Propositions gÃ©nÃ©rÃ©es\n\n"
+            rapport += "### 📝 Propositions générées\n\n"
             for detail in resultats_entrants['details']:
-                rapport += f"- **{detail['type']}**: {detail['propositions']} proposition(s) â†’ En attente de validation\n"
+                rapport += f"- **{detail['type']}**: {detail['propositions']} proposition(s) → En attente de validation\n"
         
-        # DÃ©tails des validations traitÃ©es
+        # Détails des validations traitées
         if resultats_validations.get('details'):
-            rapport += "\n### âœ… Validations traitÃ©es\n\n"
+            rapport += "\n### ✅ Validations traitées\n\n"
             for detail in resultats_validations['details']:
                 if detail.get('status') == 'insere_en_db':
-                    rapport += f"- **{detail['type']}**: {detail['ecritures_inserees']} Ã©criture(s) insÃ©rÃ©e(s)\n"
+                    rapport += f"- **{detail['type']}**: {detail['ecritures_inserees']} écriture(s) insérée(s)\n"
                 elif detail.get('status') == 'erreur':
-                    rapport += f"- âŒ {detail.get('message', 'Erreur')}\n"
+                    rapport += f"- ❌ {detail.get('message', 'Erreur')}\n"
         
-        # RÃ©sumÃ© erreurs
+        # Résumé erreurs
         if self.erreurs:
-            rapport += f"\n### âš ï¸ Erreurs ({len(self.erreurs)})\n\n"
-            for erreur in self.erreurs[:5]:  # Limiter Ã  5
+            rapport += f"\n### ⚠️ Erreurs ({len(self.erreurs)})\n\n"
+            for erreur in self.erreurs[:5]:  # Limiter à 5
                 rapport += f"- {erreur}\n"
             if len(self.erreurs) > 5:
                 rapport += f"- ... et {len(self.erreurs) - 5} autre(s) erreur(s)\n"
         
-        # RÃ©sumÃ© final
-        rapport += f"\n### ðŸ“Š RÃ©sumÃ©\n\n"
-        rapport += f"- Total emails traitÃ©s: {self.emails_traites}\n"
+        # Résumé final
+        rapport += f"\n### 📊 Résumé\n\n"
+        rapport += f"- Total emails traités: {self.emails_traites}\n"
         rapport += f"- Total propositions: {self.propositions_generees}\n"
         rapport += f"- Total validations: {self.validations_traitees}\n"
-        rapport += f"- Total Ã©critures insÃ©rÃ©es: {self.ecritures_inserees}\n"
+        rapport += f"- Total écritures insérées: {self.ecritures_inserees}\n"
         
         return rapport
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-# POINT D'ENTRÃ‰E UNIQUE POUR reveil_quotidien()
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
+# POINT D'ENTRÉE UNIQUE POUR reveil_quotidien()
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def integrer_module2_v2(
     emails: List[Dict],
@@ -282,7 +282,7 @@ def integrer_module2_v2(
     email_ulrik: str
 ) -> Dict:
     """
-    Point d'entrÃ©e unique Ã  appeler depuis reveil_quotidien()
+    Point d'entrée unique à appeler depuis reveil_quotidien()
     
     Usage dans main_V4_2.py:
         
@@ -300,7 +300,7 @@ def integrer_module2_v2(
     
     Returns:
         {
-            'rapport': str (Ã  inclure dans rapport_quotidien),
+            'rapport': str (à inclure dans rapport_quotidien),
             'stats': {
                 'emails_traites': int,
                 'propositions_generees': int,
@@ -311,7 +311,7 @@ def integrer_module2_v2(
     """
     
     try:
-        # Initialiser intÃ©grateur
+        # Initialiser intégrateur
         integrator = IntegratorModule2(
             database_url,
             anthropic_api_key,
@@ -320,13 +320,13 @@ def integrer_module2_v2(
             email_ulrik
         )
         
-        # Phase 1: Traiter emails entrants (gÃ©nÃ©ration propositions)
+        # Phase 1: Traiter emails entrants (génération propositions)
         resultats_entrants = integrator.traiter_emails_entrants(emails)
         
         # Phase 2: Traiter validations (insertion BD)
         resultats_validations = integrator.traiter_validations(emails)
         
-        # GÃ©nÃ©rer rapport
+        # Générer rapport
         rapport = integrator.generer_rapport(resultats_entrants, resultats_validations)
         
         return {
@@ -343,7 +343,7 @@ def integrer_module2_v2(
     
     except Exception as e:
         return {
-            'rapport': f"\n## âŒ MODULE 2 - ERREUR\n\n{str(e)}\n",
+            'rapport': f"\n## ❌ MODULE 2 - ERREUR\n\n{str(e)}\n",
             'stats': {
                 'emails_traites': 0,
                 'propositions_generees': 0,
@@ -355,9 +355,9 @@ def integrer_module2_v2(
         }
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
 # EXPORT
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
 
 __all__ = [
     'IntegratorModule2',
