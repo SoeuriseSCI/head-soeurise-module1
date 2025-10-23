@@ -2,14 +2,14 @@
 MODULE 2 VALIDATIONS V2 - TRAITEMENT DES VALIDATIONS
 ====================================================
 
-Phases 5ï¸âƒ£-9ï¸âƒ£ du workflow:
-5ï¸âƒ£ DÃ©tection: cherche tag [_Head] VALIDE: dans emails
-6ï¸âƒ£ Extraction: parse JSON depuis bloc ```json...```
-7ï¸âƒ£ Validation: vÃ©rifie intÃ©gritÃ© + token MD5
-8ï¸âƒ£ Insertion: crÃ©e EcritureComptable en BD
-9ï¸âƒ£ Tracking: met Ã  jour EvenementComptable
+Phases 5️⃣-9️⃣ du workflow:
+5️⃣ Détection: cherche tag [_Head] VALIDE: dans emails
+6️⃣ Extraction: parse JSON depuis bloc ```json...```
+7️⃣ Validation: vérifie intégrité + token MD5
+8️⃣ Insertion: crée EcritureComptable en BD
+9️⃣ Tracking: met à jour EvenementComptable
 
-RÃ´le: Valider les propositions avant insertion, avec audit trail complet
+Rôle: Valider les propositions avant insertion, avec audit trail complet
 """
 
 import json
@@ -29,17 +29,17 @@ from models_module2 import (
 from module2_workflow_v2 import ParseurMarkdownJSON
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-# 1. DÃ‰TECTEUR VALIDATIONS
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
+# 1. DÉTECTEUR VALIDATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
 
 class DetecteurValidations:
-    """DÃ©tecte les validations dans les emails reÃ§us"""
+    """Détecte les validations dans les emails reçus"""
     
     @staticmethod
     def detecter_validation(email: Dict) -> Dict:
         """
-        DÃ©tecte si l'email contient une validation
+        Détecte si l'email contient une validation
         
         Cherche le tag: [_Head] VALIDE:
         
@@ -61,10 +61,10 @@ class DetecteurValidations:
                 "validation_detectee": False,
                 "json_markdown": None,
                 "token_email": None,
-                "message": "Tag [_Head] VALIDE: non trouvÃ©"
+                "message": "Tag [_Head] VALIDE: non trouvé"
             }
         
-        # Tag trouvÃ© - extraire JSON
+        # Tag trouvé - extraire JSON
         parseur = ParseurMarkdownJSON()
         json_data = parseur.extraire_json(body)
         
@@ -73,7 +73,7 @@ class DetecteurValidations:
                 "validation_detectee": True,
                 "json_markdown": None,
                 "token_email": None,
-                "message": "Tag [_Head] VALIDE: trouvÃ© MAIS aucun JSON valide"
+                "message": "Tag [_Head] VALIDE: trouvé MAIS aucun JSON valide"
             }
         
         # Extraire token depuis JSON
@@ -83,26 +83,26 @@ class DetecteurValidations:
             "validation_detectee": True,
             "json_markdown": json_data,
             "token_email": token_email,
-            "message": "Validation dÃ©tectÃ©e avec JSON valide"
+            "message": "Validation détectée avec JSON valide"
         }
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-# 2. VALIDATEUR INTÃ‰GRITÃ‰ JSON
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2. VALIDATEUR INTÉGRITÉ JSON
+# ═══════════════════════════════════════════════════════════════════════════════
 
 class ValidateurIntegriteJSON:
-    """Valide l'intÃ©gritÃ© des propositions et dÃ©tecte les tamperings"""
+    """Valide l'intégrité des propositions et détecte les tamperings"""
     
     def __init__(self, session: Session):
         self.session = session
     
     def valider_propositions(self, propositions: List[Dict], token_email: str) -> Tuple[bool, str]:
         """
-        Valide intÃ©gritÃ© des propositions
+        Valide intégrité des propositions
         
-        VÃ©rifications:
-        1. Token MD5 match (dÃ©tecte tampering)
+        Vérifications:
+        1. Token MD5 match (détecte tampering)
         2. Tous les comptes existent
         3. Montants > 0
         4. Structure JSON valide
@@ -111,55 +111,55 @@ class ValidateurIntegriteJSON:
             (valide, message_erreur)
         """
         
-        # 1. VÃ©rifier token MD5
+        # 1. Vérifier token MD5
         token_calculated = hashlib.md5(
             json.dumps(propositions, sort_keys=True).encode()
         ).hexdigest()
         
         if token_calculated != token_email:
-            return False, f"âŒ Token MD5 invalide (tampering dÃ©tectÃ©?) - Attendu: {token_email}, CalculÃ©: {token_calculated}"
+            return False, f"❌ Token MD5 invalide (tampering détecté?) - Attendu: {token_email}, Calculé: {token_calculated}"
         
-        # 2. VÃ©rifier chaque proposition
+        # 2. Vérifier chaque proposition
         for i, prop in enumerate(propositions):
             
-            # VÃ©rifier structure
+            # Vérifier structure
             required_keys = ['compte_debit', 'compte_credit', 'montant', 'numero_ecriture']
             for key in required_keys:
                 if key not in prop:
-                    return False, f"Proposition {i}: clÃ© '{key}' manquante"
+                    return False, f"Proposition {i}: clé '{key}' manquante"
             
-            # VÃ©rifier montant
+            # Vérifier montant
             try:
                 montant = Decimal(str(prop['montant']))
                 if montant <= 0:
-                    return False, f"Proposition {i}: montant doit Ãªtre > 0 (trouvÃ©: {montant})"
+                    return False, f"Proposition {i}: montant doit être > 0 (trouvé: {montant})"
             except (ValueError, TypeError):
                 return False, f"Proposition {i}: montant invalide '{prop['montant']}'"
             
-            # VÃ©rifier comptes existent
+            # Vérifier comptes existent
             compte_debit = self.session.query(PlanCompte).filter_by(
                 numero_compte=str(prop['compte_debit'])
             ).first()
             
             if not compte_debit:
-                return False, f"Proposition {i}: compte dÃ©bit '{prop['compte_debit']}' n'existe pas"
+                return False, f"Proposition {i}: compte débit '{prop['compte_debit']}' n'existe pas"
             
             compte_credit = self.session.query(PlanCompte).filter_by(
                 numero_compte=str(prop['compte_credit'])
             ).first()
             
             if not compte_credit:
-                return False, f"Proposition {i}: compte crÃ©dit '{prop['compte_credit']}' n'existe pas"
+                return False, f"Proposition {i}: compte crédit '{prop['compte_credit']}' n'existe pas"
         
         return True, ""
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
 # 3. PROCESSEUR INSERTION
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
 
 class ProcesseurInsertion:
-    """InsÃ¨re les propositions validÃ©es en tant que EcritureComptable"""
+    """Insère les propositions validées en tant que EcritureComptable"""
     
     def __init__(self, session: Session):
         self.session = session
@@ -169,7 +169,7 @@ class ProcesseurInsertion:
                                    evt_original_id: str,
                                    evt_validation_id: str,
                                    email_validation_from: str) -> Tuple[bool, str, List[int]]:
-        """InsÃ¨re propositions Ã©vÃ©nement simple"""
+        """Insère propositions événement simple"""
         
         return self._inserer_propositions_generiques(
             propositions, evt_original_id, evt_validation_id, email_validation_from
@@ -180,10 +180,10 @@ class ProcesseurInsertion:
                                         evt_original_id: str,
                                         evt_validation_id: str,
                                         email_validation_from: str) -> Tuple[bool, str, List[int]]:
-        """InsÃ¨re propositions init bilan + crÃ©e ExerciceComptable 2023"""
+        """Insère propositions init bilan + crée ExerciceComptable 2023"""
         
         try:
-            # D'abord crÃ©er l'exercice 2023 s'il n'existe pas
+            # D'abord créer l'exercice 2023 s'il n'existe pas
             exercice_2023 = self.session.query(ExerciceComptable).filter_by(annee=2023).first()
             
             if not exercice_2023:
@@ -198,7 +198,7 @@ class ProcesseurInsertion:
                 self.session.add(exercice_2023)
                 self.session.flush()
             
-            # Puis insÃ©rer les propositions
+            # Puis insérer les propositions
             return self._inserer_propositions_generiques(
                 propositions, evt_original_id, evt_validation_id, email_validation_from,
                 exercice_id=exercice_2023.id
@@ -213,18 +213,18 @@ class ProcesseurInsertion:
                                      evt_original_id: str,
                                      evt_validation_id: str,
                                      email_validation_from: str) -> Tuple[bool, str, List[int]]:
-        """InsÃ¨re propositions clÃ´ture + crÃ©e ExerciceComptable 2024"""
+        """Insère propositions clôture + crée ExerciceComptable 2024"""
         
         try:
-            # RÃ©cupÃ©rer exercice 2023
+            # Récupérer exercice 2023
             exercice_2023 = self.session.query(ExerciceComptable).filter_by(annee=2023).first()
             if not exercice_2023:
-                return False, "Exercice 2023 non trouvÃ© pour clÃ´ture", []
+                return False, "Exercice 2023 non trouvé pour clôture", []
             
             # Marquer 2023 comme CLOTURE
             exercice_2023.statut = 'CLOTURE'
             
-            # CrÃ©er exercice 2024 s'il n'existe pas
+            # Créer exercice 2024 s'il n'existe pas
             exercice_2024 = self.session.query(ExerciceComptable).filter_by(annee=2024).first()
             if not exercice_2024:
                 from datetime import date
@@ -238,7 +238,7 @@ class ProcesseurInsertion:
                 self.session.add(exercice_2024)
                 self.session.flush()
             
-            # Puis insÃ©rer les propositions (sur 2023)
+            # Puis insérer les propositions (sur 2023)
             return self._inserer_propositions_generiques(
                 propositions, evt_original_id, evt_validation_id, email_validation_from,
                 exercice_id=exercice_2023.id
@@ -246,7 +246,7 @@ class ProcesseurInsertion:
         
         except Exception as e:
             self.session.rollback()
-            return False, f"Erreur clÃ´ture: {str(e)[:100]}", []
+            return False, f"Erreur clôture: {str(e)[:100]}", []
     
     def _inserer_propositions_generiques(self,
                                         propositions: List[Dict],
@@ -254,14 +254,14 @@ class ProcesseurInsertion:
                                         evt_validation_id: str,
                                         email_validation_from: str,
                                         exercice_id: int = None) -> Tuple[bool, str, List[int]]:
-        """InsÃ¨re les propositions de faÃ§on gÃ©nÃ©rique"""
+        """Insère les propositions de façon générique"""
         
         try:
-            # Si pas d'exercice spÃ©cifiÃ©, utiliser 2024
+            # Si pas d'exercice spécifié, utiliser 2024
             if not exercice_id:
                 exercice_2024 = self.session.query(ExerciceComptable).filter_by(annee=2024).first()
                 if not exercice_2024:
-                    return False, "Exercice 2024 non trouvÃ©", []
+                    return False, "Exercice 2024 non trouvé", []
                 exercice_id = exercice_2024.id
             
             ecriture_ids = []
@@ -282,7 +282,7 @@ class ProcesseurInsertion:
                         validee_by_email_id=evt_validation_id,
                         valide=True,
                         validee_at=datetime.now(),
-                        notes=f"ValidÃ©e par Ulrik via email {evt_validation_id}"
+                        notes=f"Validée par Ulrik via email {evt_validation_id}"
                     )
                     
                     self.session.add(ecriture)
@@ -291,22 +291,22 @@ class ProcesseurInsertion:
                 
                 except IntegrityError as ie:
                     self.session.rollback()
-                    return False, f"Erreur intÃ©gritÃ© DB: {str(ie)[:100]}", ecriture_ids
+                    return False, f"Erreur intégrité DB: {str(ie)[:100]}", ecriture_ids
                 except Exception as e:
                     self.session.rollback()
-                    return False, f"Erreur insertion Ã©criture: {str(e)[:100]}", ecriture_ids
+                    return False, f"Erreur insertion écriture: {str(e)[:100]}", ecriture_ids
             
             self.session.commit()
-            return True, f"{len(ecriture_ids)} Ã©critures insÃ©rÃ©es avec succÃ¨s", ecriture_ids
+            return True, f"{len(ecriture_ids)} écritures insérées avec succès", ecriture_ids
         
         except Exception as e:
             self.session.rollback()
             return False, f"Erreur globale: {str(e)[:100]}", []
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
 # 4. ORCHESTRATOR VALIDATIONS
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ═══════════════════════════════════════════════════════════════════════════════
 
 class OrchestratorValidations:
     """Orchestre le workflow complet de validation (phases 5-9)"""
@@ -322,11 +322,11 @@ class OrchestratorValidations:
         Traite un email de validation (phase 5-9)
         
         Workflow:
-        5ï¸âƒ£ DÃ©tecte tag [_Head] VALIDE:
-        6ï¸âƒ£ Extrait JSON du bloc ```json...```
-        7ï¸âƒ£ Valide intÃ©gritÃ© + token MD5
-        8ï¸âƒ£ InsÃ¨re les EcritureComptable
-        9ï¸âƒ£ Update EvenementComptable
+        5️⃣ Détecte tag [_Head] VALIDE:
+        6️⃣ Extrait JSON du bloc ```json...```
+        7️⃣ Valide intégrité + token MD5
+        8️⃣ Insère les EcritureComptable
+        9️⃣ Update EvenementComptable
         
         Returns:
             {
@@ -338,19 +338,19 @@ class OrchestratorValidations:
             }
         """
         
-        # PHASE 5ï¸âƒ£: DÃ©tection
+        # PHASE 5️⃣: Détection
         result_detection = self.detecteur.detecter_validation(email)
         
         if not result_detection['validation_detectee']:
             return {
                 "validation_detectee": False,
-                "statut": "IGNORÃ‰",
+                "statut": "IGNORÉ",
                 "message": result_detection['message'],
                 "ecritures_creees": 0,
                 "type_evenement": None
             }
         
-        # RÃ©cupÃ©rer le JSON des propositions
+        # Récupérer le JSON des propositions
         json_data = result_detection['json_markdown']
         token_email = result_detection['token_email']
         
@@ -358,12 +358,12 @@ class OrchestratorValidations:
             return {
                 "validation_detectee": True,
                 "statut": "ERREUR",
-                "message": "Validation dÃ©tectÃ©e mais JSON invalide",
+                "message": "Validation détectée mais JSON invalide",
                 "ecritures_creees": 0,
                 "type_evenement": None
             }
         
-        # PHASE 6ï¸âƒ£: Extraction JSON (dÃ©jÃ  faite)
+        # PHASE 6️⃣: Extraction JSON (déjà faite)
         propositions = json_data.get('propositions', [])
         type_evenement = json_data.get('type_evenement', 'UNKNOWN')
         
@@ -376,11 +376,11 @@ class OrchestratorValidations:
                 "type_evenement": type_evenement
             }
         
-        # PHASE 7ï¸âƒ£: Validation intÃ©gritÃ©
+        # PHASE 7️⃣: Validation intégrité
         valide, msg_erreur = self.validateur.valider_propositions(propositions, token_email)
         
         if not valide:
-            # CrÃ©er EvenementComptable rejetÃ©
+            # Créer EvenementComptable rejeté
             evt_rejet = EvenementComptable(
                 email_id=email.get('email_id'),
                 email_from=email.get('from'),
@@ -388,7 +388,7 @@ class OrchestratorValidations:
                 email_body=email.get('body', '')[:1000],
                 type_evenement=type_evenement,
                 est_comptable=True,
-                statut='REJETÃ‰',
+                statut='REJETÉ',
                 message_erreur=msg_erreur
             )
             self.session.add(evt_rejet)
@@ -397,14 +397,14 @@ class OrchestratorValidations:
             return {
                 "validation_detectee": True,
                 "statut": "ERREUR",
-                "message": f"Validation Ã©chouÃ©e: {msg_erreur}",
+                "message": f"Validation échouée: {msg_erreur}",
                 "ecritures_creees": 0,
                 "type_evenement": type_evenement
             }
         
-        # PHASE 8ï¸âƒ£-9ï¸âƒ£: Insertion + Update
+        # PHASE 8️⃣-9️⃣: Insertion + Update
         
-        # RÃ©cupÃ©rer l'email original (source des propositions)
+        # Récupérer l'email original (source des propositions)
         evt_original = self.session.query(EvenementComptable).filter_by(
             statut='EN_ATTENTE_VALIDATION',
             type_evenement=type_evenement
@@ -414,7 +414,7 @@ class OrchestratorValidations:
             return {
                 "validation_detectee": True,
                 "statut": "ERREUR",
-                "message": f"Impossible de trouver l'Ã©vÃ©nement original ({type_evenement})",
+                "message": f"Impossible de trouver l'événement original ({type_evenement})",
                 "ecritures_creees": 0,
                 "type_evenement": type_evenement
             }
@@ -433,7 +433,7 @@ class OrchestratorValidations:
                 propositions, evt_original.email_id, email.get('email_id'), email.get('from')
             )
         else:
-            succes, msg, ids = False, f"Type Ã©vÃ©nement inconnu: {type_evenement}", []
+            succes, msg, ids = False, f"Type événement inconnu: {type_evenement}", []
         
         if not succes:
             return {
@@ -444,7 +444,7 @@ class OrchestratorValidations:
                 "type_evenement": type_evenement
             }
         
-        # Mettre Ã  jour l'Ã©vÃ©nement original
+        # Mettre à jour l'événement original
         evt_original.statut = 'INSEPE_EN_DB'
         evt_original.email_validation_id = email.get('email_id')
         evt_original.ecritures_creees = ids
@@ -454,11 +454,11 @@ class OrchestratorValidations:
         return {
             "validation_detectee": True,
             "statut": "OK",
-            "message": f"âœ“ {len(ids)} Ã©critures insÃ©rÃ©es avec succÃ¨s",
+            "message": f"✓ {len(ids)} écritures insérées avec succès",
             "ecritures_creees": len(ids),
             "type_evenement": type_evenement
         }
 
 
 if __name__ == "__main__":
-    print("âœ… Module 2 Validations V2 chargÃ© et prÃªt")
+    print("✅ Module 2 Validations V2 chargé et prêt")
