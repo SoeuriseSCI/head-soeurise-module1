@@ -61,6 +61,8 @@ def log_critical(action, details=""):
     try:
         with open('/tmp/head_soeurise_critical.log', 'a') as f:
             f.write(message + '\n')
+            f.flush()  # ← AJOUTEZ CETTE LIGNE
+            os.fsync(f.fileno())  # ← ET CELLE-CI (force sync disque)
     except:
         pass
 
