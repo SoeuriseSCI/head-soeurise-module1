@@ -46,6 +46,8 @@ try:
 except:
     PDF2IMAGE_SUPPORT = False
 
+from typing import Tuple, Optional, List
+
 # ═══════════════════════════════════════════════════════════════════
 # LOGGING CRITIQUE SEULEMENT (V3.7)
 # ═══════════════════════════════════════════════════════════════════
