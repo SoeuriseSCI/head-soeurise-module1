@@ -1241,7 +1241,7 @@ if __name__ == "__main__":
             # Continuer sans Module 2 si erreur
     # ════════════════════════════════════════════════════════════════════════════
 
-    log_critical("GIT_ENDPOINT_INIT", "Endpoint: https://api.soeurise.com/git")
+    log_critical("GIT_ENDPOINT_INIT", "Endpoint: https://head-soeurise-web.onrender.com/api/git")
 
     init_git_repo()
     reveil_quotidien()
