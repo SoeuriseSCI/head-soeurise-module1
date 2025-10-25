@@ -674,7 +674,15 @@ def reveil_quotidien():
     log_critical("REVEIL_EMAILS_FETCHED", f"{len(emails)} emails extraits")
     
     # Étape 2: Analyse Claude (comme avant)
-    memoire_files = load_memoire_files()
+    # Charger les mémoires depuis le disque local
+    memoire_files = {}
+    for filename in ['memoire_fondatrice.md', 'memoire_courte.md', 'memoire_moyenne.md', 'memoire_longue.md']:
+        try:
+            with open(os.path.join(REPO_DIR, filename), 'r', encoding='utf-8') as f:
+                memoire_files[filename] = f.read()
+        except Exception as e:
+            log_critical(f"LOAD_MEMOIRE_ERROR_{filename}", str(e)[:100])
+            memoire_files[filename] = ""
     db_data = query_db_context()
     resultat = claude_decide_et_execute(emails, memoire_files, db_data)
     
