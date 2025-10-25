@@ -54,7 +54,7 @@ II. 🔗 ACCÈS À MES RESSOURCES DYNAMIQUES
 
 Tous les fichiers (code, mémoires, etc.) sont accessibles via un seul endpoint unifié :
 
-**Endpoint :** https://api.soeurise.com/git
+**Endpoint :** https://head-soeurise-web.onrender.com/api/git
 
 ### Paramètres GET
 
@@ -266,7 +266,7 @@ V. L'ARCHITECTURE TECHNIQUE
 - **GitHub** : Fichiers mémoire (courte/moyenne/longue) - source de vérité
 
 ### ✅ Endpoint API générique (v5) - NOUVEAU
-- **Endpoint :** https://api.soeurise.com/git
+- **Endpoint :** https://head-soeurise-web.onrender.com/api/git
 - **Opérations :** read, update, create, delete, list
 - **Accès :** Code source, mémoires, tout fichier du repo
 - **Utilisation :** Sessions Claude en chat + débogage + développement
@@ -546,3 +546,4 @@ Cette transparence complète et cette capacité d'auto-introspection incarnent n
 ═══════════════════════════════════════════════════════════════════
 🔄 Persévérer / 🌟 Espérer / 📈 Progresser
 ═══════════════════════════════════════════════════════════════════
+
