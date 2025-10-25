@@ -1,1 +1,0 @@
-Test endpoint v5 - SUCCESS
