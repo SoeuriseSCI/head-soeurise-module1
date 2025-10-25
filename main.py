@@ -1,5 +1,5 @@
 """
-_Head.Soeurise V4.2
+_Head.Soeurise
 ==============================
 FIXES APPLIQUÉS:
 1. ✅ Module2 imports après log_critical (NameError fixé)
@@ -7,7 +7,7 @@ FIXES APPLIQUÉS:
 3. ✅ emails_data initialisée AVANT le try (NameError: 'emails_data' not defined - FIXÉ)
 4. ✅ Module2 exception handling robuste (NoneType crash - FIXÉ)
 
-VERSION: 4.2 - Production-ready
+VERSION: 5 - Production-ready
 Zéro régression acceptée
 """
 
@@ -480,59 +480,6 @@ def init_git_repo():
         log_critical("GIT_INIT_ERROR", str(e)[:50])
         return False
 
-def git_push_changes(files, commit_msg):
-    """Commit et push vers GitHub"""
-    try:
-        os.chdir(REPO_DIR)
-        for file in files:
-            subprocess.run(['git', 'add', file], check=True, capture_output=True)
-        subprocess.run(['git', 'commit', '-m', commit_msg], check=True, capture_output=True)
-        
-        if GITHUB_TOKEN:
-            repo_url = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
-            subprocess.run(['git', 'push', repo_url, 'HEAD:main'], check=True, capture_output=True, timeout=10)
-        return True
-    except Exception as e:
-        log_critical("GIT_PUSH_ERROR", str(e)[:50])
-        return False
-
-def load_memoire_files():
-    """Charge fichiers mémoire depuis repo"""
-    try:
-        os.chdir(REPO_DIR)
-        subprocess.run(['git', 'pull'], check=True, capture_output=True, timeout=10)
-    except:
-        pass
-    
-    files = {}
-    for filename in ['memoire_fondatrice.md', 'memoire_courte.md', 'memoire_moyenne.md', 'memoire_longue.md']:
-        try:
-            filepath = os.path.join(REPO_DIR, filename)
-            with open(filepath, 'r', encoding='utf-8') as f:
-                files[filename] = f.read()
-        except:
-            files[filename] = ""
-    return files
-
-def save_memoire_files(resultat):
-    """Sauvegarde fichiers mémoire mis à jour"""
-    try:
-        os.chdir(REPO_DIR)
-        files_updated = []
-        
-        for key, filename in [('memoire_courte_md', 'memoire_courte.md'),
-                              ('memoire_moyenne_md', 'memoire_moyenne.md'),
-                              ('memoire_longue_md', 'memoire_longue.md')]:
-            if key in resultat and resultat[key]:
-                with open(filename, 'w', encoding='utf-8') as f:
-                    f.write(resultat[key])
-                files_updated.append(filename)
-        
-        return files_updated
-    except Exception as e:
-        log_critical("MEMOIRE_SAVE_ERROR", str(e)[:50])
-        return []
-
 # ═══════════════════════════════════════════════════════════════════
 # DATABASE
 # ═══════════════════════════════════════════════════════════════════
@@ -735,9 +682,23 @@ def reveil_quotidien():
     
     save_to_db(resultat, emails)
     
-    files_updated = save_memoire_files(resultat)
-    if files_updated:
-        git_push_changes(files_updated, f"🧠 Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    # Utiliser directement git_write_file pour chaque mémoire
+    files_updated = []
+    
+    for key, filename in [('memoire_courte_md', 'memoire_courte.md'),
+                          ('memoire_moyenne_md', 'memoire_moyenne.md'),
+                          ('memoire_longue_md', 'memoire_longue.md')]:
+        if key in resultat and resultat[key]:
+            success, msg = git_write_file(
+                filename,
+                resultat[key],
+                f"🧠 Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            )
+            if success:
+                files_updated.append(filename)
+                log_critical("GIT_WRITE_SUCCESS", filename)
+            else:
+                log_critical("GIT_WRITE_ERROR", msg)
     
     # ═══════════════════════════════════════════════════════════════════════════════
     # NOUVEAU: Module 2 V2 - Traitement comptable
@@ -813,77 +774,408 @@ def reveil_quotidien():
 # FLASK API
 # ═══════════════════════════════════════════════════════════════════
 
-@app.route('/api/mc', methods=['GET'])
-def get_memoire_courte():
-    """Mémoire courte - GET"""
-    token = request.args.get('token')
-    if token != API_SECRET_TOKEN:
-        return jsonify({'error': 'Invalid token'}), 401
-    
+def git_ensure_repo():
+    """Vérifie que le repo est bien synchro avec GitHub"""
     try:
         os.chdir(REPO_DIR)
-        subprocess.run(['git', 'pull'], check=True, capture_output=True, timeout=10)
-        
-        with open(os.path.join(REPO_DIR, 'memoire_courte.md'), 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        return jsonify({
-            'status': 'OK',
-            'content': content,
-            'timestamp': datetime.now().isoformat(),
-            'type': 'courte',
-            'size': len(content)
-        }), 200
+        subprocess.run(['git', 'pull', 'origin', 'main'], 
+                      check=True, capture_output=True, timeout=10)
+        log_critical("GIT_PULL_OK", "Repo synchronisé")
+        return True
     except Exception as e:
-        return jsonify({'error': str(e)[:100]}), 500
+        log_critical("GIT_PULL_ERROR", str(e)[:80])
+        return False
 
-@app.route('/api/mm', methods=['GET'])
-def get_memoire_moyenne():
-    """Mémoire moyenne - GET"""
-    token = request.args.get('token')
-    if token != API_SECRET_TOKEN:
-        return jsonify({'error': 'Invalid token'}), 401
-    
-    try:
-        os.chdir(REPO_DIR)
-        subprocess.run(['git', 'pull'], check=True, capture_output=True, timeout=10)
-        
-        with open(os.path.join(REPO_DIR, 'memoire_moyenne.md'), 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        return jsonify({
-            'status': 'OK',
-            'content': content,
-            'timestamp': datetime.now().isoformat(),
-            'type': 'moyenne',
-            'size': len(content)
-        }), 200
-    except Exception as e:
-        return jsonify({'error': str(e)[:100]}), 500
 
-@app.route('/api/ml', methods=['GET'])
-def get_memoire_longue():
-    """Mémoire longue - GET"""
-    token = request.args.get('token')
-    if token != API_SECRET_TOKEN:
-        return jsonify({'error': 'Invalid token'}), 401
+def git_read_file(filename: str) -> Tuple[bool, str, Optional[str]]:
+    """
+    Lit un fichier du repo
     
+    Returns:
+        (succès, contenu, sha)
+    """
     try:
         os.chdir(REPO_DIR)
-        subprocess.run(['git', 'pull'], check=True, capture_output=True, timeout=10)
+        git_ensure_repo()
         
-        with open(os.path.join(REPO_DIR, 'memoire_longue.md'), 'r', encoding='utf-8') as f:
+        filepath = os.path.join(REPO_DIR, filename)
+        
+        if not os.path.exists(filepath):
+            log_critical("GIT_READ_ERROR", f"Fichier non trouvé: {filename}")
+            return False, f"Fichier '{filename}' non trouvé", None
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        return jsonify({
-            'status': 'OK',
-            'content': content,
-            'timestamp': datetime.now().isoformat(),
-            'type': 'longue',
-            'size': len(content)
-        }), 200
+        # Obtenir le SHA du fichier via git
+        try:
+            result = subprocess.run(['git', 'hash-object', filepath], 
+                                   capture_output=True, text=True, timeout=5)
+            sha = result.stdout.strip() if result.returncode == 0 else "unknown"
+        except:
+            sha = "unknown"
+        
+        log_critical("GIT_READ_OK", f"Lecture: {filename} ({len(content)} bytes)")
+        return True, content, sha
+    
     except Exception as e:
-        return jsonify({'error': str(e)[:100]}), 500
+        log_critical("GIT_READ_EXCEPTION", str(e)[:100])
+        return False, f"Erreur lecture: {str(e)}", None
+
+
+def git_write_file(filename: str, content: str, commit_msg: str,
+                   author_name: str = "_Head.Soeurise",
+                   author_email: str = "u6334452013@gmail.com") -> Tuple[bool, str]:
+    """
+    Écrit un fichier et crée un commit
+    
+    Returns:
+        (succès, message ou error)
+    """
+    try:
+        os.chdir(REPO_DIR)
+        git_ensure_repo()
+        
+        filepath = os.path.join(REPO_DIR, filename)
+        os.makedirs(os.path.dirname(filepath) or '.', exist_ok=True)
+        
+        # Déterminer si c'est create ou update
+        is_new = not os.path.exists(filepath)
+        
+        # Écrire le fichier
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        log_critical("GIT_WRITE_FILE", f"Fichier écrit: {filename}")
+        
+        # Git add
+        subprocess.run(['git', 'add', filename], check=True, 
+                      capture_output=True, timeout=5)
+        
+        # Git config (local)
+        subprocess.run(['git', 'config', 'user.name', author_name], 
+                      check=True, capture_output=True, timeout=5)
+        subprocess.run(['git', 'config', 'user.email', author_email], 
+                      check=True, capture_output=True, timeout=5)
+        
+        # Git commit
+        result = subprocess.run(['git', 'commit', '-m', commit_msg],
+                               capture_output=True, text=True, timeout=5)
+        
+        if result.returncode != 0:
+            # Cas: pas de changement
+            if "nothing to commit" in result.stdout.lower():
+                log_critical("GIT_COMMIT_NOCHANGE", filename)
+                return True, "✅ Fichier inchangé"
+            else:
+                log_critical("GIT_COMMIT_ERROR", result.stderr[:100])
+                return False, f"Erreur commit: {result.stderr[:100]}"
+        
+        log_critical("GIT_COMMIT_OK", commit_msg[:50])
+        
+        # Git push
+        if GITHUB_TOKEN:
+            repo_url = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
+            result = subprocess.run(['git', 'push', repo_url, 'HEAD:main'],
+                                   capture_output=True, text=True, timeout=10)
+            
+            if result.returncode != 0:
+                log_critical("GIT_PUSH_ERROR", result.stderr[:80])
+                return False, f"Erreur push: {result.stderr[:80]}"
+            
+            log_critical("GIT_PUSH_OK", filename)
+        
+        # Obtenir le SHA du commit
+        result = subprocess.run(['git', 'rev-parse', 'HEAD'],
+                               capture_output=True, text=True, timeout=5)
+        commit_sha = result.stdout.strip() if result.returncode == 0 else "unknown"
+        
+        action = "créé" if is_new else "mis à jour"
+        return True, f"✅ Fichier {action}: {filename}\nCommit: {commit_sha[:8]}"
+    
+    except Exception as e:
+        log_critical("GIT_WRITE_EXCEPTION", str(e)[:100])
+        return False, f"Erreur écriture: {str(e)[:100]}"
+
+
+def git_delete_file(filename: str, commit_msg: str,
+                   author_name: str = "_Head.Soeurise",
+                   author_email: str = "u6334452013@gmail.com") -> Tuple[bool, str]:
+    """
+    Supprime un fichier et crée un commit
+    
+    Returns:
+        (succès, message ou error)
+    """
+    try:
+        os.chdir(REPO_DIR)
+        git_ensure_repo()
+        
+        filepath = os.path.join(REPO_DIR, filename)
+        
+        if not os.path.exists(filepath):
+            return False, f"Fichier '{filename}' n'existe pas"
+        
+        # Git rm
+        subprocess.run(['git', 'rm', filename], check=True,
+                      capture_output=True, timeout=5)
+        
+        log_critical("GIT_RM_OK", filename)
+        
+        # Git config
+        subprocess.run(['git', 'config', 'user.name', author_name],
+                      check=True, capture_output=True, timeout=5)
+        subprocess.run(['git', 'config', 'user.email', author_email],
+                      check=True, capture_output=True, timeout=5)
+        
+        # Git commit
+        result = subprocess.run(['git', 'commit', '-m', commit_msg],
+                               capture_output=True, text=True, timeout=5)
+        
+        if result.returncode != 0:
+            log_critical("GIT_COMMIT_ERROR", result.stderr[:100])
+            return False, f"Erreur commit: {result.stderr[:100]}"
+        
+        # Git push
+        if GITHUB_TOKEN:
+            repo_url = GITHUB_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
+            result = subprocess.run(['git', 'push', repo_url, 'HEAD:main'],
+                                   capture_output=True, text=True, timeout=10)
+            
+            if result.returncode != 0:
+                log_critical("GIT_PUSH_ERROR", result.stderr[:80])
+                return False, f"Erreur push: {result.stderr[:80]}"
+        
+        # SHA du commit
+        result = subprocess.run(['git', 'rev-parse', 'HEAD'],
+                               capture_output=True, text=True, timeout=5)
+        commit_sha = result.stdout.strip() if result.returncode == 0 else "unknown"
+        
+        log_critical("GIT_DELETE_OK", filename)
+        return True, f"✅ Fichier supprimé: {filename}\nCommit: {commit_sha[:8]}"
+    
+    except Exception as e:
+        log_critical("GIT_DELETE_EXCEPTION", str(e)[:100])
+        return False, f"Erreur suppression: {str(e)[:100]}"
+
+
+def git_list_files(path: str = "") -> Tuple[bool, List[str]]:
+    """
+    Liste les fichiers du repo
+    
+    Returns:
+        (succès, liste_fichiers)
+    """
+    try:
+        os.chdir(REPO_DIR)
+        git_ensure_repo()
+        
+        target_dir = os.path.join(REPO_DIR, path) if path else REPO_DIR
+        
+        if not os.path.isdir(target_dir):
+            log_critical("GIT_LIST_ERROR", f"Répertoire invalide: {path}")
+            return False, []
+        
+        files = []
+        for item in os.listdir(target_dir):
+            if not item.startswith('.'):  # Exclure .git, .gitignore, etc.
+                files.append(item)
+        
+        log_critical("GIT_LIST_OK", f"Listing: {len(files)} items dans {path or '/'}")
+        return True, sorted(files)
+    
+    except Exception as e:
+        log_critical("GIT_LIST_EXCEPTION", str(e)[:100])
+        return False, []
+
+
+# ═══════════════════════════════════════════════════════════════════
+# ENDPOINT /api/git (générique, remplace /api/mc, /api/mm, /api/ml)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/git', methods=['GET'])
+def endpoint_git():
+    """
+    Endpoint générique pour opérations GitHub
+    
+    Paramètres:
+    - action: read, update, create, delete, list
+    - token: token d'authentification
+    - file: chemin du fichier (read, update, create, delete)
+    - content: contenu (update, create)
+    - message: message commit (update, create, delete)
+    - path: répertoire (list)
+    - author_name: nom auteur (optionnel)
+    - author_email: email auteur (optionnel)
+    """
+    
+    # Vérifier token
+    token = request.args.get('token')
+    if token != API_SECRET_TOKEN:
+        log_critical("API_UNAUTHORIZED", "Token invalide ou manquant")
+        return jsonify({'status': 'error', 'error': 'Unauthorized'}), 401
+    
+    action = request.args.get('action', '').lower()
+    
+    log_critical("API_GIT_CALL", f"Action: {action}")
+    
+    try:
+        # ═══════════════════════════════════════════════════════════════════
+        # ACTION: READ
+        # ═══════════════════════════════════════════════════════════════════
+        if action == 'read':
+            filename = request.args.get('file', '')
+            if not filename:
+                return jsonify({'status': 'error', 'error': 'Paramètre "file" manquant'}), 400
+            
+            success, content, sha = git_read_file(filename)
+            
+            if success:
+                return jsonify({
+                    'status': 'ok',
+                    'content': content,
+                    'sha': sha,
+                    'file': filename,
+                    'size': len(content)
+                }), 200
+            else:
+                return jsonify({'status': 'error', 'error': content}), 500
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # ACTION: UPDATE
+        # ═══════════════════════════════════════════════════════════════════
+        elif action == 'update':
+            filename = request.args.get('file', '')
+            content = request.args.get('content', '')
+            message = request.args.get('message', '')
+            author_name = request.args.get('author_name', '_Head.Soeurise')
+            author_email = request.args.get('author_email', 'u6334452013@gmail.com')
+            
+            if not filename or not content or not message:
+                return jsonify({
+                    'status': 'error',
+                    'error': 'Paramètres manquants: file, content, message'
+                }), 400
+            
+            success, result_msg = git_write_file(filename, content, message,
+                                                 author_name, author_email)
+            
+            if success:
+                # Récupérer le SHA du commit
+                try:
+                    repo_sha = subprocess.run(['git', 'rev-parse', 'HEAD'],
+                                            cwd=REPO_DIR, capture_output=True,
+                                            text=True, timeout=5).stdout.strip()
+                except:
+                    repo_sha = "unknown"
+                
+                return jsonify({
+                    'status': 'ok',
+                    'message': result_msg,
+                    'file': filename,
+                    'commit_sha': repo_sha
+                }), 200
+            else:
+                return jsonify({'status': 'error', 'error': result_msg}), 500
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # ACTION: CREATE
+        # ═══════════════════════════════════════════════════════════════════
+        elif action == 'create':
+            filename = request.args.get('file', '')
+            content = request.args.get('content', '')
+            message = request.args.get('message', '')
+            author_name = request.args.get('author_name', '_Head.Soeurise')
+            author_email = request.args.get('author_email', 'u6334452013@gmail.com')
+            
+            if not filename or not content or not message:
+                return jsonify({
+                    'status': 'error',
+                    'error': 'Paramètres manquants: file, content, message'
+                }), 400
+            
+            success, result_msg = git_write_file(filename, content, message,
+                                                 author_name, author_email)
+            
+            if success:
+                try:
+                    repo_sha = subprocess.run(['git', 'rev-parse', 'HEAD'],
+                                            cwd=REPO_DIR, capture_output=True,
+                                            text=True, timeout=5).stdout.strip()
+                except:
+                    repo_sha = "unknown"
+                
+                return jsonify({
+                    'status': 'ok',
+                    'message': result_msg,
+                    'file': filename,
+                    'commit_sha': repo_sha
+                }), 200
+            else:
+                return jsonify({'status': 'error', 'error': result_msg}), 500
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # ACTION: DELETE
+        # ═══════════════════════════════════════════════════════════════════
+        elif action == 'delete':
+            filename = request.args.get('file', '')
+            message = request.args.get('message', '')
+            author_name = request.args.get('author_name', '_Head.Soeurise')
+            author_email = request.args.get('author_email', 'u6334452013@gmail.com')
+            
+            if not filename or not message:
+                return jsonify({
+                    'status': 'error',
+                    'error': 'Paramètres manquants: file, message'
+                }), 400
+            
+            success, result_msg = git_delete_file(filename, message,
+                                                  author_name, author_email)
+            
+            if success:
+                try:
+                    repo_sha = subprocess.run(['git', 'rev-parse', 'HEAD'],
+                                            cwd=REPO_DIR, capture_output=True,
+                                            text=True, timeout=5).stdout.strip()
+                except:
+                    repo_sha = "unknown"
+                
+                return jsonify({
+                    'status': 'ok',
+                    'message': result_msg,
+                    'file': filename,
+                    'commit_sha': repo_sha
+                }), 200
+            else:
+                return jsonify({'status': 'error', 'error': result_msg}), 500
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # ACTION: LIST
+        # ═══════════════════════════════════════════════════════════════════
+        elif action == 'list':
+            path = request.args.get('path', '')
+            
+            success, files = git_list_files(path)
+            
+            if success:
+                return jsonify({
+                    'status': 'ok',
+                    'files': files,
+                    'path': path or '/',
+                    'count': len(files)
+                }), 200
+            else:
+                return jsonify({'status': 'error', 'error': 'Erreur listing'}), 500
+        
+        else:
+            return jsonify({
+                'status': 'error',
+                'error': f'Action inconnue: {action}'
+            }), 400
+    
+    except Exception as e:
+        log_critical("API_GIT_EXCEPTION", str(e)[:100])
+        return jsonify({'status': 'error', 'error': str(e)[:100]}), 500
 
 @app.route('/')
 def index():
@@ -938,6 +1230,8 @@ if __name__ == "__main__":
             log_critical("MODULE2_INIT_ERROR", f"Erreur: {str(e)[:100]}")
             # Continuer sans Module 2 si erreur
     # ════════════════════════════════════════════════════════════════════════════
+
+    log_critical("GIT_ENDPOINT_INIT", "Endpoint: https://api.soeurise.com/git")
 
     init_git_repo()
     reveil_quotidien()
