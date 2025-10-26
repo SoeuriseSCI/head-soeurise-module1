@@ -406,23 +406,100 @@ class GenerateurPropositions:
     
     @staticmethod
     def generer_propositions_init_bilan_2023(comptes: List[Dict]) -> Tuple[str, Dict, str]:
-        """Génère propositions pour initialisation bilan 2023"""
-        
+        """
+        Génère propositions pour initialisation bilan 2023
+
+        CORRECTION V6: Génère écritures correctes avec distinction Actif/Passif
+        - Compte 89 "Bilan d'ouverture" comme contrepartie
+        - Respect du sens comptable (débit/crédit)
+        """
+
         propositions = []
+        compte_ouverture = "89"  # Compte standard bilan d'ouverture (sera soldé automatiquement)
+
         for i, compte in enumerate(comptes, 1):
-            propositions.append({
-                "numero_ecriture": f"2023-INIT-{i:04d}",
-                "type": "INIT_BILAN_2023",
-                "compte_debit": compte["compte"],
-                "compte_credit": "899",  # Compte équilibre temporaire
-                "montant": compte["solde"],
-                "libelle": f"Ouverture: {compte['libelle']}"
-            })
-        
+            num_compte = compte["compte"]
+            libelle = compte["libelle"]
+            solde = abs(compte["solde"])  # Valeur absolue
+            sens = compte.get("sens", GenerateurPropositions._determiner_sens_compte(num_compte, compte.get("type_bilan", "")))
+
+            if sens == "DEBIT":
+                # Compte à l'actif ou capitaux propres négatifs
+                propositions.append({
+                    "numero_ecriture": f"2023-INIT-{i:04d}",
+                    "type": "INIT_BILAN_2023",
+                    "compte_debit": num_compte,
+                    "compte_credit": compte_ouverture,
+                    "montant": solde,
+                    "libelle": f"Ouverture: {libelle}"
+                })
+            else:
+                # Compte au passif ou provisions/amortissements
+                propositions.append({
+                    "numero_ecriture": f"2023-INIT-{i:04d}",
+                    "type": "INIT_BILAN_2023",
+                    "compte_debit": compte_ouverture,
+                    "compte_credit": num_compte,
+                    "montant": solde,
+                    "libelle": f"Ouverture: {libelle}"
+                })
+
         token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
         markdown = GenerateurPropositions._generer_markdown_init_bilan(propositions, comptes)
-        
+
         return markdown, {"propositions": propositions, "token": token}, token
+
+    @staticmethod
+    def _determiner_sens_compte(num_compte: str, type_bilan: str = "") -> str:
+        """
+        Détermine si un compte doit être débité ou crédité à l'ouverture
+
+        Args:
+            num_compte: Numéro du compte (ex: "280", "101")
+            type_bilan: "ACTIF" ou "PASSIF" (si disponible)
+
+        Returns:
+            "DEBIT" ou "CREDIT"
+        """
+        # Si on a l'info directe, l'utiliser
+        if type_bilan == "ACTIF":
+            return "DEBIT"
+        elif type_bilan == "PASSIF":
+            return "CREDIT"
+
+        # Sinon, déterminer selon le numéro de compte (Plan Comptable Général français)
+        premiere_classe = num_compte[0] if num_compte else "0"
+
+        # Classe 1 : Capitaux propres
+        if premiere_classe == "1":
+            # 12x Report à nouveau peut être débiteur si négatif (traité au cas par cas)
+            if num_compte.startswith("12"):
+                return "DEBIT"  # RAN négatif dans bilan SCI Soeurise
+            return "CREDIT"  # Capital, réserves, résultat, emprunts
+
+        # Classe 2 : Immobilisations
+        elif premiere_classe == "2":
+            if num_compte.startswith("28") or num_compte.startswith("29"):
+                return "CREDIT"  # Amortissements et provisions
+            return "DEBIT"  # Immobilisations brutes
+
+        # Classe 3 : Stocks (généralement débit)
+        elif premiere_classe == "3":
+            return "DEBIT"
+
+        # Classe 4 : Comptes de tiers
+        elif premiere_classe == "4":
+            if num_compte.startswith("40") or num_compte.startswith("42") or \
+               num_compte.startswith("43") or num_compte.startswith("44"):
+                return "CREDIT"  # Fournisseurs, dettes diverses
+            return "DEBIT"  # Clients et créances (41x)
+
+        # Classe 5 : Comptes financiers (trésorerie)
+        elif premiere_classe == "5":
+            return "DEBIT"
+
+        # Par défaut (ne devrait pas arriver pour un bilan)
+        return "DEBIT"
     
     @staticmethod
     def generer_propositions_cloture_2023(credit_data: Dict, scpi_data: List[Dict]) -> Tuple[str, Dict, str]:
@@ -505,7 +582,7 @@ class GenerateurPropositions:
     @staticmethod
     def _generer_markdown_init_bilan(propositions: List[Dict], comptes: List[Dict]) -> str:
         """Génère Markdown pour initialisation bilan 2023"""
-        
+
         md = """# Initialisation Bilan 2023
 
 **Date:** """ + datetime.now().strftime('%d/%m/%Y %H:%M') + """
@@ -515,20 +592,36 @@ class GenerateurPropositions:
 | Compte | Libellé | Solde |
 |--------|---------|-------|
 """
-        
+
         for compte in comptes:
             md += f"| {compte['compte']} | {compte['libelle']} | {compte['solde']}€ |\n"
-        
+
         md += f"\n**Total:** {sum(c['solde'] for c in comptes)}€\n"
         md += f"**Nombre de comptes:** {len(comptes)}\n"
-        md += "\n## Écritures d'Ouverture\n\n"
-        
-        for prop in propositions[:5]:  # Montrer les 5 premières
-            md += f"- {prop['numero_ecriture']}: {prop['libelle']}\n"
-        
-        if len(propositions) > 5:
-            md += f"- ... et {len(propositions) - 5} autres écritures\n"
-        
+
+        # Analyse ACTIF/PASSIF
+        total_debit = sum(p['montant'] for p in propositions if p['compte_debit'] != '89')
+        total_credit = sum(p['montant'] for p in propositions if p['compte_credit'] != '89')
+
+        md += f"\n## Écritures d'Ouverture\n\n"
+        md += f"**ACTIF (débits)**: {total_debit:.2f}€\n"
+        md += f"**PASSIF (crédits)**: {total_credit:.2f}€\n"
+        md += f"**Équilibre**: {'✓ OK' if abs(total_debit - total_credit) < 0.01 else '✗ ERREUR'}\n\n"
+
+        # Détail par type
+        md += "### Détail des écritures\n\n"
+        md += "**Comptes à l'ACTIF (débit):**\n"
+        for prop in propositions:
+            if prop['compte_debit'] != '89':
+                md += f"- {prop['compte_debit']} : {prop['montant']}€ (contrepartie crédit 89)\n"
+
+        md += "\n**Comptes au PASSIF (crédit):**\n"
+        for prop in propositions:
+            if prop['compte_credit'] != '89':
+                md += f"- {prop['compte_credit']} : {prop['montant']}€ (contrepartie débit 89)\n"
+
+        md += f"\n**Compte 89 (bilan d'ouverture)**: se solde automatiquement à 0€\n"
+
         md += "\n## JSON Structure\n\n```json\n"
         md += json.dumps({
             "propositions": propositions,
@@ -537,7 +630,7 @@ class GenerateurPropositions:
             "generee_at": datetime.now().isoformat()
         }, indent=2)
         md += "\n```\n"
-        
+
         return md
     
     @staticmethod
@@ -677,25 +770,63 @@ class WorkflowModule2V2:
             }
     
     def _traiter_init_bilan_2023(self, email: Dict) -> Dict:
-        """Traite initialisation bilan 2023"""
+        """
+        Traite initialisation bilan 2023
+
+        Accepte 2 formats:
+        1. PDF en pièce jointe (parsing automatique via OCR)
+        2. JSON dans le corps de l'email avec format:
+           ```json
+           {
+             "comptes": [
+               {"compte": "280", "libelle": "SCPI", "solde": 500032, "type_bilan": "ACTIF"},
+               {"compte": "101", "libelle": "Capital", "solde": 1000, "type_bilan": "PASSIF"}
+             ]
+           }
+           ```
+        """
         try:
-            attachments = email.get('attachments', [])
-            pdf_files = [a for a in attachments if a.get('content_type') == 'application/pdf']
-            
-            if not pdf_files:
-                return {
-                    "type_detecte": TypeEvenement.INIT_BILAN_2023,
-                    "statut": "ERREUR",
-                    "message": "Aucun PDF trouvé en pièce jointe",
-                    "markdown": "",
-                    "propositions": {},
-                    "token": ""
-                }
-            
-            # Parser le premier PDF (bilan 2023)
-            filepath = pdf_files[0].get('filepath')
-            comptes = self.parseur_bilan.parse_from_pdf(filepath)
-            
+            comptes = None
+            source = None
+
+            # Option 1: Chercher JSON dans le corps de l'email
+            body = email.get('body', '')
+            if '```json' in body or '"comptes"' in body:
+                try:
+                    # Extraire JSON du corps (peut être dans un bloc markdown)
+                    json_match = body
+                    if '```json' in body:
+                        json_match = body.split('```json')[1].split('```')[0]
+                    elif '```' in body:
+                        json_match = body.split('```')[1].split('```')[0]
+
+                    data = json.loads(json_match.strip())
+                    if 'comptes' in data and isinstance(data['comptes'], list):
+                        comptes = data['comptes']
+                        source = "JSON email"
+                except (json.JSONDecodeError, IndexError) as e:
+                    pass  # Si parsing JSON échoue, tenter PDF
+
+            # Option 2: Parser PDF si pas de JSON valide
+            if not comptes:
+                attachments = email.get('attachments', [])
+                pdf_files = [a for a in attachments if a.get('content_type') == 'application/pdf']
+
+                if not pdf_files:
+                    return {
+                        "type_detecte": TypeEvenement.INIT_BILAN_2023,
+                        "statut": "ERREUR",
+                        "message": "Aucun PDF trouvé et aucun JSON valide dans le corps de l'email",
+                        "markdown": "",
+                        "propositions": {},
+                        "token": ""
+                    }
+
+                # Parser le premier PDF (bilan 2023)
+                filepath = pdf_files[0].get('filepath')
+                comptes = self.parseur_bilan.parse_from_pdf(filepath)
+                source = f"PDF {pdf_files[0].get('filename', 'inconnu')}"
+
             if not comptes:
                 return {
                     "type_detecte": TypeEvenement.INIT_BILAN_2023,
@@ -705,24 +836,24 @@ class WorkflowModule2V2:
                     "propositions": {},
                     "token": ""
                 }
-            
+
             # Générer propositions
             markdown, props, token = GenerateurPropositions.generer_propositions_init_bilan_2023(comptes)
-            
+
             return {
                 "type_detecte": TypeEvenement.INIT_BILAN_2023,
                 "statut": "OK",
                 "markdown": markdown,
                 "propositions": props,
                 "token": token,
-                "message": f"{len(comptes)} comptes importés pour initialisation bilan 2023"
+                "message": f"{len(comptes)} comptes importés depuis {source}"
             }
-        
+
         except Exception as e:
             return {
                 "type_detecte": TypeEvenement.INIT_BILAN_2023,
                 "statut": "ERREUR",
-                "message": f"Erreur parsing bilan: {str(e)[:100]}",
+                "message": f"Erreur traitement bilan: {str(e)[:100]}",
                 "markdown": "",
                 "propositions": {},
                 "token": ""
