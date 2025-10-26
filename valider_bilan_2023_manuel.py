@@ -112,7 +112,9 @@ def main():
     print("=" * 80)
     print()
 
-    session = get_session()
+    # Utiliser DATABASE_URL depuis env ou argument
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://soeurise:6cIWYzBxmh8YKBGBH9Or6ohidT6NiCap@dpg-d3ikk7ggjchc73ee4flg-a/soeurise')
+    session = get_session(database_url)
 
     try:
         # 1. Créer ou récupérer l'exercice 2023
