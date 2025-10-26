@@ -12,7 +12,7 @@ from module2_workflow_v2 import GenerateurPropositions
 # Données du bilan 2023 fournies par l'utilisateur
 comptes_bilan_2023 = [
     # ACTIF (DEBIT)
-    {"compte": "280", "libelle": "SCPI Patrimmo Croissance", "solde": 500032, "type_bilan": "ACTIF"},
+    {"compte": "280", "libelle": "SCPI Epargne Pierre", "solde": 500032, "type_bilan": "ACTIF"},
     {"compte": "412", "libelle": "Créances diverses", "solde": 7356, "type_bilan": "ACTIF"},
     {"compte": "502", "libelle": "Actions", "solde": 4140, "type_bilan": "ACTIF"},
     {"compte": "512", "libelle": "Banque", "solde": 2093, "type_bilan": "ACTIF"},

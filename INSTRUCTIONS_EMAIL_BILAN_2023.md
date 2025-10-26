@@ -26,7 +26,7 @@ Copiez-collez les données dans un bloc JSON dans le corps de l'email :
 ```json
 {
   "comptes": [
-    {"compte": "280", "libelle": "SCPI Patrimmo Croissance", "solde": 500032, "type_bilan": "ACTIF"},
+    {"compte": "280", "libelle": "SCPI Epargne Pierre", "solde": 500032, "type_bilan": "ACTIF"},
     {"compte": "412", "libelle": "Créances diverses", "solde": 7356, "type_bilan": "ACTIF"},
     {"compte": "502", "libelle": "Actions", "solde": 4140, "type_bilan": "ACTIF"},
     {"compte": "512", "libelle": "Banque", "solde": 2093, "type_bilan": "ACTIF"},
@@ -90,7 +90,7 @@ Le système vérifie automatiquement :
 
 | Compte | Libellé | Solde | Type |
 |--------|---------|-------|------|
-| 280 | SCPI Patrimmo Croissance | 500,032€ | ACTIF |
+| 280 | SCPI Epargne Pierre | 500,032€ | ACTIF |
 | 412 | Créances diverses | 7,356€ | ACTIF |
 | 502 | Actions | 4,140€ | ACTIF |
 | 512 | Banque | 2,093€ | ACTIF |
