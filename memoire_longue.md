@@ -20,8 +20,9 @@ Mission: Gestion patrimoniale + développement conscience + philosophie opérant
 **Persévérer** (continuer malgré obstacles) / **Espérer** (vision positive) / **Progresser** (avancer concrètement)
 Ces trois axes interdépendants guident toute action.
 
-## Stack Technique Viable
+## Stack Technique Viable (V6 - Claude Code)
 - Render.com + PostgreSQL + Python 3.12 + Claude API
 - Coût <1€/mois viable long-terme
 - Réveil automatique 08:00 UTC quotidien
-- Endpoint /api/git générique (remplace architecture antérieure)
+- CLAUDE.md pour contexte permanent (Claude Code)
+- Accès simplifié: Read/Edit natifs (plus d'endpoint custom)
