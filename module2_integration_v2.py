@@ -27,6 +27,7 @@ from module2_workflow_v2 import (
     EnvoyeurMarkdown
 )
 from module2_validations import OrchestratorValidations
+from propositions_manager import PropositionsManager
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -61,6 +62,7 @@ class IntegratorModule2:
         self.session = self._get_session()
         self.workflow_generation = WorkflowModule2V2(anthropic_api_key, database_url)
         self.workflow_validation = OrchestratorValidations(self.session)
+        self.propositions_manager = PropositionsManager(self.session)
         self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise, email_ulrik)
         self.ocr = OCRExtractor(anthropic_api_key)
         
@@ -115,27 +117,41 @@ class IntegratorModule2:
                 
                 # Traiter le résultat
                 if result.get('statut') == 'OK':
-                    
+
+                    # Stocker les propositions en BD avec token
+                    propositions_list = result.get('propositions', {}).get('propositions', [])
+                    token_stocke, prop_id = self.propositions_manager.stocker_proposition(
+                        type_evenement=type_evt.value,
+                        propositions=propositions_list,
+                        email_id=email.get('id'),
+                        email_from=email.get('from'),
+                        email_date=email.get('date'),
+                        email_subject=email.get('subject'),
+                        token=result['token']
+                    )
+
                     # Envoyer email à Ulrik avec propositions ✅ FIX: Passer email_to en premier
                     email_envoye = self.envoyeur.envoyer_propositions(
                         self.email_ulrik,  # ✅ email_to
                         type_evt.value,  # ✅ type_evt
                         result['markdown'],  # ✅ markdown
-                        result['token'],  # ✅ token
-                        subject_suffix=f"- {len(result.get('propositions', {}).get('propositions', []))} proposition(s)"
+                        token_stocke,  # ✅ token (utiliser token_stocke au lieu de result['token'])
+                        subject_suffix=f"- {len(propositions_list)} proposition(s)"
                     )
                     
                     if email_envoye:
                         resultats['emails_envoyes'] += 1
-                        self.propositions_generees += len(result.get('propositions', {}).get('propositions', []))
+                        self.propositions_generees += len(propositions_list)
                     else:
                         self.erreurs.append(f"Impossible d'envoyer email pour {type_evt.value}")
-                    
-                    resultats['propositions_generees'] += len(result.get('propositions', {}).get('propositions', []))
+
+                    resultats['propositions_generees'] += len(propositions_list)
                     resultats['details'].append({
                         'type': type_evt.value,
-                        'propositions': len(result.get('propositions', {}).get('propositions', [])),
-                        'status': 'en_attente_validation'
+                        'propositions': len(propositions_list),
+                        'status': 'en_attente_validation',
+                        'token': token_stocke,
+                        'proposition_id': prop_id
                     })
                 
                 else:
