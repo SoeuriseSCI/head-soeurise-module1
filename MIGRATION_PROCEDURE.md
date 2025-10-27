@@ -64,11 +64,26 @@ CREATE TABLE propositions_en_attente (
 
 ## 🚀 Application des Migrations sur Render
 
+### ⚠️ ÉTAPE PRÉALABLE OBLIGATOIRE : Déployer le Code
+
+**AVANT TOUTE CHOSE**, il faut déployer le code mergé sur Render :
+
+1. **Ouvrir le Dashboard Render** : https://dashboard.render.com
+2. **Sélectionner** le service "head-soeurise-web"
+3. **Cliquer sur "Manual Deploy"** → "Deploy latest commit"
+4. **Attendre** 2-3 minutes que le déploiement se termine (statut "Live")
+5. **Vérifier** que les nouveaux fichiers sont présents :
+   ```bash
+   # Dans le Shell Render
+   ls -la apply_migration.py propositions_manager.py
+   ```
+
 ### Option A : Via Shell Render (Recommandé)
 
+**Une fois le déploiement terminé** :
+
 1. **Accéder au shell Render** :
-   - Ouvrir https://dashboard.render.com
-   - Sélectionner le service "head-soeurise-web"
+   - Dashboard Render → Service "head-soeurise-web"
    - Cliquer sur "Shell" dans le menu de gauche
 
 2. **Vérifier l'état actuel** :

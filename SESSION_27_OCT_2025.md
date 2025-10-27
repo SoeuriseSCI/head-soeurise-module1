@@ -213,19 +213,28 @@ Documentation complète de la procédure de migration :
 
 ### Priorité 1 : Appliquer les Migrations en Production
 
-**Sur Render Shell :**
+**⚠️ ÉTAPE PRÉALABLE : Déployer le code sur Render**
+
+1. **Dashboard Render** → Service "head-soeurise-web"
+2. **"Manual Deploy"** → "Deploy latest commit"
+3. **Attendre** que le statut soit "Live" (2-3 min)
+
+**Puis sur Shell Render :**
 
 ```bash
-# 1. Vérifier l'état actuel
+# 1. Vérifier que les fichiers sont présents
+ls -la apply_migration.py propositions_manager.py
+
+# 2. Vérifier l'état actuel
 python apply_migration.py --dry
 
-# 2. Appliquer les migrations
+# 3. Appliquer les migrations
 python apply_migration.py
 
-# 3. Vérifier le schéma
+# 4. Vérifier le schéma
 python verify_schema.py
 
-# 4. Tester le gestionnaire
+# 5. Tester le gestionnaire
 python test_propositions_manager.py
 ```
 
