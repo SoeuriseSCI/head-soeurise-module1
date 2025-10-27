@@ -309,6 +309,212 @@ class ParseurAmortissementCredit:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# 4b. PARSEUR TABLEAU PRÊT COMPLET (Ingestion données de référence)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ParseurTableauPret:
+    """
+    Parse tableau d'amortissement COMPLET pour ingestion en BD de référence
+
+    Objectif : Extraire TOUTES les échéances ligne par ligne avec ventilation
+               intérêts/capital pour chaque date
+
+    Usage : Appelé lors détection PRET_IMMOBILIER pour stocker données de référence
+    """
+
+    def __init__(self, ocr_extractor: OCRExtractor):
+        self.ocr = ocr_extractor
+
+    def parse_from_pdf(self, filepath: str) -> Dict:
+        """
+        Parse tableau amortissement complet depuis PDF
+
+        Args:
+            filepath: Chemin vers PDF tableau amortissement
+
+        Returns:
+            {
+              "pret": {
+                "numero_pret": "5009736BRM0911AH",
+                "banque": "LCL",
+                "montant_initial": 250000.00,
+                "taux_annuel": 0.0105,
+                "duree_mois": 240,
+                "date_debut": "2023-04-15",
+                "date_fin": "2043-04-15",
+                "type_amortissement": "AMORTISSEMENT_CONSTANT",
+                "echeance_mensuelle": 1166.59
+              },
+              "echeances": [
+                {
+                  "numero": 1,
+                  "date": "2023-05-15",
+                  "montant_total": 1166.59,
+                  "montant_interet": 218.75,
+                  "montant_capital": 947.84,
+                  "capital_restant": 249052.16
+                },
+                ...
+              ]
+            }
+        """
+        # Prompt spécialisé pour extraction complète
+        prompt = """
+Analyse ce tableau d'amortissement de prêt immobilier et extrait:
+
+1. INFORMATIONS CONTRAT:
+- Numéro prêt
+- Banque
+- Montant initial
+- Taux annuel (%)
+- Durée (mois)
+- Date début
+- Date fin
+- Type (amortissement constant / franchise partielle / franchise totale)
+- Échéance mensuelle
+
+2. TABLEAU ÉCHÉANCES (toutes les lignes):
+- N° échéance
+- Date
+- Montant total
+- Intérêts
+- Capital amorti
+- Capital restant dû
+
+Format attendu:
+CONTRAT: numero|banque|montant|taux|duree|debut|fin|type|echeance
+LIGNE: num|date|total|interets|capital|reste
+"""
+
+        texte_brut = self.ocr.extract_from_pdf(filepath, prompt=prompt)
+
+        # Parser les données
+        result = self._parser_tableau_complet(texte_brut)
+        return result
+
+    @staticmethod
+    def _parser_tableau_complet(texte: str) -> Dict:
+        """Parse texte OCRisé pour extraire contrat + toutes échéances"""
+        from datetime import datetime
+        from decimal import Decimal
+
+        pret_info = {}
+        echeances = []
+
+        # ═══════════════════════════════════════════════════════════════════
+        # EXTRACTION INFOS CONTRAT
+        # ═══════════════════════════════════════════════════════════════════
+
+        # Numéro prêt (patterns: 5009736BRM0911AH, etc.)
+        match = re.search(r'(?:n°|num|numero|contract|prêt|pret)\s*:?\s*([A-Z0-9]{10,20})', texte, re.IGNORECASE)
+        if match:
+            pret_info['numero_pret'] = match.group(1)
+
+        # Banque
+        match = re.search(r'(?:banque|bank|organisme)\s*:?\s*([A-Z]{2,10})', texte, re.IGNORECASE)
+        if match:
+            pret_info['banque'] = match.group(1).upper()
+
+        # Montant initial (patterns: 250000, 250.000, 250 000)
+        match = re.search(r'(?:montant|capital|initial)\s*:?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
+        if match:
+            montant_str = match.group(1).replace(' ', '').replace(',', '.')
+            pret_info['montant_initial'] = float(montant_str)
+
+        # Taux annuel (patterns: 1.05%, 0.0105, etc.)
+        match = re.search(r'(?:taux|rate)\s*:?\s*([\d.,]+)\s*%?', texte, re.IGNORECASE)
+        if match:
+            taux_str = match.group(1).replace(',', '.')
+            taux = float(taux_str)
+            # Si > 1, c'est un pourcentage → diviser par 100
+            if taux > 1:
+                taux = taux / 100
+            pret_info['taux_annuel'] = taux
+
+        # Durée (patterns: 240 mois, 20 ans)
+        match = re.search(r'(?:durée|duree|duration)\s*:?\s*(\d+)\s*(?:mois|months?)', texte, re.IGNORECASE)
+        if match:
+            pret_info['duree_mois'] = int(match.group(1))
+        else:
+            match = re.search(r'(?:durée|duree|duration)\s*:?\s*(\d+)\s*(?:ans?|years?)', texte, re.IGNORECASE)
+            if match:
+                pret_info['duree_mois'] = int(match.group(1)) * 12
+
+        # Dates (patterns: 15/04/2023, 2023-04-15)
+        match = re.search(r'(?:début|debut|start|date.*début)\s*:?\s*(\d{2}[/-]\d{2}[/-]\d{4})', texte, re.IGNORECASE)
+        if match:
+            date_str = match.group(1).replace('/', '-')
+            # Convertir DD-MM-YYYY → YYYY-MM-DD
+            parts = date_str.split('-')
+            if len(parts[0]) == 2:
+                pret_info['date_debut'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
+            else:
+                pret_info['date_debut'] = date_str
+
+        match = re.search(r'(?:fin|end|date.*fin)\s*:?\s*(\d{2}[/-]\d{2}[/-]\d{4})', texte, re.IGNORECASE)
+        if match:
+            date_str = match.group(1).replace('/', '-')
+            parts = date_str.split('-')
+            if len(parts[0]) == 2:
+                pret_info['date_fin'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
+            else:
+                pret_info['date_fin'] = date_str
+
+        # Type amortissement
+        if 'franchise' in texte.lower():
+            pret_info['type_amortissement'] = 'FRANCHISE_PARTIELLE'
+        else:
+            pret_info['type_amortissement'] = 'AMORTISSEMENT_CONSTANT'
+
+        # Échéance mensuelle
+        match = re.search(r'(?:échéance|echeance|mensualité|mensualite)\s*:?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
+        if match:
+            montant_str = match.group(1).replace(' ', '').replace(',', '.')
+            pret_info['echeance_mensuelle'] = float(montant_str)
+
+        # ═════════════════════════════════════════════════════════════════
+        # EXTRACTION ÉCHÉANCES LIGNE PAR LIGNE
+        # ═══════════════════════════════════════════════════════════════════
+
+        # Pattern: N° | Date | Montant | Intérêts | Capital | Reste
+        # Exemple: "1   15/05/2023   1166.59   218.75   947.84   249052.16"
+        pattern = r'(\d{1,3})\s+(\d{2}[/-]\d{2}[/-]\d{4})\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)'
+
+        matches = re.finditer(pattern, texte)
+        for match in matches:
+            try:
+                num = int(match.group(1))
+                date_str = match.group(2).replace('/', '-')
+                # Convertir DD-MM-YYYY → YYYY-MM-DD
+                parts = date_str.split('-')
+                if len(parts[0]) == 2:
+                    date = f"{parts[2]}-{parts[1]}-{parts[0]}"
+                else:
+                    date = date_str
+
+                montant_total = float(match.group(3).replace(',', '.'))
+                montant_interet = float(match.group(4).replace(',', '.'))
+                montant_capital = float(match.group(5).replace(',', '.'))
+                capital_restant = float(match.group(6).replace(',', '.'))
+
+                echeances.append({
+                    "numero_echeance": num,
+                    "date_echeance": date,
+                    "montant_total": montant_total,
+                    "montant_interet": montant_interet,
+                    "montant_capital": montant_capital,
+                    "capital_restant_du": capital_restant
+                })
+            except (ValueError, IndexError):
+                continue
+
+        return {
+            "pret": pret_info,
+            "echeances": echeances
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 5. PARSEUR RÉÉVALUATION SCPI
 # ═══════════════════════════════════════════════════════════════════════════════
 
