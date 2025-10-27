@@ -108,10 +108,21 @@ class IntegratorModule2:
             try:
                 # Détecter type
                 type_evt = DetecteurTypeEvenement.detecter(email)
-                
+
                 if type_evt == TypeEvenement.UNKNOWN:  # ✅ COMPARAISON ENUM FIX
                     continue
-                
+
+                # ⚠️ FIX BUG #1: PRET_IMMOBILIER pas encore implémenté (v future)
+                if type_evt == TypeEvenement.PRET_IMMOBILIER:
+                    self.erreurs.append(f"Type PRET_IMMOBILIER détecté mais traitement non implémenté (développement futur)")
+                    resultats['details'].append({
+                        'type': type_evt.value,
+                        'propositions': 0,
+                        'status': 'non_implemente',
+                        'message': 'Tableaux amortissement détectés - Traitement à venir'
+                    })
+                    continue
+
                 # Générer propositions via workflow
                 result = self.workflow_generation.traiter_email(email)
                 
@@ -120,6 +131,18 @@ class IntegratorModule2:
 
                     # Stocker les propositions en BD avec token
                     propositions_list = result.get('propositions', {}).get('propositions', [])
+
+                    # ⚠️ FIX BUG #2: Ne pas envoyer d'email si 0 propositions
+                    if len(propositions_list) == 0:
+                        self.erreurs.append(f"Détection {type_evt.value} mais 0 propositions générées - Email non envoyé")
+                        resultats['details'].append({
+                            'type': type_evt.value,
+                            'propositions': 0,
+                            'status': 'detection_vide',
+                            'message': 'Aucune proposition générée'
+                        })
+                        continue
+
                     token_stocke, prop_id = self.propositions_manager.stocker_proposition(
                         type_evenement=type_evt.value,
                         propositions=propositions_list,
@@ -138,7 +161,7 @@ class IntegratorModule2:
                         token_stocke,  # ✅ token (utiliser token_stocke au lieu de result['token'])
                         subject_suffix=f"- {len(propositions_list)} proposition(s)"
                     )
-                    
+
                     if email_envoye:
                         resultats['emails_envoyes'] += 1
                         self.propositions_generees += len(propositions_list)
