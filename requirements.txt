@@ -1,6 +1,7 @@
 anthropic==0.40.0              # Claude API
 sqlalchemy>=2.0                # ORM
 psycopg2-binary==2.9.9         # PostgreSQL
+alembic==1.13.1                # Database migrations
 pdf2image==1.17.0              # PDF → Images (OCR)
 pdfplumber==0.11.0             # PDF extraction fallback
 reportlab==4.0.9               # PDF generation

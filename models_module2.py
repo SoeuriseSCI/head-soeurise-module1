@@ -205,33 +205,70 @@ class CalculAmortissement(Base):
 
 class EvenementComptable(Base):
     __tablename__ = 'evenements_comptables'
-    
+
     id = Column(Integer, primary_key=True)
-    
+
     # Source email
     email_id = Column(String(255), unique=True)
     email_from = Column(String(255), nullable=False)
     email_date = Column(DateTime, nullable=False)
     email_subject = Column(String(255))
     email_body = Column(Text, nullable=False)
-    
+
     # Classification
     type_evenement = Column(String(100))
     est_comptable = Column(Boolean)  # NULL = non traite, TRUE/FALSE = resultat
-    
+
     # Traitement
     statut = Column(String(50), default='EN_ATTENTE')  # EN_ATTENTE, VALIDE, REJETE, ERREUR
     message_erreur = Column(Text)
-    
+
     # Ecritures creees
     ecritures_creees = Column(ARRAY(Integer))
-    
+
     created_at = Column(DateTime, default=datetime.utcnow)
     traite_at = Column(DateTime)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     def __repr__(self):
         return f"<EvenementComptable(email={self.email_id}, statut={self.statut})>"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PROPOSITIONS EN ATTENTE DE VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class PropositionEnAttente(Base):
+    __tablename__ = 'propositions_en_attente'
+
+    id = Column(Integer, primary_key=True)
+
+    # Token unique pour validation
+    token = Column(String(50), unique=True, nullable=False)
+
+    # Type d'événement
+    type_evenement = Column(String(100), nullable=False)
+
+    # Source email
+    email_id = Column(String(255))
+    email_from = Column(String(255))
+    email_date = Column(DateTime)
+    email_subject = Column(String(255))
+
+    # Propositions au format JSON
+    propositions_json = Column(JSONB, nullable=False)
+
+    # Statut
+    statut = Column(String(50), default='EN_ATTENTE')  # EN_ATTENTE, VALIDEE, REJETEE, EXPIREE
+
+    # Validation
+    created_at = Column(DateTime, default=datetime.utcnow)
+    validee_at = Column(DateTime)
+    validee_par = Column(String(255))
+    notes = Column(Text)
+
+    def __repr__(self):
+        return f"<PropositionEnAttente(token={self.token}, statut={self.statut})>"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -332,6 +369,7 @@ __all__ = [
     'Immobilisation',
     'CalculAmortissement',
     'EvenementComptable',
+    'PropositionEnAttente',
     'BalanceMensuelle',
     'RapportComptable',
     'get_session',
