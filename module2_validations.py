@@ -23,10 +23,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from models_module2 import (
-    EvenementComptable, EcritureComptable, ExerciceComptable, 
+    EvenementComptable, EcritureComptable, ExerciceComptable,
     PlanCompte, BalanceMensuelle
 )
 from module2_workflow_v2 import ParseurMarkdownJSON
+from propositions_manager import PropositionsManager
 
 
 # DETECTEUR VALIDATIONS
@@ -37,56 +38,49 @@ class DetecteurValidations:
     @staticmethod
     def detecter_validation(email: Dict) -> Dict:
         """
-        Detecte si l'email contient une validation
-        
-        Cherche le tag: [_Head] VALIDE:
-        Et extrait le JSON soit du body, soit des attachments .md
-        
+        Detecte si l'email contient une validation avec TOKEN
+
+        Cherche le tag: [_Head] VALIDE: TOKEN
+
         Returns:
             {
               "validation_detectee": bool,
-              "json_markdown": Dict ou None,
               "token_email": str ou None,
               "message": str
             }
         """
-        
+
         body = email.get('body', '')
         subject = email.get('subject', '')
-        
-        # Chercher tag [_Head] VALIDE:
-        if '[_Head] VALIDE:' not in body and '[_Head] VALIDE:' not in subject:
+
+        # Chercher tag [_Head] VALIDE: suivi du token
+        # Pattern: [_Head] VALIDE: HEAD-XXXXXXXX ou [_Head] VALIDE:HEAD-XXXXXXXX
+        pattern = r'\[_Head\]\s*VALIDE:\s*([A-Z0-9-]+)'
+
+        # Chercher dans le body
+        match = re.search(pattern, body, re.IGNORECASE)
+        if not match:
+            # Chercher dans le subject
+            match = re.search(pattern, subject, re.IGNORECASE)
+
+        if not match:
             return {
                 "validation_detectee": False,
-                "json_markdown": None,
                 "token_email": None,
-                "message": "Tag [_Head] VALIDE: non trouve"
+                "message": "Tag [_Head] VALIDE: TOKEN non trouve"
             }
-        
-        # Tag trouve - extraire JSON
-        parseur = ParseurMarkdownJSON()
-        json_data = parseur.extraire_json(body)
-        
-        # Si JSON pas trouve dans le body, chercher dans les attachments
-        if not json_data:
-            json_data = DetecteurValidations._extraire_json_attachments(email, parseur)
-        
-        if not json_data:
-            return {
-                "validation_detectee": True,
-                "json_markdown": None,
-                "token_email": None,
-                "message": "Tag [_Head] VALIDE: trouve MAIS aucun JSON valide"
-            }
-        
-        # Extraire token depuis JSON
-        token_email = json_data.get('token')
-        
+
+        # Token trouvé
+        token_email = match.group(1).strip().upper()
+
+        # S'assurer que le token commence par HEAD- ou l'ajouter
+        if not token_email.startswith('HEAD-'):
+            token_email = f"HEAD-{token_email}"
+
         return {
             "validation_detectee": True,
-            "json_markdown": json_data,
             "token_email": token_email,
-            "message": "Validation detectee avec JSON valide"
+            "message": f"Validation detectee avec token: {token_email}"
         }
     
     @staticmethod
@@ -347,6 +341,7 @@ class OrchestratorValidations:
         self.detecteur = DetecteurValidations()
         self.validateur = ValidateurIntegriteJSON(session)
         self.processeur = ProcesseurInsertion(session)
+        self.propositions_manager = PropositionsManager(session)
     
     def traiter_email_validation(self, email: Dict) -> Dict:
         """
@@ -369,9 +364,9 @@ class OrchestratorValidations:
             }
         """
         
-        # PHASE 5: Detection
+        # PHASE 5: Detection du token
         result_detection = self.detecteur.detecter_validation(email)
-        
+
         if not result_detection['validation_detectee']:
             return {
                 "validation_detectee": False,
@@ -380,23 +375,35 @@ class OrchestratorValidations:
                 "ecritures_creees": 0,
                 "type_evenement": None
             }
-        
-        # Recuperer le JSON des propositions
-        json_data = result_detection['json_markdown']
+
+        # Récupérer le token
         token_email = result_detection['token_email']
-        
-        if not json_data:
+
+        # PHASE 6: Récupération des propositions depuis la BD via le token
+        proposition_data = self.propositions_manager.recuperer_proposition(token_email)
+
+        if not proposition_data:
             return {
                 "validation_detectee": True,
                 "statut": "ERREUR",
-                "message": "Validation detectee mais JSON invalide",
+                "message": f"Token {token_email} non trouvé en base de données",
                 "ecritures_creees": 0,
                 "type_evenement": None
             }
-        
-        # PHASE 6: Extraction JSON (deja faite)
-        propositions = json_data.get('propositions', [])
-        type_evenement = json_data.get('type_evenement', 'UNKNOWN')
+
+        # Vérifier que la proposition est en attente
+        if proposition_data['statut'] != 'EN_ATTENTE':
+            return {
+                "validation_detectee": True,
+                "statut": "ERREUR",
+                "message": f"Proposition {token_email} déjà traitée (statut: {proposition_data['statut']})",
+                "ecritures_creees": 0,
+                "type_evenement": proposition_data['type_evenement']
+            }
+
+        # Extraction des données de la proposition
+        propositions = proposition_data['propositions']
+        type_evenement = proposition_data['type_evenement']
         
         if not propositions:
             return {
@@ -480,6 +487,14 @@ class OrchestratorValidations:
         evt_original.email_validation_id = email.get('email_id')
         evt_original.ecritures_creees = ids
         evt_original.traite_at = datetime.now()
+
+        # Marquer la proposition comme validée dans la table propositions_en_attente
+        self.propositions_manager.valider_proposition(
+            token=token_email,
+            validee_par=email.get('from'),
+            notes=f"Validée via email le {datetime.now()}"
+        )
+
         self.session.commit()
         
         return {
