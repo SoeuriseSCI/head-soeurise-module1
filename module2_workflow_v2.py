@@ -417,8 +417,9 @@ LIGNE: num|date|total|interets|capital|reste
         # EXTRACTION INFOS CONTRAT
         # ═══════════════════════════════════════════════════════════════════
 
-        # Numéro prêt (patterns: 5009736BRM0911AH, N° DU PRET : 5009736BRLZE11AQ)
-        match = re.search(r'(?:N°\s+DU\s+PRET|n°|num|numero|contract|prêt|pret)\s*:?\s*([A-Z0-9]{10,20})', texte, re.IGNORECASE)
+        # Numéro prêt (patterns: N° DU PRET : 5009736BRLZE11AQ)
+        # Plus flexible sur espaces car OCR peut varier
+        match = re.search(r'N°?\s*DU\s+PRET\s*:?\s*([A-Z0-9]{12,20})', texte, re.IGNORECASE)
         if match:
             pret_info['numero_pret'] = match.group(1)
         else:
@@ -428,22 +429,24 @@ LIGNE: num|date|total|interets|capital|reste
         if 'LCL' in texte.upper():
             pret_info['banque'] = 'CREDIT_LYONNAIS'
         else:
-            match = re.search(r'(?:banque|bank|organisme)\s*:?\s*([A-ZÀ-Ü\s]{2,30})', texte, re.IGNORECASE)
-            if match:
-                pret_info['banque'] = match.group(1).strip().upper()
-            else:
-                pret_info['banque'] = 'CREDIT_LYONNAIS'  # Défaut
+            pret_info['banque'] = 'CREDIT_LYONNAIS'  # Défaut
 
-        # Montant initial (patterns: EUR 250 000,00 ou MONTANT TOTAL DEBLOQUE : EUR 250 000,00)
-        match = re.search(r'(?:MONTANT\s+TOTAL\s+DEBLOQUE|MONTANT\s+DU\s+PRET|montant|capital|initial)\s*:?\s*(?:EUR)?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
+        # Montant initial - IMPORTANT: chercher d'abord MONTANT TOTAL DEBLOQUE (pas MONTANT DU PRET qui est vide!)
+        # Pattern: "MONTANT TOTAL DEBLOQUE : EUR 250 000,00"
+        match = re.search(r'MONTANT\s+TOTAL\s+DEBLOQUE\s*:?\s*EUR\s+([\d\s.,]+)', texte, re.IGNORECASE)
         if match:
             pret_info['montant_initial'] = safe_float(match.group(1), 'montant_initial')
         else:
-            erreurs_parsing.append("Montant initial non trouvé")
-            pret_info['montant_initial'] = 0.0
+            # Fallback: chercher autres patterns
+            match = re.search(r'(?:montant|capital).*?:?\s*EUR?\s*([\d\s.,]+)', texte, re.IGNORECASE)
+            if match:
+                pret_info['montant_initial'] = safe_float(match.group(1), 'montant_initial')
+            else:
+                erreurs_parsing.append("Montant initial non trouvé")
+                pret_info['montant_initial'] = 0.0
 
-        # Taux annuel (patterns: TAUX DEBITEUR EN COURS : 1,240000 %)
-        match = re.search(r'(?:TAUX\s+DEBITEUR|taux|rate)\s*(?:EN\s+COURS)?\s*:?\s*([\d.,]+)\s*%?', texte, re.IGNORECASE)
+        # Taux annuel: "TAUX DEBITEUR EN COURS : 1,240000 %"
+        match = re.search(r'TAUX\s+DEBITEUR\s+EN\s+COURS\s*:?\s*([\d.,]+)\s*%', texte, re.IGNORECASE)
         if match:
             taux = safe_float(match.group(1), 'taux_annuel')
             # Si > 1, c'est un pourcentage → diviser par 100
@@ -454,22 +457,22 @@ LIGNE: num|date|total|interets|capital|reste
             erreurs_parsing.append("Taux annuel non trouvé")
             pret_info['taux_annuel'] = 0.0
 
-        # Durée (patterns: DUREE TOTALE DU PRET : 216 MOIS)
-        match = re.search(r'(?:DUREE\s+TOTALE|durée|duree|duration)\s*(?:DU\s+PRET)?\s*:?\s*(\d+)\s*(?:mois|months?)', texte, re.IGNORECASE)
+        # Durée: "DUREE TOTALE DU PRET : 216 MOIS" (attention aux espaces multiples)
+        match = re.search(r'DUREE\s+TOTALE\s+DU\s+PRET\s*:?\s*(\d+)\s*MOIS', texte, re.IGNORECASE)
         if match:
             pret_info['duree_mois'] = int(match.group(1))
         else:
-            match = re.search(r'(?:DUREE\s+TOTALE|durée|duree|duration)\s*(?:DU\s+PRET)?\s*:?\s*(\d+)\s*(?:ans?|years?)', texte, re.IGNORECASE)
+            match = re.search(r'(?:durée|duree).*?:?\s*(\d+)\s*(?:ans?|years?)', texte, re.IGNORECASE)
             if match:
                 pret_info['duree_mois'] = int(match.group(1)) * 12
             else:
                 erreurs_parsing.append("Durée non trouvée")
                 pret_info['duree_mois'] = 0
 
-        # Dates (patterns: 15.04.2022, 15/04/2023, 15-04-2023)
-        match = re.search(r'(?:DATE\s+DE\s+DEPART|début|debut|start|date.*début)\s*(?:DU\s+PRET)?\s*:?\s*(\d{2}[/.\-]\d{2}[/.\-]\d{4})', texte, re.IGNORECASE)
+        # Date début: "DATE DE DEPART DU PRET : 15.04.2022"
+        match = re.search(r'DATE\s+DE\s+DEPART\s+DU\s+PRET\s*:?\s*(\d{2}[.]\d{2}[.]\d{4})', texte, re.IGNORECASE)
         if match:
-            date_str = match.group(1).replace('/', '-').replace('.', '-')
+            date_str = match.group(1).replace('.', '-')
             # Convertir DD-MM-YYYY → YYYY-MM-DD
             parts = date_str.split('-')
             if len(parts[0]) == 2:
