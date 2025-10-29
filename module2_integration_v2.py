@@ -65,13 +65,7 @@ class IntegratorModule2:
         self.propositions_manager = PropositionsManager(self.session)
         self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise, email_ulrik)
         self.ocr = OCRExtractor(anthropic_api_key)
-
-        # Import PretsManager et ParseurTableauPret pour ingestion prêts
-        from prets_manager import PretsManager
-        from module2_workflow_v2 import ParseurTableauPret
-        self.prets_manager = PretsManager(self.session)
-        self.parseur_pret = ParseurTableauPret(self.ocr)
-
+        
         # État du traitement
         self.emails_traites = 0
         self.propositions_generees = 0
@@ -114,7 +108,7 @@ class IntegratorModule2:
             try:
                 # Détecter type
                 type_evt = DetecteurTypeEvenement.detecter(email)
-
+                
                 if type_evt == TypeEvenement.UNKNOWN:  # ✅ COMPARAISON ENUM FIX
                     continue
 
@@ -222,18 +216,6 @@ class IntegratorModule2:
 
                     # Stocker les propositions en BD avec token
                     propositions_list = result.get('propositions', {}).get('propositions', [])
-
-                    # ⚠️ FIX BUG #2: Ne pas envoyer d'email si 0 propositions
-                    if len(propositions_list) == 0:
-                        self.erreurs.append(f"Détection {type_evt.value} mais 0 propositions générées - Email non envoyé")
-                        resultats['details'].append({
-                            'type': type_evt.value,
-                            'propositions': 0,
-                            'status': 'detection_vide',
-                            'message': 'Aucune proposition générée'
-                        })
-                        continue
-
                     token_stocke, prop_id = self.propositions_manager.stocker_proposition(
                         type_evenement=type_evt.value,
                         propositions=propositions_list,
@@ -252,7 +234,7 @@ class IntegratorModule2:
                         token_stocke,  # ✅ token (utiliser token_stocke au lieu de result['token'])
                         subject_suffix=f"- {len(propositions_list)} proposition(s)"
                     )
-
+                    
                     if email_envoye:
                         resultats['emails_envoyes'] += 1
                         self.propositions_generees += len(propositions_list)
