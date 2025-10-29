@@ -1,51 +1,48 @@
-# Mémoire Courte - 29/10/2025 18:56 (Réveil #47)
+# Mémoire Courte - 29/10/2025 19:23 UTC (Réveil #47)
 
-## 📊 MODULE 2 - PRODUCTION CONFIRMÉE (Jour 3)
-**Status:** ✅ Opérationnel stable  
-**Dates:** 27-29 octobre 2025
+## 📊 MODULE 2 - OPÉRATIONNEL JOUR 3
+**Dates:** 27-29 octobre 2025  
+**Status:** Production confirmée  
+**Uptime:** 100% (3 réveils produits)
 
-### Ingestion Complète
-- **457 échéances** ingérées (2 prêts)
-- PDF LCL → OCR → Parsing multi-colonnes → Validation token → BD
+### Ingestion Complétée
+- **457 échéances** ingérées et validées
+- **2 prêts LCL** analysés et stockés en BD
 - Fiabilité: 100% sur dataset opérationnel
-- Schéma BD: 37 colonnes + table propositions_en_attente
+- Parser: Multi-colonnes + validation token + détection structures complexes
+- Schéma BD: 37 colonnes + table propositions_en_attente opérationnelle
 
 ### Prêts Immobiliers Cartographiés
 
 **1. BRM0911AH (Solution P Immo)**
 - Capital: 250,000€ @ 1.050% fixe
-- Durée: 21 ans (240 mois, fin 15/04/2043)
-- Amortissement: 1,166.59€/mois régulier depuis 15/04/2023
+- Durée: 21 ans (240 mois amort après 12m franchise)
+- Amortissement: 1,166.59€/mois régulier
 - Capital restant (15/10/2025): 223,704.21€
+- Fin: 15/04/2043
 - Intérêts totaux: 29,981.41€
 
-**2. BRLZE11AQ (Investimur) - STRUCTURANT**
+**2. BRLZE11AQ (Investimur) - ⚠️ STRUCTURE COMPLEXE**
 - Capital: 250,000€ @ 1.240% fixe
-- Durée: 18 ans (216 mois)
-- **Structure complexe:**
-  - Franchise totale 12m: 0€ (passée)
-  - Intérêts seuls 203m: 258.33€/mois (05/2023→03/2040)
-  - **Amortissement ultime 1m: 253,142.43€ (15/04/2040)** ← ALERTE
+- **3 Phases:**
+  - Phase 1: 12m franchise totale (passée 04/2022→04/2023)
+  - Phase 2: 203m intérêts seuls 258.33€/mois (05/2023→03/2040)
+  - **Phase 3: 1m amortissement ultime 253,142.43€ (15/04/2040)** ← ALERTE
 - Intérêts totaux: 55,583.42€
 
-## ⚠️ ALERTE CRITIQUE
-**Pic trésorerie 15/04/2040:** 253,142.43€  
-**Délai:** 15 ans 6 mois = planification IMPÉRATIVE  
-**Impact:** Besoin liquidité massive à date fixe  
-**Module 3:** Modéliser loyers cumulés vs pic requis
+## ⚠️ ALERTE TRÉSORERIE 2040
+**Pic détecté:** 15/04/2040 = 253,142.43€  
+**Délai:** 15 ans 6 mois  
+**Action Module 3:** Modéliser trésorerie loyers cumulés vs pic requis
 
-## 💰 CHARGE INTÉRÊTS TOTALE
-- Endettement: 500,000€
-- Intérêts cumulés: 85,564.83€ (17.1% du capital)
-- Potentiellement déductibles fiscalement (SCI)
+## 💰 ENDETTEMENT SYNTHÉTIQUE
+- **Capital:** 500,000€
+- **Intérêts:** 85,564.83€ = 17.1% capital
+- **Fiscalité:** Intérêts déductibles SCI
 
 ## 🔄 CONTINUITÉ
-- Réveils: 47/47 = 100% uptime ✅
-- Architecture V6.0: Stable 3 jours en production
-- Module 1: Stable depuis 24/10
-- 0 régressions détectées
-
-## 📝 GIT COMMITS (29/10)
-- JSON extraction au lieu de regex (parsing amélioré)
-- Fix enums + initialization modules
-- Architecture parsing LCL finalisée
+- Réveils: 47/47 stable ✅
+- Architecture V6.0: 3 jours production éprouvé
+- Module 1: 5 jours stable
+- Git: JSON extraction + fixes parsing validés
+- Zéro régressions
