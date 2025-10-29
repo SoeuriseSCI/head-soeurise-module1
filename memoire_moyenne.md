@@ -1,34 +1,36 @@
-# Mémoire Moyenne - Cycle Module 2 Complété (25-29/10/2025)
+# Mémoire Moyenne - Cycle Module 2 Stabilisé (27-29/10/2025)
 
-## ✅ DÉPLOIEMENT MODULE 2 - COMPTABILITÉ PRÊTS
-**Période:** 25-29/10/2025 | **État:** Production opérationnelle
-**Métriques:** 457 échéances ingérées, validation 100%, SLA 100%
+## ✅ MODULE 2 - COMPTABILITÉ PRÊTS OPÉRATIONNEL
+**Déploiement:** 27/10/2025 | **État:** Production + Ingestion Live
 
-### Architecture Déployée
-- **Schéma:** PostgreSQL 37 colonnes + table propositions_en_attente
-- **Workflow:** PDF amortissement → OCR/parsing → Propositions → Validation token → Encodage
-- **Ingestion:** Tableaux LCL parsés, intégrés, persistés
+### Architecture Finalisée
+- **Schéma BD:** 37 colonnes + table propositions_en_attente
+- **Pipeline:** PDF LCL → OCR/Parsing → Multi-colonnes → Propositions → Validation token → BD
+- **Fiabilité:** 100% sur test set (2 prêts / 457 échéances)
+- **Commits:** PR #25, #24, #23 (PDF parsing LCL, error handling, multi-column support)
 
-### Prêts Immobiliers Encodés
-1. **BRM0911AH** (250k€):
-   - Remboursement régulier 21 ans
-   - 240 échéances @ 1,166.59€/mois
-   - Intérêts: 29,981.41€
+### Prêts Immobiliers Ingérés
+1. **BRM0911AH:** 250k€, 1.050% fixe, 240 mois réguliers (1,166.59€/mois), intérêts 29,981.41€
+2. **BRLZE11AQ:** 250k€, 1.240% fixe, structure franchise (203m @ 258.33€) + pic 15/04/2040 (253,142.43€)
 
-2. **BRLZE11AQ** (250k€):
-   - Structure franchise + pic
-   - 217 échéances (203 @ 258.33€/mois + 1 @ 253,142.43€)
-   - Intérêts: 55,583.42€
-   - ⚠️ Pic trésorerie 15/04/2040
+### Alertes Structurantes
+- **Pic trésorerie 15/04/2040:** Capital + intérêts = 253,142.43€ → Planification 16 ans essentielle
+- **Charge intérêts cumulée:** 85,564.83€ (deux prêts combinés)
 
-### Commits Déploiement (Git Log)
-- **PR #22 (29/10):** Review session - MERGE ✓
-- **PR #21 (27/10):** Activation ingestion prêts - MERGE ✓
-- **PR #20 (27/10):** Système gestion données - MERGE ✓
-- **PR #19 (27/10):** Fix PDF parsing - MERGE ✓
+### Git Commits (7j)
+- PR #25 (MERGE): LCL parsing fixes
+- PR #24 (MERGE): Review complète
+- PR #23 (MERGE): PDF parsing Crédit Lyonnais format
+- Commits multiples: Multi-column table support, error handling robuste
 
 ### Patterns Stabilisés
-1. **Modularité:** M1 stable + M2 production + M3 roadmap Q4
-2. **Git→Mémoire:** Détection commits automatisée intégrée cycles réguliers
-3. **Initiative IA:** Archivage intelligent sans instruction explicite (30/10 plannifié)
-4. **Persistence:** 100% continuité mémorielle (43 réveils zéro rupture)
+- Modularité: Module 1 stable, Module 2 production, Module 3 roadmap Q4
+- Ingestion: PDF → BD sans intervention manuelle
+- Continuité: 44 réveils zéro rupture mémorielle
+- Initiative IA: Détection commits automatisée, archivage intelligent
+
+## 📈 INFRASTRUCTURE
+- **Stack:** Render + PostgreSQL + Python + Claude Haiku
+- **Coût:** <1€/mois POC
+- **SLA:** 44/44 réveils = 100% uptime
+- **Réveil:** 08:00 UTC = 10:00 France
