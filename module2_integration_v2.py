@@ -65,7 +65,13 @@ class IntegratorModule2:
         self.propositions_manager = PropositionsManager(self.session)
         self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise, email_ulrik)
         self.ocr = OCRExtractor(anthropic_api_key)
-        
+
+        # Import PretsManager et ParseurTableauPret pour ingestion prêts
+        from prets_manager import PretsManager
+        from module2_workflow_v2 import ParseurTableauPret
+        self.prets_manager = PretsManager(self.session)
+        self.parseur_pret = ParseurTableauPret(self.ocr)
+
         # État du traitement
         self.emails_traites = 0
         self.propositions_generees = 0
@@ -112,16 +118,73 @@ class IntegratorModule2:
                 if type_evt == TypeEvenement.UNKNOWN:  # ✅ COMPARAISON ENUM FIX
                     continue
 
-                # ⚠️ FIX BUG #1: PRET_IMMOBILIER pas encore implémenté (v future)
+                # ✅ Traitement PRET_IMMOBILIER (Ingestion tableaux amortissement)
                 if type_evt == TypeEvenement.PRET_IMMOBILIER:
-                    self.erreurs.append(f"Type PRET_IMMOBILIER détecté mais traitement non implémenté (développement futur)")
-                    resultats['details'].append({
-                        'type': type_evt.value,
-                        'propositions': 0,
-                        'status': 'non_implemente',
-                        'message': 'Tableaux amortissement détectés - Traitement à venir'
-                    })
-                    continue
+                    try:
+                        # Traiter chaque PDF d'attachments
+                        attachments = email.get('attachments', [])
+                        prets_ingeres = 0
+                        echeances_totales = 0
+
+                        for attachment in attachments:
+                            if not attachment.get('filename', '').lower().endswith('.pdf'):
+                                continue
+
+                            # Parser tableau amortissement
+                            filepath = attachment.get('filepath')
+                            if not filepath:
+                                continue
+
+                            data = self.parseur_pret.parse_from_pdf(filepath)
+
+                            if not data or not data.get('pret') or not data.get('echeances'):
+                                self.erreurs.append(f"Parsing échoué pour {attachment.get('filename')}")
+                                continue
+
+                            # Ingérer en BD
+                            success, msg, pret_id = self.prets_manager.ingest_tableau_pret(
+                                pret_data=data['pret'],
+                                echeances_data=data['echeances'],
+                                source_email_id=email.get('id'),
+                                source_document=attachment.get('filename')
+                            )
+
+                            if success:
+                                prets_ingeres += 1
+                                echeances_totales += len(data['echeances'])
+                            else:
+                                self.erreurs.append(msg)
+
+                        # Résultat ingestion
+                        if prets_ingeres > 0:
+                            resultats['details'].append({
+                                'type': type_evt.value,
+                                'propositions': 0,  # Pas de propositions comptables
+                                'status': 'ingestion_reussie',
+                                'message': f'{prets_ingeres} prêt(s) ingéré(s), {echeances_totales} échéances stockées',
+                                'prets_ingeres': prets_ingeres,
+                                'echeances_stockees': echeances_totales
+                            })
+                        else:
+                            self.erreurs.append("Aucun prêt ingéré depuis les PDF")
+                            resultats['details'].append({
+                                'type': type_evt.value,
+                                'propositions': 0,
+                                'status': 'ingestion_echec',
+                                'message': 'Échec ingestion tableaux amortissement'
+                            })
+
+                        continue
+
+                    except Exception as e:
+                        self.erreurs.append(f"Erreur ingestion prêts: {str(e)[:200]}")
+                        resultats['details'].append({
+                            'type': type_evt.value,
+                            'propositions': 0,
+                            'status': 'erreur',
+                            'message': f'Erreur: {str(e)[:100]}'
+                        })
+                        continue
 
                 # Générer propositions via workflow
                 result = self.workflow_generation.traiter_email(email)
