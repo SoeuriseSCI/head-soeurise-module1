@@ -356,221 +356,86 @@ class ParseurTableauPret:
               ]
             }
         """
-        # Prompt spécialisé pour extraction complète
+        # Prompt pour extraction JSON structuré (comme _Head le fait!)
         prompt = """
-Analyse ce tableau d'amortissement de prêt immobilier et extrait:
+Analyse ce tableau d'amortissement de prêt immobilier du Crédit Lyonnais (LCL).
 
-1. INFORMATIONS CONTRAT:
-- Numéro prêt
-- Banque
-- Montant initial
-- Taux annuel (%)
-- Durée (mois)
-- Date début
-- Date fin
-- Type (amortissement constant / franchise partielle / franchise totale)
-- Échéance mensuelle
+RETOURNE UNIQUEMENT UN OBJET JSON VALIDE avec cette structure exacte:
 
-2. TABLEAU ÉCHÉANCES (toutes les lignes):
-- N° échéance
-- Date
-- Montant total
-- Intérêts
-- Capital amorti
-- Capital restant dû
+{
+  "pret": {
+    "numero_pret": "5009736BRLZE11AQ",
+    "banque": "CREDIT_LYONNAIS",
+    "montant_initial": 250000.00,
+    "taux_annuel": 0.0124,
+    "duree_mois": 216,
+    "date_debut": "2022-04-15",
+    "date_fin": "2040-04-15",
+    "type_amortissement": "FRANCHISE_PARTIELLE",
+    "echeance_mensuelle": 258.33
+  },
+  "echeances": [
+    {
+      "numero_echeance": 1,
+      "date_echeance": "2023-05-15",
+      "montant_total": 258.33,
+      "montant_interet": 258.33,
+      "montant_capital": 0.00,
+      "capital_restant_du": 250000.00
+    }
+  ]
+}
 
-Format attendu:
-CONTRAT: numero|banque|montant|taux|duree|debut|fin|type|echeance
-LIGNE: num|date|total|interets|capital|reste
+INSTRUCTIONS:
+- numero_pret: cherche "N° DU PRET : XXXX"
+- montant_initial: cherche "MONTANT TOTAL DEBLOQUE : EUR XXX"
+- taux_annuel: format décimal (ex: 1.24% = 0.0124)
+- dates: format YYYY-MM-DD
+- Extrait TOUTES les lignes du tableau d'échéances
+- Si franchise: type_amortissement = "FRANCHISE_PARTIELLE"
+
+NE RETOURNE QUE LE JSON, RIEN D'AUTRE.
 """
 
         texte_brut = self.ocr.extract_from_pdf(filepath, prompt=prompt)
 
-        # Parser les données
-        result = self._parser_tableau_complet(texte_brut)
+        # Parser le JSON directement (pas de regex!)
+        result = self._parser_json_response(texte_brut)
         return result
 
     @staticmethod
-    def _parser_tableau_complet(texte: str) -> Dict:
-        """Parse texte OCRisé pour extraire contrat + toutes échéances"""
-        from datetime import datetime
-        from decimal import Decimal
+    def _parser_json_response(texte: str) -> Dict:
+        """Parse réponse JSON de Claude"""
+        import json
 
-        pret_info = {}
-        echeances = []
-        erreurs_parsing = []
+        try:
+            # Nettoyer le texte (enlever markdown si présent)
+            texte = texte.strip()
+            if texte.startswith('```json'):
+                texte = texte.split('```json')[1].split('```')[0].strip()
+            elif texte.startswith('```'):
+                texte = texte.split('```')[1].split('```')[0].strip()
 
-        # Helper pour conversion float sécurisée
-        def safe_float(value_str: str, field_name: str) -> float:
-            """Convertit string en float avec gestion d'erreurs"""
-            try:
-                cleaned = value_str.strip().replace(' ', '').replace(',', '.')
-                if not cleaned:
-                    erreurs_parsing.append(f"{field_name}: chaîne vide")
-                    return 0.0
-                return float(cleaned)
-            except (ValueError, AttributeError) as e:
-                erreurs_parsing.append(f"{field_name}: '{value_str}' invalide ({e})")
-                return 0.0
+            data = json.loads(texte)
 
-        # ═══════════════════════════════════════════════════════════════════
-        # EXTRACTION INFOS CONTRAT
-        # ═══════════════════════════════════════════════════════════════════
+            # Valider structure minimale
+            if 'pret' not in data or 'echeances' not in data:
+                return {"pret": {}, "echeances": [], "_erreur": "Structure JSON invalide"}
 
-        # Numéro prêt (patterns: N° DU PRET : 5009736BRLZE11AQ)
-        # Plus flexible sur espaces car OCR peut varier
-        match = re.search(r'N°?\s*DU\s+PRET\s*:?\s*([A-Z0-9]{12,20})', texte, re.IGNORECASE)
-        if match:
-            pret_info['numero_pret'] = match.group(1)
-        else:
-            erreurs_parsing.append("Numéro de prêt non trouvé")
+            return data
 
-        # Banque (LCL détecté = CREDIT_LYONNAIS)
-        if 'LCL' in texte.upper():
-            pret_info['banque'] = 'CREDIT_LYONNAIS'
-        else:
-            pret_info['banque'] = 'CREDIT_LYONNAIS'  # Défaut
-
-        # Montant initial - IMPORTANT: chercher d'abord MONTANT TOTAL DEBLOQUE (pas MONTANT DU PRET qui est vide!)
-        # Pattern: "MONTANT TOTAL DEBLOQUE : EUR 250 000,00"
-        match = re.search(r'MONTANT\s+TOTAL\s+DEBLOQUE\s*:?\s*EUR\s+([\d\s.,]+)', texte, re.IGNORECASE)
-        if match:
-            pret_info['montant_initial'] = safe_float(match.group(1), 'montant_initial')
-        else:
-            # Fallback: chercher autres patterns
-            match = re.search(r'(?:montant|capital).*?:?\s*EUR?\s*([\d\s.,]+)', texte, re.IGNORECASE)
-            if match:
-                pret_info['montant_initial'] = safe_float(match.group(1), 'montant_initial')
-            else:
-                erreurs_parsing.append("Montant initial non trouvé")
-                pret_info['montant_initial'] = 0.0
-
-        # Taux annuel: "TAUX DEBITEUR EN COURS : 1,240000 %"
-        match = re.search(r'TAUX\s+DEBITEUR\s+EN\s+COURS\s*:?\s*([\d.,]+)\s*%', texte, re.IGNORECASE)
-        if match:
-            taux = safe_float(match.group(1), 'taux_annuel')
-            # Si > 1, c'est un pourcentage → diviser par 100
-            if taux > 1:
-                taux = taux / 100
-            pret_info['taux_annuel'] = taux
-        else:
-            erreurs_parsing.append("Taux annuel non trouvé")
-            pret_info['taux_annuel'] = 0.0
-
-        # Durée: "DUREE TOTALE DU PRET : 216 MOIS" (attention aux espaces multiples)
-        match = re.search(r'DUREE\s+TOTALE\s+DU\s+PRET\s*:?\s*(\d+)\s*MOIS', texte, re.IGNORECASE)
-        if match:
-            pret_info['duree_mois'] = int(match.group(1))
-        else:
-            match = re.search(r'(?:durée|duree).*?:?\s*(\d+)\s*(?:ans?|years?)', texte, re.IGNORECASE)
-            if match:
-                pret_info['duree_mois'] = int(match.group(1)) * 12
-            else:
-                erreurs_parsing.append("Durée non trouvée")
-                pret_info['duree_mois'] = 0
-
-        # Date début: "DATE DE DEPART DU PRET : 15.04.2022"
-        match = re.search(r'DATE\s+DE\s+DEPART\s+DU\s+PRET\s*:?\s*(\d{2}[.]\d{2}[.]\d{4})', texte, re.IGNORECASE)
-        if match:
-            date_str = match.group(1).replace('.', '-')
-            # Convertir DD-MM-YYYY → YYYY-MM-DD
-            parts = date_str.split('-')
-            if len(parts[0]) == 2:
-                pret_info['date_debut'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
-            else:
-                pret_info['date_debut'] = date_str
-        else:
-            erreurs_parsing.append("Date début non trouvée")
-
-        match = re.search(r'(?:fin|end|date.*fin)\s*:?\s*(\d{2}[/.\-]\d{2}[/.\-]\d{4})', texte, re.IGNORECASE)
-        if match:
-            date_str = match.group(1).replace('/', '-').replace('.', '-')
-            parts = date_str.split('-')
-            if len(parts[0]) == 2:
-                pret_info['date_fin'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
-            else:
-                pret_info['date_fin'] = date_str
-        else:
-            # Calculer date fin si date début + durée disponibles
-            if 'date_debut' in pret_info and pret_info.get('duree_mois', 0) > 0:
-                try:
-                    from dateutil.relativedelta import relativedelta
-                    from datetime import datetime
-                    dt_debut = datetime.strptime(pret_info['date_debut'], '%Y-%m-%d')
-                    dt_fin = dt_debut + relativedelta(months=pret_info['duree_mois'])
-                    pret_info['date_fin'] = dt_fin.strftime('%Y-%m-%d')
-                except Exception:
-                    erreurs_parsing.append("Date fin non trouvée et calcul échoué")
-            else:
-                erreurs_parsing.append("Date fin non trouvée")
-
-        # Type amortissement
-        if 'franchise' in texte.lower():
-            pret_info['type_amortissement'] = 'FRANCHISE_PARTIELLE'
-        else:
-            pret_info['type_amortissement'] = 'AMORTISSEMENT_CONSTANT'
-
-        # Échéance mensuelle
-        match = re.search(r'(?:échéance|echeance|mensualité|mensualite)\s*:?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
-        if match:
-            pret_info['echeance_mensuelle'] = safe_float(match.group(1), 'echeance_mensuelle')
-
-        # ═════════════════════════════════════════════════════════════════
-        # EXTRACTION ÉCHÉANCES LIGNE PAR LIGNE
-        # ═══════════════════════════════════════════════════════════════════
-
-        # Pattern LCL: "014 15/05/2023    0,00    258,33    0,00    0,00    258,33    250 000,00..."
-        # Format: Num | Date | Col1 | Intérêts | Col3 | Capital | Total | Capital Restant | Cumul | Total+Cumul
-        pattern_ligne = r'(\d{1,3})\s+(\d{2}/\d{2}/\d{4})\s+(.+)'
-
-        matches = re.finditer(pattern_ligne, texte, re.MULTILINE)
-        for match in matches:
-            try:
-                num = int(match.group(1))
-                date_str = match.group(2)
-                colonnes_str = match.group(3)
-
-                # Convertir date DD/MM/YYYY → YYYY-MM-DD
-                parts = date_str.split('/')
-                if len(parts) == 3 and len(parts[0]) == 2:
-                    date = f"{parts[2]}-{parts[1]}-{parts[0]}"
-                else:
-                    date = date_str.replace('/', '-')
-
-                # Splitter colonnes par espaces multiples (2+)
-                colonnes = re.split(r'\s{2,}', colonnes_str.strip())
-
-                # Format LCL attendu : 8+ colonnes
-                # [0]=0,00  [1]=intérêts  [2]=0,00  [3]=capital  [4]=total  [5]=reste_dû  [6]=cumul  [7]=total+cumul
-                if len(colonnes) >= 6:
-                    montant_interet = safe_float(colonnes[1] if len(colonnes) > 1 else '0', f'ligne_{num}_interet')
-                    montant_capital = safe_float(colonnes[3] if len(colonnes) > 3 else '0', f'ligne_{num}_capital')
-                    montant_total = safe_float(colonnes[4] if len(colonnes) > 4 else '0', f'ligne_{num}_total')
-                    capital_restant = safe_float(colonnes[5] if len(colonnes) > 5 else '0', f'ligne_{num}_reste')
-
-                    echeances.append({
-                        "numero_echeance": num,
-                        "date_echeance": date,
-                        "montant_total": montant_total,
-                        "montant_interet": montant_interet,
-                        "montant_capital": montant_capital,
-                        "capital_restant_du": capital_restant
-                    })
-                else:
-                    erreurs_parsing.append(f"Ligne {num}: Format colonne invalide ({len(colonnes)} cols)")
-
-            except (ValueError, IndexError) as e:
-                erreurs_parsing.append(f"Ligne échéance {num if 'num' in locals() else '?'}: {e}")
-                continue
-
-        # Validation minimale
-        if erreurs_parsing:
-            pret_info['_erreurs_parsing'] = erreurs_parsing[:5]  # Max 5 pour pas surcharger
-
-        return {
-            "pret": pret_info,
-            "echeances": echeances
-        }
+        except json.JSONDecodeError as e:
+            return {
+                "pret": {},
+                "echeances": [],
+                "_erreur": f"JSON invalide: {str(e)[:100]}"
+            }
+        except Exception as e:
+            return {
+                "pret": {},
+                "echeances": [],
+                "_erreur": f"Erreur parsing: {str(e)[:100]}"
+            }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
