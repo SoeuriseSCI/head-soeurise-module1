@@ -405,22 +405,58 @@ NE RETOURNE QUE LE JSON, RIEN D'AUTRE.
 
     @staticmethod
     def _parser_json_response(texte: str) -> Dict:
-        """Parse réponse JSON de Claude"""
+        """Parse réponse JSON de Claude - robuste aux variations de format"""
         import json
+        import re
 
         try:
-            # Nettoyer le texte (enlever markdown si présent)
+            # Nettoyer le texte
             texte = texte.strip()
-            if texte.startswith('```json'):
-                texte = texte.split('```json')[1].split('```')[0].strip()
-            elif texte.startswith('```'):
-                texte = texte.split('```')[1].split('```')[0].strip()
 
+            # Cas 1: JSON dans code block markdown
+            if '```json' in texte:
+                match = re.search(r'```json\s*(\{.*?\})\s*```', texte, re.DOTALL)
+                if match:
+                    texte = match.group(1)
+            elif '```' in texte:
+                match = re.search(r'```\s*(\{.*?\})\s*```', texte, re.DOTALL)
+                if match:
+                    texte = match.group(1)
+
+            # Cas 2: JSON direct avec texte avant/après
+            # Chercher le premier { et dernier } qui correspondent
+            match = re.search(r'(\{.*\})', texte, re.DOTALL)
+            if match:
+                texte = match.group(1)
+
+            # Parser le JSON
             data = json.loads(texte)
 
             # Valider structure minimale
+            if not isinstance(data, dict):
+                return {
+                    "pret": {},
+                    "echeances": [],
+                    "_erreur": "Réponse non-dict",
+                    "_raw": texte[:200]
+                }
+
             if 'pret' not in data or 'echeances' not in data:
-                return {"pret": {}, "echeances": [], "_erreur": "Structure JSON invalide"}
+                return {
+                    "pret": {},
+                    "echeances": [],
+                    "_erreur": "Structure JSON invalide (manque pret ou echeances)",
+                    "_raw": texte[:200]
+                }
+
+            # Vérifier que pret a au moins quelques champs
+            if not data['pret'] or len(data['pret']) < 3:
+                return {
+                    "pret": data.get('pret', {}),
+                    "echeances": data.get('echeances', []),
+                    "_erreur": "Objet pret vide ou incomplet",
+                    "_raw": str(data['pret'])[:200]
+                }
 
             return data
 
@@ -428,13 +464,15 @@ NE RETOURNE QUE LE JSON, RIEN D'AUTRE.
             return {
                 "pret": {},
                 "echeances": [],
-                "_erreur": f"JSON invalide: {str(e)[:100]}"
+                "_erreur": f"JSON invalide: {str(e)[:100]}",
+                "_raw": texte[:300]
             }
         except Exception as e:
             return {
                 "pret": {},
                 "echeances": [],
-                "_erreur": f"Erreur parsing: {str(e)[:100]}"
+                "_erreur": f"Erreur parsing: {str(e)[:100]}",
+                "_raw": texte[:300]
             }
 
 

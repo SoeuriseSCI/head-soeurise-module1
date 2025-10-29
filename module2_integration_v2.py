@@ -145,6 +145,17 @@ class IntegratorModule2:
                             pret_info = data.get('pret', {})
                             echeances_data = data.get('echeances', [])
 
+                            # Vérifier erreurs de parsing JSON
+                            if '_erreur' in data:
+                                msg_erreur = f"{attachment.get('filename')}: {data['_erreur']}"
+                                erreurs_parsing_detaillees.append(msg_erreur)
+                                self.erreurs.append(msg_erreur)
+
+                                # Ajouter raw pour debug
+                                if '_raw' in data:
+                                    erreurs_parsing_detaillees.append(f"  Raw: {data['_raw'][:200]}")
+                                continue
+
                             # Vérifier champs critiques
                             champs_critiques = ['numero_pret', 'montant_initial', 'taux_annuel', 'duree_mois']
                             champs_manquants = [c for c in champs_critiques if not pret_info.get(c)]
