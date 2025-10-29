@@ -490,7 +490,18 @@ LIGNE: num|date|total|interets|capital|reste
             else:
                 pret_info['date_fin'] = date_str
         else:
-            erreurs_parsing.append("Date fin non trouvée")
+            # Calculer date fin si date début + durée disponibles
+            if 'date_debut' in pret_info and pret_info.get('duree_mois', 0) > 0:
+                try:
+                    from dateutil.relativedelta import relativedelta
+                    from datetime import datetime
+                    dt_debut = datetime.strptime(pret_info['date_debut'], '%Y-%m-%d')
+                    dt_fin = dt_debut + relativedelta(months=pret_info['duree_mois'])
+                    pret_info['date_fin'] = dt_fin.strftime('%Y-%m-%d')
+                except Exception:
+                    erreurs_parsing.append("Date fin non trouvée et calcul échoué")
+            else:
+                erreurs_parsing.append("Date fin non trouvée")
 
         # Type amortissement
         if 'franchise' in texte.lower():
@@ -507,35 +518,46 @@ LIGNE: num|date|total|interets|capital|reste
         # EXTRACTION ÉCHÉANCES LIGNE PAR LIGNE
         # ═══════════════════════════════════════════════════════════════════
 
-        # Pattern: N° | Date | Montant | Intérêts | Capital | Reste
-        # Exemple: "1   15/05/2023   1166.59   218.75   947.84   249052.16"
-        pattern = r'(\d{1,3})\s+(\d{2}[/-]\d{2}[/-]\d{4})\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)'
+        # Pattern LCL: "014 15/05/2023    0,00    258,33    0,00    0,00    258,33    250 000,00..."
+        # Format: Num | Date | Col1 | Intérêts | Col3 | Capital | Total | Capital Restant | Cumul | Total+Cumul
+        pattern_ligne = r'(\d{1,3})\s+(\d{2}/\d{2}/\d{4})\s+(.+)'
 
-        matches = re.finditer(pattern, texte)
+        matches = re.finditer(pattern_ligne, texte, re.MULTILINE)
         for match in matches:
             try:
                 num = int(match.group(1))
-                date_str = match.group(2).replace('/', '-')
-                # Convertir DD-MM-YYYY → YYYY-MM-DD
-                parts = date_str.split('-')
-                if len(parts[0]) == 2:
+                date_str = match.group(2)
+                colonnes_str = match.group(3)
+
+                # Convertir date DD/MM/YYYY → YYYY-MM-DD
+                parts = date_str.split('/')
+                if len(parts) == 3 and len(parts[0]) == 2:
                     date = f"{parts[2]}-{parts[1]}-{parts[0]}"
                 else:
-                    date = date_str
+                    date = date_str.replace('/', '-')
 
-                montant_total = safe_float(match.group(3), f'ligne_{num}_montant_total')
-                montant_interet = safe_float(match.group(4), f'ligne_{num}_interet')
-                montant_capital = safe_float(match.group(5), f'ligne_{num}_capital')
-                capital_restant = safe_float(match.group(6), f'ligne_{num}_reste')
+                # Splitter colonnes par espaces multiples (2+)
+                colonnes = re.split(r'\s{2,}', colonnes_str.strip())
 
-                echeances.append({
-                    "numero_echeance": num,
-                    "date_echeance": date,
-                    "montant_total": montant_total,
-                    "montant_interet": montant_interet,
-                    "montant_capital": montant_capital,
-                    "capital_restant_du": capital_restant
-                })
+                # Format LCL attendu : 8+ colonnes
+                # [0]=0,00  [1]=intérêts  [2]=0,00  [3]=capital  [4]=total  [5]=reste_dû  [6]=cumul  [7]=total+cumul
+                if len(colonnes) >= 6:
+                    montant_interet = safe_float(colonnes[1] if len(colonnes) > 1 else '0', f'ligne_{num}_interet')
+                    montant_capital = safe_float(colonnes[3] if len(colonnes) > 3 else '0', f'ligne_{num}_capital')
+                    montant_total = safe_float(colonnes[4] if len(colonnes) > 4 else '0', f'ligne_{num}_total')
+                    capital_restant = safe_float(colonnes[5] if len(colonnes) > 5 else '0', f'ligne_{num}_reste')
+
+                    echeances.append({
+                        "numero_echeance": num,
+                        "date_echeance": date,
+                        "montant_total": montant_total,
+                        "montant_interet": montant_interet,
+                        "montant_capital": montant_capital,
+                        "capital_restant_du": capital_restant
+                    })
+                else:
+                    erreurs_parsing.append(f"Ligne {num}: Format colonne invalide ({len(colonnes)} cols)")
+
             except (ValueError, IndexError) as e:
                 erreurs_parsing.append(f"Ligne échéance {num if 'num' in locals() else '?'}: {e}")
                 continue
