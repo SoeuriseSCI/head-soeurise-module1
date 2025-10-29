@@ -48,6 +48,7 @@ class TypeEvenement(Enum):
     EVENEMENT_SIMPLE = "EVENEMENT_SIMPLE"
     INIT_BILAN_2023 = "INIT_BILAN_2023"
     CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
+    PRET_IMMOBILIER = "PRET_IMMOBILIER"  # Tableaux d'amortissement prévisionnels
     UNKNOWN = "UNKNOWN"
 
 
@@ -136,36 +137,49 @@ class DetecteurTypeEvenement:
     def detecter(email: Dict) -> TypeEvenement:
         """
         Détecte le type d'événement
-        
+
         Returns:
-            TypeEvenement enum (EVENEMENT_SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE | UNKNOWN)
+            TypeEvenement enum (EVENEMENT_SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE | PRET_IMMOBILIER | UNKNOWN)
         """
         body = (email.get('body', '') + ' ' + email.get('subject', '')).lower()
         subject = email.get('subject', '').lower()
         attachments = email.get('attachments', [])
-        
-        # Détecteur CLOTURE_EXERCICE
-        if any(kw in body for kw in ['cloture', 'clôture', 'amortissement_credit', 'reevaluation', 'réévaluation']):
+
+        # ⚠️ FIX BUG #1: Détecter PRET_IMMOBILIER en PRIORITE (avant CLOTURE_EXERCICE)
+        # Tableaux d'amortissement prévisionnels ≠ relevés avec paiements réels
+        if any(f['filename'].lower().endswith('.pdf') and
+               ('tableau' in f['filename'].lower() or 'tableaux' in f['filename'].lower()) and
+               ('amortissement' in f['filename'].lower() or 'prêt' in f['filename'].lower() or 'pret' in f['filename'].lower())
+               for f in attachments if 'filename' in f):
+            return TypeEvenement.PRET_IMMOBILIER
+
+        if any(kw in body for kw in ['tableau amortissement', 'tableaux amortissement', 'planning prêt', 'planning pret']):
+            return TypeEvenement.PRET_IMMOBILIER
+
+        # Détecteur CLOTURE_EXERCICE (relevés bancaires avec transactions réelles)
+        if any(kw in body for kw in ['cloture', 'clôture', 'releve bancaire', 'relevé bancaire', 'reevaluation', 'réévaluation']):
             return TypeEvenement.CLOTURE_EXERCICE
-        
-        if any(f['filename'].lower().endswith('.pdf') and any(kw in f['filename'].lower() 
-               for kw in ['amortissement', 'credit', 'reevaluation', 'cloture'])
+
+        # Note: "amortissement" seul ne suffit plus pour CLOTURE_EXERCICE (trop ambigu)
+        # On cherche maintenant "relevé" + contexte de paiements
+        if any(f['filename'].lower().endswith('.pdf') and
+               any(kw in f['filename'].lower() for kw in ['releve', 'relevé', 'reevaluation', 'cloture'])
                for f in attachments if 'filename' in f):
             return TypeEvenement.CLOTURE_EXERCICE
-        
+
         # Détecteur INIT_BILAN_2023
         if any(kw in body for kw in ['bilan 2023', 'bilan_2023', 'bilan initial', 'initialisation comptable']):
             return TypeEvenement.INIT_BILAN_2023
-        
+
         if any(f['filename'].lower().endswith('.pdf') and 'bilan' in f['filename'].lower() and '2023' in f['filename'].lower()
                for f in attachments if 'filename' in f):
             return TypeEvenement.INIT_BILAN_2023
-        
+
         # Détecteur EVENEMENT_SIMPLE (loyer, charge, etc.)
-        if any(kw in body for kw in ['loyer', 'location', 'paiement', 'charge', 'entretien', 
+        if any(kw in body for kw in ['loyer', 'location', 'paiement', 'charge', 'entretien',
                                        'réparation', 'assurance', 'taxe', 'syndic', '€', 'eur']):
             return TypeEvenement.EVENEMENT_SIMPLE
-        
+
         return TypeEvenement.UNKNOWN
 
 
