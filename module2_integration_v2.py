@@ -125,6 +125,7 @@ class IntegratorModule2:
                         attachments = email.get('attachments', [])
                         prets_ingeres = 0
                         echeances_totales = 0
+                        erreurs_parsing_detaillees = []
 
                         for attachment in attachments:
                             if not attachment.get('filename', '').lower().endswith('.pdf'):
@@ -137,31 +138,58 @@ class IntegratorModule2:
 
                             data = self.parseur_pret.parse_from_pdf(filepath)
 
-                            if not data or not data.get('pret') or not data.get('echeances'):
-                                self.erreurs.append(f"Parsing échoué pour {attachment.get('filename')}")
+                            if not data or not data.get('pret'):
+                                self.erreurs.append(f"Parsing échoué pour {attachment.get('filename')}: données manquantes")
+                                continue
+
+                            pret_info = data.get('pret', {})
+                            echeances_data = data.get('echeances', [])
+
+                            # Vérifier champs critiques
+                            champs_critiques = ['numero_pret', 'montant_initial', 'taux_annuel', 'duree_mois']
+                            champs_manquants = [c for c in champs_critiques if not pret_info.get(c)]
+
+                            if champs_manquants:
+                                msg_erreur = f"{attachment.get('filename')}: Champs manquants: {', '.join(champs_manquants)}"
+                                erreurs_parsing_detaillees.append(msg_erreur)
+                                self.erreurs.append(msg_erreur)
+
+                                # Ajouter erreurs de parsing si présentes
+                                if '_erreurs_parsing' in pret_info:
+                                    erreurs_parsing_detaillees.append(f"  Détails: {'; '.join(pret_info['_erreurs_parsing'])}")
+                                continue
+
+                            if not echeances_data or len(echeances_data) == 0:
+                                msg_erreur = f"{attachment.get('filename')}: Aucune échéance extraite du PDF"
+                                erreurs_parsing_detaillees.append(msg_erreur)
+                                self.erreurs.append(msg_erreur)
                                 continue
 
                             # Ingérer en BD
                             success, msg, pret_id = self.prets_manager.ingest_tableau_pret(
-                                pret_data=data['pret'],
-                                echeances_data=data['echeances'],
+                                pret_data=pret_info,
+                                echeances_data=echeances_data,
                                 source_email_id=email.get('id'),
                                 source_document=attachment.get('filename')
                             )
 
                             if success:
                                 prets_ingeres += 1
-                                echeances_totales += len(data['echeances'])
+                                echeances_totales += len(echeances_data)
                             else:
                                 self.erreurs.append(msg)
 
                         # Résultat ingestion
                         if prets_ingeres > 0:
+                            msg_resultat = f'{prets_ingeres} prêt(s) ingéré(s), {echeances_totales} échéances stockées'
+                            if erreurs_parsing_detaillees:
+                                msg_resultat += f" (avec {len(erreurs_parsing_detaillees)} erreur(s) de parsing)"
+
                             resultats['details'].append({
                                 'type': type_evt.value,
                                 'propositions': 0,  # Pas de propositions comptables
                                 'status': 'ingestion_reussie',
-                                'message': f'{prets_ingeres} prêt(s) ingéré(s), {echeances_totales} échéances stockées',
+                                'message': msg_resultat,
                                 'prets_ingeres': prets_ingeres,
                                 'echeances_stockees': echeances_totales
                             })
@@ -171,7 +199,7 @@ class IntegratorModule2:
                                 'type': type_evt.value,
                                 'propositions': 0,
                                 'status': 'ingestion_echec',
-                                'message': 'Échec ingestion tableaux amortissement'
+                                'message': 'Échec ingestion tableaux amortissement - Voir erreurs détaillées'
                             })
 
                         continue

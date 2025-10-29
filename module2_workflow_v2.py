@@ -400,6 +400,20 @@ LIGNE: num|date|total|interets|capital|reste
 
         pret_info = {}
         echeances = []
+        erreurs_parsing = []
+
+        # Helper pour conversion float sécurisée
+        def safe_float(value_str: str, field_name: str) -> float:
+            """Convertit string en float avec gestion d'erreurs"""
+            try:
+                cleaned = value_str.strip().replace(' ', '').replace(',', '.')
+                if not cleaned:
+                    erreurs_parsing.append(f"{field_name}: chaîne vide")
+                    return 0.0
+                return float(cleaned)
+            except (ValueError, AttributeError) as e:
+                erreurs_parsing.append(f"{field_name}: '{value_str}' invalide ({e})")
+                return 0.0
 
         # ═══════════════════════════════════════════════════════════════════
         # EXTRACTION INFOS CONTRAT
@@ -409,27 +423,35 @@ LIGNE: num|date|total|interets|capital|reste
         match = re.search(r'(?:n°|num|numero|contract|prêt|pret)\s*:?\s*([A-Z0-9]{10,20})', texte, re.IGNORECASE)
         if match:
             pret_info['numero_pret'] = match.group(1)
+        else:
+            erreurs_parsing.append("Numéro de prêt non trouvé")
 
         # Banque
-        match = re.search(r'(?:banque|bank|organisme)\s*:?\s*([A-Z]{2,10})', texte, re.IGNORECASE)
+        match = re.search(r'(?:banque|bank|organisme)\s*:?\s*([A-ZÀ-Ü\s]{2,30})', texte, re.IGNORECASE)
         if match:
-            pret_info['banque'] = match.group(1).upper()
+            pret_info['banque'] = match.group(1).strip().upper()
+        else:
+            pret_info['banque'] = 'CREDIT_LYONNAIS'  # Défaut
 
         # Montant initial (patterns: 250000, 250.000, 250 000)
         match = re.search(r'(?:montant|capital|initial)\s*:?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
         if match:
-            montant_str = match.group(1).replace(' ', '').replace(',', '.')
-            pret_info['montant_initial'] = float(montant_str)
+            pret_info['montant_initial'] = safe_float(match.group(1), 'montant_initial')
+        else:
+            erreurs_parsing.append("Montant initial non trouvé")
+            pret_info['montant_initial'] = 0.0
 
         # Taux annuel (patterns: 1.05%, 0.0105, etc.)
         match = re.search(r'(?:taux|rate)\s*:?\s*([\d.,]+)\s*%?', texte, re.IGNORECASE)
         if match:
-            taux_str = match.group(1).replace(',', '.')
-            taux = float(taux_str)
+            taux = safe_float(match.group(1), 'taux_annuel')
             # Si > 1, c'est un pourcentage → diviser par 100
             if taux > 1:
                 taux = taux / 100
             pret_info['taux_annuel'] = taux
+        else:
+            erreurs_parsing.append("Taux annuel non trouvé")
+            pret_info['taux_annuel'] = 0.0
 
         # Durée (patterns: 240 mois, 20 ans)
         match = re.search(r'(?:durée|duree|duration)\s*:?\s*(\d+)\s*(?:mois|months?)', texte, re.IGNORECASE)
@@ -439,6 +461,9 @@ LIGNE: num|date|total|interets|capital|reste
             match = re.search(r'(?:durée|duree|duration)\s*:?\s*(\d+)\s*(?:ans?|years?)', texte, re.IGNORECASE)
             if match:
                 pret_info['duree_mois'] = int(match.group(1)) * 12
+            else:
+                erreurs_parsing.append("Durée non trouvée")
+                pret_info['duree_mois'] = 0
 
         # Dates (patterns: 15/04/2023, 2023-04-15)
         match = re.search(r'(?:début|debut|start|date.*début)\s*:?\s*(\d{2}[/-]\d{2}[/-]\d{4})', texte, re.IGNORECASE)
@@ -450,6 +475,8 @@ LIGNE: num|date|total|interets|capital|reste
                 pret_info['date_debut'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
             else:
                 pret_info['date_debut'] = date_str
+        else:
+            erreurs_parsing.append("Date début non trouvée")
 
         match = re.search(r'(?:fin|end|date.*fin)\s*:?\s*(\d{2}[/-]\d{2}[/-]\d{4})', texte, re.IGNORECASE)
         if match:
@@ -459,6 +486,8 @@ LIGNE: num|date|total|interets|capital|reste
                 pret_info['date_fin'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
             else:
                 pret_info['date_fin'] = date_str
+        else:
+            erreurs_parsing.append("Date fin non trouvée")
 
         # Type amortissement
         if 'franchise' in texte.lower():
@@ -469,8 +498,7 @@ LIGNE: num|date|total|interets|capital|reste
         # Échéance mensuelle
         match = re.search(r'(?:échéance|echeance|mensualité|mensualite)\s*:?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
         if match:
-            montant_str = match.group(1).replace(' ', '').replace(',', '.')
-            pret_info['echeance_mensuelle'] = float(montant_str)
+            pret_info['echeance_mensuelle'] = safe_float(match.group(1), 'echeance_mensuelle')
 
         # ═════════════════════════════════════════════════════════════════
         # EXTRACTION ÉCHÉANCES LIGNE PAR LIGNE
@@ -492,10 +520,10 @@ LIGNE: num|date|total|interets|capital|reste
                 else:
                     date = date_str
 
-                montant_total = float(match.group(3).replace(',', '.'))
-                montant_interet = float(match.group(4).replace(',', '.'))
-                montant_capital = float(match.group(5).replace(',', '.'))
-                capital_restant = float(match.group(6).replace(',', '.'))
+                montant_total = safe_float(match.group(3), f'ligne_{num}_montant_total')
+                montant_interet = safe_float(match.group(4), f'ligne_{num}_interet')
+                montant_capital = safe_float(match.group(5), f'ligne_{num}_capital')
+                capital_restant = safe_float(match.group(6), f'ligne_{num}_reste')
 
                 echeances.append({
                     "numero_echeance": num,
@@ -505,8 +533,13 @@ LIGNE: num|date|total|interets|capital|reste
                     "montant_capital": montant_capital,
                     "capital_restant_du": capital_restant
                 })
-            except (ValueError, IndexError):
+            except (ValueError, IndexError) as e:
+                erreurs_parsing.append(f"Ligne échéance {num if 'num' in locals() else '?'}: {e}")
                 continue
+
+        # Validation minimale
+        if erreurs_parsing:
+            pret_info['_erreurs_parsing'] = erreurs_parsing[:5]  # Max 5 pour pas surcharger
 
         return {
             "pret": pret_info,
