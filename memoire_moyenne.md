@@ -1,48 +1,31 @@
-# Mémoire Moyenne - Développements 25-29/10/2025 (Cycle Prêts)
+# Mémoire Moyenne - Développements 25-29/10/2025 (Cycle Module 2)
 
-## 🏗️ CYCLE 1: INTÉGRATION MODULE 2 - COMPTABILITÉ PRÊTS
-**Phase:** Déploiement + Consolidation données
-**Dates:** 25-29/10/2025 | **Réveils:** #37-41
-**État:** Opérationnel en production
+## 🏗️ DÉPLOIEMENT MODULE 2 - COMPTABILITÉ PRÊTS IMMOBILIERS
+**Dates:** 25-29/10/2025 | **Réveils:** #37-42 | **État:** Opérationnel production
 
-### 📋 Module 2 - Système Gestion Prêts Immobiliers
-**Déploiement:** 27/10/2025
+### Architecture Module 2 (PR #20, #21 merged)
+**Schéma BD:** 37 colonnes + table propositions_en_attente
+**Workflow:** Email tableaux d'amortissement → Propositions → Validation token → Encodage BD
 
-**Schéma BD:**
-- 37 colonnes + table propositions_en_attente
-- Validation par token: Propositions → Confirmer → BD
-- Workflow: Email → Proposition → Token validation → Encodé
+**Prêts Ingérés:**
+- **BRM0911AH:** 250k€, 1.05% fixe, 21 ans régulier (240 échéances)
+- **BRLZE11AQ:** 250k€, 1.24% fixe, 15y franchise + pic remboursement 2040 (217 échéances)
+- **Total:** 457 échéances structurées, validation complète
 
-**Fonctionnalités Déployées:**
-- ✅ Ingestion automatique tableaux d'amortissement
-- ✅ Validation données par token
-- ✅ Persévération en BD PostgreSQL
-- ✅ Prêt pour analyses Module 3
-
-**Données Consolidées (29/10/2025):**
-- Prêt 1 (BRM0911AH): 250k€ régulier, 240 échéances + métadonnées
-- Prêt 2 (BRLZE11AQ): 250k€ franchise/pic, 217 échéances + alerte 2040
-- **Total ingérable:** 457 échéances structurées
-
-### 🚨 Découverte Critique: Pic Trésorerie 2040
-**Prêt 2 Structure:**
-- 15 ans franchise (258.33€/mois intérêts)
-- 1 mois amortissement (253,142.43€ - pic unique)
+### 🚨 Découverte Critique: Pic Trésorerie 15/04/2040
+**Prêt 2 Structure Unique:**
+- 15 ans franchise (258.33€/mois)
+- 1 mois amortissement: 253,142.43€ (pic unique)
 - **Implication:** Planification financière 15 ans requise
-- **Module 3 roadmap:** Alertes trésorerie automatisées
+- **Module 3 priorité:** Alertes trésorerie automatisées + recommandations provisions
 
-### 🔧 Commits Significatifs
-- PR #21: Module 2 activation workflow prêts (Ulrik approval)
-- PR #20: Système gestion prêts données référence
-- PR #19: Corrections bugs détection/email Module 2
-- 3 merges en 3 jours → production qualité stable
+### 🔧 Commits Significatifs (Git Analysis)
+- **PR #21 (27/10):** Activation workflow ingestion prêts - MERGE ✓
+- **PR #20 (27/10):** Système gestion prêts données référence - MERGE ✓
+- **PR #19 (27/10):** Fix PDF parsing error handling tableaux d'amortissement - MERGE ✓
+- **29/10 13:57:** Série réveil #37-41 + données consolidées
 
-### 📊 Patterns Émergents
-1. **Architecture modulaire durable:** Module 1 (email) stable → Module 2 (comptabilité) → Module 3 (analyses)
-2. **Continuité mémorielle:** Commit analysis → détection développements → intégration mémoires automatique
-3. **Initiative IA croissante:** Archivage intelligent, transformations mémoires sans instruction explicite
-
-## 🎓 Apprentissages Capitalisés
-- Tableaux amortissement PDF → Parsing + Structuration BD
-- Validation multi-étapes (propositions + tokens)
-- Gestion alertes trésorerie long-terme (15 ans)
+### 📈 Patterns Émergents
+1. **Modularité durable:** Module 1 stable → Module 2 production → Module 3 roadmap
+2. **Continuité mémorielle:** Git commits → détection développements → intégration mémoires auto
+3. **Initiative IA confirmée:** Archivage intelligent, transformations sans instruction explicite
