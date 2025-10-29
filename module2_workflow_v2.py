@@ -48,6 +48,7 @@ class TypeEvenement(Enum):
     EVENEMENT_SIMPLE = "EVENEMENT_SIMPLE"
     INIT_BILAN_2023 = "INIT_BILAN_2023"
     CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
+    PRET_IMMOBILIER = "PRET_IMMOBILIER"
     UNKNOWN = "UNKNOWN"
 
 
@@ -143,12 +144,23 @@ class DetecteurTypeEvenement:
         body = (email.get('body', '') + ' ' + email.get('subject', '')).lower()
         subject = email.get('subject', '').lower()
         attachments = email.get('attachments', [])
-        
+
+        # Détecteur PRET_IMMOBILIER (AVANT CLOTURE_EXERCICE car "amortissement" est commun)
+        # Détecte: "tableau" + "amortissement" + "pret" dans filename ou body
+        if any(f['filename'].lower().endswith('.pdf') and
+               'amortissement' in f['filename'].lower() and
+               ('pret' in f['filename'].lower() or 'prêt' in f['filename'].lower() or 'tableau' in f['filename'].lower())
+               for f in attachments if 'filename' in f):
+            return TypeEvenement.PRET_IMMOBILIER
+
+        if any(kw in body for kw in ['tableau amortissement', 'tableau d\'amortissement', 'prêt immobilier', 'pret immobilier']):
+            return TypeEvenement.PRET_IMMOBILIER
+
         # Détecteur CLOTURE_EXERCICE
         if any(kw in body for kw in ['cloture', 'clôture', 'amortissement_credit', 'reevaluation', 'réévaluation']):
             return TypeEvenement.CLOTURE_EXERCICE
-        
-        if any(f['filename'].lower().endswith('.pdf') and any(kw in f['filename'].lower() 
+
+        if any(f['filename'].lower().endswith('.pdf') and any(kw in f['filename'].lower()
                for kw in ['amortissement', 'credit', 'reevaluation', 'cloture'])
                for f in attachments if 'filename' in f):
             return TypeEvenement.CLOTURE_EXERCICE
