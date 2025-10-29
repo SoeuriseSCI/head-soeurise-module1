@@ -65,7 +65,13 @@ class IntegratorModule2:
         self.propositions_manager = PropositionsManager(self.session)
         self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise, email_ulrik)
         self.ocr = OCRExtractor(anthropic_api_key)
-        
+
+        # Import PretsManager et ParseurTableauPret pour ingestion prêts
+        from prets_manager import PretsManager
+        from module2_workflow_v2 import ParseurTableauPret
+        self.prets_manager = PretsManager(self.session)
+        self.parseur_pret = ParseurTableauPret(self.ocr)
+
         # État du traitement
         self.emails_traites = 0
         self.propositions_generees = 0
