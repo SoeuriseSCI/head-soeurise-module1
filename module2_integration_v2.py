@@ -65,13 +65,7 @@ class IntegratorModule2:
         self.propositions_manager = PropositionsManager(self.session)
         self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise, email_ulrik)
         self.ocr = OCRExtractor(anthropic_api_key)
-
-        # Import PretsManager et ParseurTableauPret pour ingestion prêts
-        from prets_manager import PretsManager
-        from module2_workflow_v2 import ParseurTableauPret
-        self.prets_manager = PretsManager(self.session)
-        self.parseur_pret = ParseurTableauPret(self.ocr)
-
+        
         # État du traitement
         self.emails_traites = 0
         self.propositions_generees = 0
@@ -114,7 +108,7 @@ class IntegratorModule2:
             try:
                 # Détecter type
                 type_evt = DetecteurTypeEvenement.detecter(email)
-
+                
                 if type_evt == TypeEvenement.UNKNOWN:  # ✅ COMPARAISON ENUM FIX
                     continue
 
@@ -125,6 +119,7 @@ class IntegratorModule2:
                         attachments = email.get('attachments', [])
                         prets_ingeres = 0
                         echeances_totales = 0
+                        erreurs_parsing_detaillees = []
 
                         for attachment in attachments:
                             if not attachment.get('filename', '').lower().endswith('.pdf'):
@@ -137,31 +132,58 @@ class IntegratorModule2:
 
                             data = self.parseur_pret.parse_from_pdf(filepath)
 
-                            if not data or not data.get('pret') or not data.get('echeances'):
-                                self.erreurs.append(f"Parsing échoué pour {attachment.get('filename')}")
+                            if not data or not data.get('pret'):
+                                self.erreurs.append(f"Parsing échoué pour {attachment.get('filename')}: données manquantes")
+                                continue
+
+                            pret_info = data.get('pret', {})
+                            echeances_data = data.get('echeances', [])
+
+                            # Vérifier champs critiques
+                            champs_critiques = ['numero_pret', 'montant_initial', 'taux_annuel', 'duree_mois']
+                            champs_manquants = [c for c in champs_critiques if not pret_info.get(c)]
+
+                            if champs_manquants:
+                                msg_erreur = f"{attachment.get('filename')}: Champs manquants: {', '.join(champs_manquants)}"
+                                erreurs_parsing_detaillees.append(msg_erreur)
+                                self.erreurs.append(msg_erreur)
+
+                                # Ajouter erreurs de parsing si présentes
+                                if '_erreurs_parsing' in pret_info:
+                                    erreurs_parsing_detaillees.append(f"  Détails: {'; '.join(pret_info['_erreurs_parsing'])}")
+                                continue
+
+                            if not echeances_data or len(echeances_data) == 0:
+                                msg_erreur = f"{attachment.get('filename')}: Aucune échéance extraite du PDF"
+                                erreurs_parsing_detaillees.append(msg_erreur)
+                                self.erreurs.append(msg_erreur)
                                 continue
 
                             # Ingérer en BD
                             success, msg, pret_id = self.prets_manager.ingest_tableau_pret(
-                                pret_data=data['pret'],
-                                echeances_data=data['echeances'],
+                                pret_data=pret_info,
+                                echeances_data=echeances_data,
                                 source_email_id=email.get('id'),
                                 source_document=attachment.get('filename')
                             )
 
                             if success:
                                 prets_ingeres += 1
-                                echeances_totales += len(data['echeances'])
+                                echeances_totales += len(echeances_data)
                             else:
                                 self.erreurs.append(msg)
 
                         # Résultat ingestion
                         if prets_ingeres > 0:
+                            msg_resultat = f'{prets_ingeres} prêt(s) ingéré(s), {echeances_totales} échéances stockées'
+                            if erreurs_parsing_detaillees:
+                                msg_resultat += f" (avec {len(erreurs_parsing_detaillees)} erreur(s) de parsing)"
+
                             resultats['details'].append({
                                 'type': type_evt.value,
                                 'propositions': 0,  # Pas de propositions comptables
                                 'status': 'ingestion_reussie',
-                                'message': f'{prets_ingeres} prêt(s) ingéré(s), {echeances_totales} échéances stockées',
+                                'message': msg_resultat,
                                 'prets_ingeres': prets_ingeres,
                                 'echeances_stockees': echeances_totales
                             })
@@ -171,7 +193,7 @@ class IntegratorModule2:
                                 'type': type_evt.value,
                                 'propositions': 0,
                                 'status': 'ingestion_echec',
-                                'message': 'Échec ingestion tableaux amortissement'
+                                'message': 'Échec ingestion tableaux amortissement - Voir erreurs détaillées'
                             })
 
                         continue
@@ -194,18 +216,6 @@ class IntegratorModule2:
 
                     # Stocker les propositions en BD avec token
                     propositions_list = result.get('propositions', {}).get('propositions', [])
-
-                    # ⚠️ FIX BUG #2: Ne pas envoyer d'email si 0 propositions
-                    if len(propositions_list) == 0:
-                        self.erreurs.append(f"Détection {type_evt.value} mais 0 propositions générées - Email non envoyé")
-                        resultats['details'].append({
-                            'type': type_evt.value,
-                            'propositions': 0,
-                            'status': 'detection_vide',
-                            'message': 'Aucune proposition générée'
-                        })
-                        continue
-
                     token_stocke, prop_id = self.propositions_manager.stocker_proposition(
                         type_evenement=type_evt.value,
                         propositions=propositions_list,
@@ -224,7 +234,7 @@ class IntegratorModule2:
                         token_stocke,  # ✅ token (utiliser token_stocke au lieu de result['token'])
                         subject_suffix=f"- {len(propositions_list)} proposition(s)"
                     )
-
+                    
                     if email_envoye:
                         resultats['emails_envoyes'] += 1
                         self.propositions_generees += len(propositions_list)

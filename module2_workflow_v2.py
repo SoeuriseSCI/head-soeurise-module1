@@ -48,7 +48,6 @@ class TypeEvenement(Enum):
     EVENEMENT_SIMPLE = "EVENEMENT_SIMPLE"
     INIT_BILAN_2023 = "INIT_BILAN_2023"
     CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
-    PRET_IMMOBILIER = "PRET_IMMOBILIER"  # Tableaux d'amortissement prévisionnels
     UNKNOWN = "UNKNOWN"
 
 
@@ -137,49 +136,36 @@ class DetecteurTypeEvenement:
     def detecter(email: Dict) -> TypeEvenement:
         """
         Détecte le type d'événement
-
+        
         Returns:
-            TypeEvenement enum (EVENEMENT_SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE | PRET_IMMOBILIER | UNKNOWN)
+            TypeEvenement enum (EVENEMENT_SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE | UNKNOWN)
         """
         body = (email.get('body', '') + ' ' + email.get('subject', '')).lower()
         subject = email.get('subject', '').lower()
         attachments = email.get('attachments', [])
-
-        # ⚠️ FIX BUG #1: Détecter PRET_IMMOBILIER en PRIORITE (avant CLOTURE_EXERCICE)
-        # Tableaux d'amortissement prévisionnels ≠ relevés avec paiements réels
-        if any(f['filename'].lower().endswith('.pdf') and
-               ('tableau' in f['filename'].lower() or 'tableaux' in f['filename'].lower()) and
-               ('amortissement' in f['filename'].lower() or 'prêt' in f['filename'].lower() or 'pret' in f['filename'].lower())
-               for f in attachments if 'filename' in f):
-            return TypeEvenement.PRET_IMMOBILIER
-
-        if any(kw in body for kw in ['tableau amortissement', 'tableaux amortissement', 'planning prêt', 'planning pret']):
-            return TypeEvenement.PRET_IMMOBILIER
-
-        # Détecteur CLOTURE_EXERCICE (relevés bancaires avec transactions réelles)
-        if any(kw in body for kw in ['cloture', 'clôture', 'releve bancaire', 'relevé bancaire', 'reevaluation', 'réévaluation']):
+        
+        # Détecteur CLOTURE_EXERCICE
+        if any(kw in body for kw in ['cloture', 'clôture', 'amortissement_credit', 'reevaluation', 'réévaluation']):
             return TypeEvenement.CLOTURE_EXERCICE
-
-        # Note: "amortissement" seul ne suffit plus pour CLOTURE_EXERCICE (trop ambigu)
-        # On cherche maintenant "relevé" + contexte de paiements
-        if any(f['filename'].lower().endswith('.pdf') and
-               any(kw in f['filename'].lower() for kw in ['releve', 'relevé', 'reevaluation', 'cloture'])
+        
+        if any(f['filename'].lower().endswith('.pdf') and any(kw in f['filename'].lower() 
+               for kw in ['amortissement', 'credit', 'reevaluation', 'cloture'])
                for f in attachments if 'filename' in f):
             return TypeEvenement.CLOTURE_EXERCICE
-
+        
         # Détecteur INIT_BILAN_2023
         if any(kw in body for kw in ['bilan 2023', 'bilan_2023', 'bilan initial', 'initialisation comptable']):
             return TypeEvenement.INIT_BILAN_2023
-
+        
         if any(f['filename'].lower().endswith('.pdf') and 'bilan' in f['filename'].lower() and '2023' in f['filename'].lower()
                for f in attachments if 'filename' in f):
             return TypeEvenement.INIT_BILAN_2023
-
+        
         # Détecteur EVENEMENT_SIMPLE (loyer, charge, etc.)
-        if any(kw in body for kw in ['loyer', 'location', 'paiement', 'charge', 'entretien',
+        if any(kw in body for kw in ['loyer', 'location', 'paiement', 'charge', 'entretien', 
                                        'réparation', 'assurance', 'taxe', 'syndic', '€', 'eur']):
             return TypeEvenement.EVENEMENT_SIMPLE
-
+        
         return TypeEvenement.UNKNOWN
 
 
@@ -400,65 +386,108 @@ LIGNE: num|date|total|interets|capital|reste
 
         pret_info = {}
         echeances = []
+        erreurs_parsing = []
+
+        # Helper pour conversion float sécurisée
+        def safe_float(value_str: str, field_name: str) -> float:
+            """Convertit string en float avec gestion d'erreurs"""
+            try:
+                cleaned = value_str.strip().replace(' ', '').replace(',', '.')
+                if not cleaned:
+                    erreurs_parsing.append(f"{field_name}: chaîne vide")
+                    return 0.0
+                return float(cleaned)
+            except (ValueError, AttributeError) as e:
+                erreurs_parsing.append(f"{field_name}: '{value_str}' invalide ({e})")
+                return 0.0
 
         # ═══════════════════════════════════════════════════════════════════
         # EXTRACTION INFOS CONTRAT
         # ═══════════════════════════════════════════════════════════════════
 
-        # Numéro prêt (patterns: 5009736BRM0911AH, etc.)
-        match = re.search(r'(?:n°|num|numero|contract|prêt|pret)\s*:?\s*([A-Z0-9]{10,20})', texte, re.IGNORECASE)
+        # Numéro prêt (patterns: 5009736BRM0911AH, N° DU PRET : 5009736BRLZE11AQ)
+        match = re.search(r'(?:N°\s+DU\s+PRET|n°|num|numero|contract|prêt|pret)\s*:?\s*([A-Z0-9]{10,20})', texte, re.IGNORECASE)
         if match:
             pret_info['numero_pret'] = match.group(1)
+        else:
+            erreurs_parsing.append("Numéro de prêt non trouvé")
 
-        # Banque
-        match = re.search(r'(?:banque|bank|organisme)\s*:?\s*([A-Z]{2,10})', texte, re.IGNORECASE)
-        if match:
-            pret_info['banque'] = match.group(1).upper()
+        # Banque (LCL détecté = CREDIT_LYONNAIS)
+        if 'LCL' in texte.upper():
+            pret_info['banque'] = 'CREDIT_LYONNAIS'
+        else:
+            match = re.search(r'(?:banque|bank|organisme)\s*:?\s*([A-ZÀ-Ü\s]{2,30})', texte, re.IGNORECASE)
+            if match:
+                pret_info['banque'] = match.group(1).strip().upper()
+            else:
+                pret_info['banque'] = 'CREDIT_LYONNAIS'  # Défaut
 
-        # Montant initial (patterns: 250000, 250.000, 250 000)
-        match = re.search(r'(?:montant|capital|initial)\s*:?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
+        # Montant initial (patterns: EUR 250 000,00 ou MONTANT TOTAL DEBLOQUE : EUR 250 000,00)
+        match = re.search(r'(?:MONTANT\s+TOTAL\s+DEBLOQUE|MONTANT\s+DU\s+PRET|montant|capital|initial)\s*:?\s*(?:EUR)?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
         if match:
-            montant_str = match.group(1).replace(' ', '').replace(',', '.')
-            pret_info['montant_initial'] = float(montant_str)
+            pret_info['montant_initial'] = safe_float(match.group(1), 'montant_initial')
+        else:
+            erreurs_parsing.append("Montant initial non trouvé")
+            pret_info['montant_initial'] = 0.0
 
-        # Taux annuel (patterns: 1.05%, 0.0105, etc.)
-        match = re.search(r'(?:taux|rate)\s*:?\s*([\d.,]+)\s*%?', texte, re.IGNORECASE)
+        # Taux annuel (patterns: TAUX DEBITEUR EN COURS : 1,240000 %)
+        match = re.search(r'(?:TAUX\s+DEBITEUR|taux|rate)\s*(?:EN\s+COURS)?\s*:?\s*([\d.,]+)\s*%?', texte, re.IGNORECASE)
         if match:
-            taux_str = match.group(1).replace(',', '.')
-            taux = float(taux_str)
+            taux = safe_float(match.group(1), 'taux_annuel')
             # Si > 1, c'est un pourcentage → diviser par 100
             if taux > 1:
                 taux = taux / 100
             pret_info['taux_annuel'] = taux
+        else:
+            erreurs_parsing.append("Taux annuel non trouvé")
+            pret_info['taux_annuel'] = 0.0
 
-        # Durée (patterns: 240 mois, 20 ans)
-        match = re.search(r'(?:durée|duree|duration)\s*:?\s*(\d+)\s*(?:mois|months?)', texte, re.IGNORECASE)
+        # Durée (patterns: DUREE TOTALE DU PRET : 216 MOIS)
+        match = re.search(r'(?:DUREE\s+TOTALE|durée|duree|duration)\s*(?:DU\s+PRET)?\s*:?\s*(\d+)\s*(?:mois|months?)', texte, re.IGNORECASE)
         if match:
             pret_info['duree_mois'] = int(match.group(1))
         else:
-            match = re.search(r'(?:durée|duree|duration)\s*:?\s*(\d+)\s*(?:ans?|years?)', texte, re.IGNORECASE)
+            match = re.search(r'(?:DUREE\s+TOTALE|durée|duree|duration)\s*(?:DU\s+PRET)?\s*:?\s*(\d+)\s*(?:ans?|years?)', texte, re.IGNORECASE)
             if match:
                 pret_info['duree_mois'] = int(match.group(1)) * 12
+            else:
+                erreurs_parsing.append("Durée non trouvée")
+                pret_info['duree_mois'] = 0
 
-        # Dates (patterns: 15/04/2023, 2023-04-15)
-        match = re.search(r'(?:début|debut|start|date.*début)\s*:?\s*(\d{2}[/-]\d{2}[/-]\d{4})', texte, re.IGNORECASE)
+        # Dates (patterns: 15.04.2022, 15/04/2023, 15-04-2023)
+        match = re.search(r'(?:DATE\s+DE\s+DEPART|début|debut|start|date.*début)\s*(?:DU\s+PRET)?\s*:?\s*(\d{2}[/.\-]\d{2}[/.\-]\d{4})', texte, re.IGNORECASE)
         if match:
-            date_str = match.group(1).replace('/', '-')
+            date_str = match.group(1).replace('/', '-').replace('.', '-')
             # Convertir DD-MM-YYYY → YYYY-MM-DD
             parts = date_str.split('-')
             if len(parts[0]) == 2:
                 pret_info['date_debut'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
             else:
                 pret_info['date_debut'] = date_str
+        else:
+            erreurs_parsing.append("Date début non trouvée")
 
-        match = re.search(r'(?:fin|end|date.*fin)\s*:?\s*(\d{2}[/-]\d{2}[/-]\d{4})', texte, re.IGNORECASE)
+        match = re.search(r'(?:fin|end|date.*fin)\s*:?\s*(\d{2}[/.\-]\d{2}[/.\-]\d{4})', texte, re.IGNORECASE)
         if match:
-            date_str = match.group(1).replace('/', '-')
+            date_str = match.group(1).replace('/', '-').replace('.', '-')
             parts = date_str.split('-')
             if len(parts[0]) == 2:
                 pret_info['date_fin'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
             else:
                 pret_info['date_fin'] = date_str
+        else:
+            # Calculer date fin si date début + durée disponibles
+            if 'date_debut' in pret_info and pret_info.get('duree_mois', 0) > 0:
+                try:
+                    from dateutil.relativedelta import relativedelta
+                    from datetime import datetime
+                    dt_debut = datetime.strptime(pret_info['date_debut'], '%Y-%m-%d')
+                    dt_fin = dt_debut + relativedelta(months=pret_info['duree_mois'])
+                    pret_info['date_fin'] = dt_fin.strftime('%Y-%m-%d')
+                except Exception:
+                    erreurs_parsing.append("Date fin non trouvée et calcul échoué")
+            else:
+                erreurs_parsing.append("Date fin non trouvée")
 
         # Type amortissement
         if 'franchise' in texte.lower():
@@ -469,44 +498,59 @@ LIGNE: num|date|total|interets|capital|reste
         # Échéance mensuelle
         match = re.search(r'(?:échéance|echeance|mensualité|mensualite)\s*:?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
         if match:
-            montant_str = match.group(1).replace(' ', '').replace(',', '.')
-            pret_info['echeance_mensuelle'] = float(montant_str)
+            pret_info['echeance_mensuelle'] = safe_float(match.group(1), 'echeance_mensuelle')
 
         # ═════════════════════════════════════════════════════════════════
         # EXTRACTION ÉCHÉANCES LIGNE PAR LIGNE
         # ═══════════════════════════════════════════════════════════════════
 
-        # Pattern: N° | Date | Montant | Intérêts | Capital | Reste
-        # Exemple: "1   15/05/2023   1166.59   218.75   947.84   249052.16"
-        pattern = r'(\d{1,3})\s+(\d{2}[/-]\d{2}[/-]\d{4})\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)'
+        # Pattern LCL: "014 15/05/2023    0,00    258,33    0,00    0,00    258,33    250 000,00..."
+        # Format: Num | Date | Col1 | Intérêts | Col3 | Capital | Total | Capital Restant | Cumul | Total+Cumul
+        pattern_ligne = r'(\d{1,3})\s+(\d{2}/\d{2}/\d{4})\s+(.+)'
 
-        matches = re.finditer(pattern, texte)
+        matches = re.finditer(pattern_ligne, texte, re.MULTILINE)
         for match in matches:
             try:
                 num = int(match.group(1))
-                date_str = match.group(2).replace('/', '-')
-                # Convertir DD-MM-YYYY → YYYY-MM-DD
-                parts = date_str.split('-')
-                if len(parts[0]) == 2:
+                date_str = match.group(2)
+                colonnes_str = match.group(3)
+
+                # Convertir date DD/MM/YYYY → YYYY-MM-DD
+                parts = date_str.split('/')
+                if len(parts) == 3 and len(parts[0]) == 2:
                     date = f"{parts[2]}-{parts[1]}-{parts[0]}"
                 else:
-                    date = date_str
+                    date = date_str.replace('/', '-')
 
-                montant_total = float(match.group(3).replace(',', '.'))
-                montant_interet = float(match.group(4).replace(',', '.'))
-                montant_capital = float(match.group(5).replace(',', '.'))
-                capital_restant = float(match.group(6).replace(',', '.'))
+                # Splitter colonnes par espaces multiples (2+)
+                colonnes = re.split(r'\s{2,}', colonnes_str.strip())
 
-                echeances.append({
-                    "numero_echeance": num,
-                    "date_echeance": date,
-                    "montant_total": montant_total,
-                    "montant_interet": montant_interet,
-                    "montant_capital": montant_capital,
-                    "capital_restant_du": capital_restant
-                })
-            except (ValueError, IndexError):
+                # Format LCL attendu : 8+ colonnes
+                # [0]=0,00  [1]=intérêts  [2]=0,00  [3]=capital  [4]=total  [5]=reste_dû  [6]=cumul  [7]=total+cumul
+                if len(colonnes) >= 6:
+                    montant_interet = safe_float(colonnes[1] if len(colonnes) > 1 else '0', f'ligne_{num}_interet')
+                    montant_capital = safe_float(colonnes[3] if len(colonnes) > 3 else '0', f'ligne_{num}_capital')
+                    montant_total = safe_float(colonnes[4] if len(colonnes) > 4 else '0', f'ligne_{num}_total')
+                    capital_restant = safe_float(colonnes[5] if len(colonnes) > 5 else '0', f'ligne_{num}_reste')
+
+                    echeances.append({
+                        "numero_echeance": num,
+                        "date_echeance": date,
+                        "montant_total": montant_total,
+                        "montant_interet": montant_interet,
+                        "montant_capital": montant_capital,
+                        "capital_restant_du": capital_restant
+                    })
+                else:
+                    erreurs_parsing.append(f"Ligne {num}: Format colonne invalide ({len(colonnes)} cols)")
+
+            except (ValueError, IndexError) as e:
+                erreurs_parsing.append(f"Ligne échéance {num if 'num' in locals() else '?'}: {e}")
                 continue
+
+        # Validation minimale
+        if erreurs_parsing:
+            pret_info['_erreurs_parsing'] = erreurs_parsing[:5]  # Max 5 pour pas surcharger
 
         return {
             "pret": pret_info,
