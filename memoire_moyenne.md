@@ -1,52 +1,52 @@
-# Mémoire Moyenne - Développements 27-29/10/2025
+# Mémoire Moyenne - 27-30/10/2025 (Production M2 Semaine 1)
 
-## ✅ MODULE 2 - COMPTABILITÉ PRÊTS IMMOBILIERS (Production J3)
+## ✅ MODULE 2 - COMPTABILITÉ PRÊTS (Déploiement 27 Oct)
+**Status:** Production stable jour 4 (27-30 oct)  
+**Reliability:** 100% (457 échéances ingérées, 0 perte)
 
-**Déploiement:** 27 octobre 2025  
-**Production confirmée:** 29 octobre (jour 3 stable)  
-**Dataset:** 457 échéances ingérées (2 prêts LCL complets)
+### Pipeline d'Ingestion
+1. **Entrée:** PDFs LCL tableaux d'amortissement multi-colonnes
+2. **Parsing:** Claude JSON extraction (remplace regex pour robustesse)
+3. **Validation:** Token check + structure detection (franchises/pics)
+4. **Stockage:** PostgreSQL (37 colonnes, table propositions_en_attente)
+5. **Output:** JSON structuré avec métadonnées
 
-### Architecture Pipeline d'Ingestion
-- **Entrée:** PDFs LCL tableaux d'amortissement multi-colonnes
-- **Étapes:** OCR → Parsing JSON (Claude) → Validation token → Stockage BD
-- **Fiabilité:** 100% sur dataset opérationnel
-- **Détection automatique:** Franchises (totales/partielles), amortissements variables, pics finaux
+### Deux Prêts Structurellement Distincts
+**BRM0911AH (Linéaire)**
+- Capital: 250,000€ @ 1.050% fixe
+- Amortissement: 1,166.59€/mois régulier
+- Durée: 20 ans (fin 15/04/2043)
+- Intérêts: 29,981.41€
+- Prévisibilité: Haute
 
-### Deux Prêts Structurellement Différents
+**BRLZE11AQ (3 Phases - Alerte)**
+- Capital: 250,000€ @ 1.240% fixe
+- Phase 1: Franchise 12m (passée 04/2022-04/2023)
+- Phase 2: Intérêts seuls 258.33€/mois (05/2023-03/2040)
+- **Phase 3: Pic ultime 253,142.43€ (15/04/2040)** ← CRITIQUE
+- Intérêts: 55,583.42€
+- Prévisibilité: Basse (pic final concentré)
 
-**BRM0911AH - Remboursement Linéaire**
-- 250k€ @ 1.050% = 1,166.59€/mois régulier
-- Fin 15/04/2043 (20 ans)
-- Capital restant stable prévisible
-- Charge intérêts: 29,981.41€
+## ⚠️ PRIORITÉ 1 - PIC TRÉSORERIE 2040
+**Date:** 15/04/2040 (15 ans 6 mois)  
+**Montant:** 253,142.43€ (50.6% capital original BRLZE11AQ)  
+**Action requise:** Module 3 doit croiser loyers nets cumulés 2025-2040  
+**Urgence:** Planification long-terme indispensable
 
-**BRLZE11AQ - Structure à 3 Phases**
-- Phase 1: Franchise 12m (passée)
-- Phase 2: Intérêts seuls 203m (05/2023→03/2040)
-- **Phase 3: Pic ultime 253,142.43€ (15/04/2040)** = Trésorerie critique
-- Charge intérêts: 55,583.42€
+## 🔧 ÉVOLUTIONS RÉCENTES (GIT)
+- **Commit 4e8b3c9:** JSON parsing robustness + debug logging amélioré
+- **Commit 1cbd863:** Réécriture complète regex → Claude JSON (fiabilité +)
+- **Commit 1bb6a21:** Patterns regex LCL corrigés format réel
+- **Commit 8c26c1b:** PRET_IMMOBILIER enum + detection module
 
-### Alertes Prioritaires
+## 📊 CHARGES FINANCIÈRES CONSOLIDÉES
+- **Capital:** 500,000€
+- **Intérêts totaux:** 85,564.83€ (17.1% du capital)
+- **Déductibilité fiscale:** À valider SCI (théoriquement oui)
+- **Flux:** Régulier BRM + irrégulier BRLZE (pic 2040)
 
-**1. Pic Trésorerie 2040**
-- Date fixe: 15/04/2040
-- Montant: 253,142.43€
-- Impact: Planification long-terme indispensable
-- Action: Module 3 doit croiser loyers cumulés 2025-2040
-
-**2. Endettement & Intérêts**
-- Capital total: 500,000€
-- Intérêts totaux: 85,564.83€ = 17.1% du capital
-- Fiscalité: Potentiellement déductibles en SCI
-
-### Continuité Technique
-- Réveils: 47/47 = 100% uptime stable
-- Module 1: Stable depuis 24 oct (5 jours)
-- Architecture V6.0: Éprouvée 3 jours production
-- 0 régressions détectées
-
-## 📋 Roadmap Module 3 (Q4 2025)
-- Alertes trésorerie automatisées (pic 2040)
-- Optimisation fiscale (intérêts déductibles)
-- Modélisation loyers vs pic d'amortissement
-- Veille juridique SCI
+## 🎯 ROADMAP M3 (Q4 2025)
+1. **Alertes automatiques:** Pic 2040 + seuils trésorerie
+2. **Optimisation fiscale:** Intérêts déductibles SCI
+3. **Modélisation:** Loyers vs charges debt-service
+4. **Veille juridique:** Changements réglementation SCI
