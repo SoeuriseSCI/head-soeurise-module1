@@ -59,7 +59,10 @@ class PretsManager:
                 numero_pret=numero_pret
             ).first()
 
+            print(f"[PRETS_MGR] Recherche prêt existant '{numero_pret}': {'TROUVÉ' if pret_existant else 'NON TROUVÉ'}", flush=True)
+
             if pret_existant:
+                print(f"[PRETS_MGR] Prêt existant ID={pret_existant.id}, suppression en cours...", flush=True)
                 # Prêt existe déjà - vérifier si échéances sont complètes
                 nb_echeances_existantes = self.session.query(EcheancePret).filter_by(
                     pret_id=pret_existant.id
@@ -77,10 +80,12 @@ class PretsManager:
                     return True, f"Prêt {numero_pret} déjà complet en BD ({nb_echeances_existantes} échéances)", pret_existant.id
                 else:
                     # Ingestion partielle précédente → supprimer et réinsérer
+                    print(f"[PRETS_MGR] Ingestion partielle ({nb_echeances_existantes}/{nb_echeances_attendues}), suppression et réinsertion...", flush=True)
                     # Utiliser synchronize_session=False pour éviter erreurs
-                    self.session.query(EcheancePret).filter_by(pret_id=pret_existant.id).delete(synchronize_session=False)
-                    self.session.query(PretImmobilier).filter_by(id=pret_existant.id).delete(synchronize_session=False)
+                    nb_echeances_supprimees = self.session.query(EcheancePret).filter_by(pret_id=pret_existant.id).delete(synchronize_session=False)
+                    nb_prets_supprimes = self.session.query(PretImmobilier).filter_by(id=pret_existant.id).delete(synchronize_session=False)
                     self.session.flush()
+                    print(f"[PRETS_MGR] Supprimés: {nb_echeances_supprimees} échéances, {nb_prets_supprimes} prêt(s)", flush=True)
                     # Continuer avec nouvelle insertion ci-dessous
 
             # Créer PretImmobilier
