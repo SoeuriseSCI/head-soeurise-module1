@@ -114,6 +114,15 @@ class PretsManager:
             self.session.flush()  # Pour obtenir pret.id
             print(f"[PRETS_MGR] Prêt créé avec ID={pret.id}", flush=True)
 
+            # CRITIQUE: Nettoyer les échéances orphelines qui pourraient exister avec ce pret_id
+            # (cas où un prêt précédent a été rollback mais ses échéances sont restées)
+            nb_orphelines = self.session.query(EcheancePret).filter_by(pret_id=pret.id).count()
+            if nb_orphelines > 0:
+                print(f"[PRETS_MGR] ALERTE: {nb_orphelines} échéances orphelines détectées pour pret_id={pret.id}, suppression...", flush=True)
+                self.session.query(EcheancePret).filter_by(pret_id=pret.id).delete(synchronize_session=False)
+                self.session.flush()
+                print(f"[PRETS_MGR] Échéances orphelines supprimées", flush=True)
+
             # Créer EcheancePret pour chaque ligne
             nb_echeances = 0
             for ech_data in echeances_data:
