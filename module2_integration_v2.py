@@ -177,6 +177,8 @@ class IntegratorModule2:
                                 continue
 
                             # Ingérer en BD
+                            print(f"[DEBUG] Ingestion prêt {pret_info.get('numero_pret')} avec {len(echeances_data)} échéances")
+
                             success, msg, pret_id = self.prets_manager.ingest_tableau_pret(
                                 pret_data=pret_info,
                                 echeances_data=echeances_data,
@@ -184,10 +186,14 @@ class IntegratorModule2:
                                 source_document=attachment.get('filename')
                             )
 
+                            print(f"[DEBUG] Résultat ingestion: success={success}, msg={msg}, pret_id={pret_id}")
+
                             if success:
                                 prets_ingeres += 1
                                 echeances_totales += len(echeances_data)
+                                print(f"[DEBUG] SUCCÈS: {prets_ingeres} prêt(s), {echeances_totales} échéances")
                             else:
+                                print(f"[DEBUG] ÉCHEC: {msg}")
                                 self.erreurs.append(msg)
 
                         # Résultat ingestion

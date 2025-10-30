@@ -104,8 +104,10 @@ class PretsManager:
                 actif=True
             )
 
+            print(f"[PRETS_MGR] Création prêt {numero_pret}")
             self.session.add(pret)
             self.session.flush()  # Pour obtenir pret.id
+            print(f"[PRETS_MGR] Prêt créé avec ID={pret.id}")
 
             # Créer EcheancePret pour chaque ligne
             nb_echeances = 0
@@ -124,16 +126,20 @@ class PretsManager:
                 self.session.add(echeance)
                 nb_echeances += 1
 
+            print(f"[PRETS_MGR] {nb_echeances} échéances créées, commit en cours...")
             self.session.commit()
+            print(f"[PRETS_MGR] COMMIT RÉUSSI pour prêt {numero_pret}")
 
             message = f"Prêt {numero_pret} ingéré : {nb_echeances} échéances stockées"
             return True, message, pret.id
 
         except IntegrityError as e:
+            print(f"[PRETS_MGR] ERREUR IntegrityError: {str(e)[:200]}")
             self.session.rollback()
             return False, f"Erreur intégrité BD: {str(e)[:200]}", None
 
         except Exception as e:
+            print(f"[PRETS_MGR] ERREUR Exception: {str(e)[:200]}")
             self.session.rollback()
             return False, f"Erreur ingestion: {str(e)[:200]}", None
 
