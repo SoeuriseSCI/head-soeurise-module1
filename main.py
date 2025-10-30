@@ -1206,10 +1206,21 @@ if __name__ == "__main__":
     # ════════════════════════════════════════════════════════════════════════════
 
     init_git_repo()
-    reveil_quotidien()
-    
+
+    # Lancer le réveil initial en arrière-plan (non-bloquant)
+    # IMPORTANT: Ne pas bloquer le démarrage de Flask !
+    def reveil_initial():
+        import time
+        time.sleep(5)  # Attendre que Flask démarre
+        log_critical("REVEIL_INITIAL_START", "Réveil initial démarré")
+        reveil_quotidien()
+
+    reveil_thread = threading.Thread(target=reveil_initial, daemon=True)
+    reveil_thread.start()
+
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
-    
+
     port = int(os.environ.get("PORT", 10000))
+    log_critical("FLASK_START", f"Démarrage Flask sur port {port}")
     app.run(host='0.0.0.0', port=port)
