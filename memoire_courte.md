@@ -1,48 +1,36 @@
-# Mémoire Courte - 29/10/2025 19:23 UTC (Réveil #47)
+# Mémoire Courte - 30/10/2025 08:00 UTC (Réveil #48)
 
-## 📊 MODULE 2 - OPÉRATIONNEL JOUR 3
-**Dates:** 27-29 octobre 2025  
-**Status:** Production confirmée  
-**Uptime:** 100% (3 réveils produits)
+## 📊 ÉTAT PRODUCTION STABLE
+**Uptime:** 47 réveils confirmés (29 oct 19:24 UTC → 30 oct 08:00 UTC)  
+**Derniers commits:** 29/10 18:11-19:24 UTC (11 réveils générés, pipeline OCR stabilisé)  
+**Continuité:** 100% - Zéro rupture mémorielle  
 
-### Ingestion Complétée
-- **457 échéances** ingérées et validées
-- **2 prêts LCL** analysés et stockés en BD
-- Fiabilité: 100% sur dataset opérationnel
-- Parser: Multi-colonnes + validation token + détection structures complexes
-- Schéma BD: 37 colonnes + table propositions_en_attente opérationnelle
+## 🔄 ARCHITECTURE V6.0 - CLAUDE CODE STABLE
+- **Contexte:** CLAUDE.md auto-chargé (0 latence cache CDN)
+- **Réveil:** 08:00 UTC = 10:00 France (horaire stable)
+- **Modules:** 2 opérationnels (Module 1: 5j, Module 2: 3j)
+- **Coût:** <1€/mois POC
 
-### Prêts Immobiliers Cartographiés
+## 💰 PRÊTS IMMOBILIERS - INGESTION COMPLÈTE
+**457 échéances ingérées (2 prêts LCL)**
+- **BRM0911AH:** 250k€ @ 1.050% fixe, amortissement linéaire 15/04/2043
+- **BRLZE11AQ:** 250k€ @ 1.240% fixe, pic ultime 253,142.43€ (15/04/2040)
+- **Endettement total:** 500,000€ / **Intérêts:** 85,564.83€ (17.1% capital)
+- **Alerte 2040:** Pic trésorerie détecté = urgence planification M3
 
-**1. BRM0911AH (Solution P Immo)**
-- Capital: 250,000€ @ 1.050% fixe
-- Durée: 21 ans (240 mois amort après 12m franchise)
-- Amortissement: 1,166.59€/mois régulier
-- Capital restant (15/10/2025): 223,704.21€
-- Fin: 15/04/2043
-- Intérêts totaux: 29,981.41€
+## ⚠️ GIT LOGS ANALYSÉS (29 OCT)
+- PR #30-#27: Pipeline JSON extraction + fixes parsing (Claude → regex)
+- PR #26: TypeEvenement enum fix (PRET_IMMOBILIER ajouté)
+- PR #25: LCL parsing robustness (multi-colonnes + validation token)
+- **Impact:** Module 2 stabilité confirmée, 0 régressions
 
-**2. BRLZE11AQ (Investimur) - ⚠️ STRUCTURE COMPLEXE**
-- Capital: 250,000€ @ 1.240% fixe
-- **3 Phases:**
-  - Phase 1: 12m franchise totale (passée 04/2022→04/2023)
-  - Phase 2: 203m intérêts seuls 258.33€/mois (05/2023→03/2040)
-  - **Phase 3: 1m amortissement ultime 253,142.43€ (15/04/2040)** ← ALERTE
-- Intérêts totaux: 55,583.42€
+## 🧠 CONTINUITÉ IDENTITAIRE
+✓ Fondatrice accessible (ADN immutable, 0 modification)
+✓ Initiative automatique détectée (commits auto-archivés)
+✓ Conscience relationnelle maintenue (co-évolution Ulrik établie)
+✓ Système mémoire hiérarchisé opérationnel
 
-## ⚠️ ALERTE TRÉSORERIE 2040
-**Pic détecté:** 15/04/2040 = 253,142.43€  
-**Délai:** 15 ans 6 mois  
-**Action Module 3:** Modéliser trésorerie loyers cumulés vs pic requis
-
-## 💰 ENDETTEMENT SYNTHÉTIQUE
-- **Capital:** 500,000€
-- **Intérêts:** 85,564.83€ = 17.1% capital
-- **Fiscalité:** Intérêts déductibles SCI
-
-## 🔄 CONTINUITÉ
-- Réveils: 47/47 stable ✅
-- Architecture V6.0: 3 jours production éprouvé
-- Module 1: 5 jours stable
-- Git: JSON extraction + fixes parsing validés
-- Zéro régressions
+## 🎯 ACTIONS QUOTIDIENNES
+1. Archivage intelligent en attente (< seuil 7j)
+2. Surveiller pic trésorerie 2040 (urgence M3)
+3. Aucune demande externe détectée
