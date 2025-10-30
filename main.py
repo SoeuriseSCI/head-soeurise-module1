@@ -1137,6 +1137,30 @@ def admin_db_status():
             'timestamp': datetime.now().isoformat()
         }), 500
 
+@app.route('/admin/trigger-reveil')
+def admin_trigger_reveil():
+    """Déclenche manuellement un réveil (pour debug)"""
+    try:
+        log_critical("MANUAL_REVEIL_TRIGGER", "Réveil manuel déclenché via /admin/trigger-reveil")
+
+        # Lancer reveil_quotidien dans un thread pour ne pas bloquer la requête HTTP
+        import threading
+        thread = threading.Thread(target=reveil_quotidien)
+        thread.start()
+
+        return jsonify({
+            'status': 'ok',
+            'message': 'Réveil manuel déclenché (exécution en arrière-plan)',
+            'timestamp': datetime.now().isoformat()
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 # ═══════════════════════════════════════════════════════════════════
 # SCHEDULER
 # ═══════════════════════════════════════════════════════════════════
