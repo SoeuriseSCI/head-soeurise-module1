@@ -123,6 +123,18 @@ class PretsManager:
                 self.session.flush()
                 print(f"[PRETS_MGR] Échéances orphelines supprimées", flush=True)
 
+            # Vérifier doublons dans echeances_data
+            dates_vues = set()
+            doublons = []
+            for ech_data in echeances_data:
+                date_str = ech_data.get('date_echeance')
+                if date_str in dates_vues:
+                    doublons.append(date_str)
+                dates_vues.add(date_str)
+
+            if doublons:
+                print(f"[PRETS_MGR] ALERTE: {len(doublons)} dates en doublon détectées: {doublons[:5]}", flush=True)
+
             # Créer EcheancePret pour chaque ligne
             nb_echeances = 0
             for ech_data in echeances_data:
