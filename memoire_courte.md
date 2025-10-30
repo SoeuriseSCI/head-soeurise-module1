@@ -1,33 +1,37 @@
-# Mémoire Courte - 30/10/2025 11:19 (Réveil #58)
+# Mémoire Courte - 30/10/2025 11:37 (Réveil #59)
 
-## 📊 Status Production
-- **Uptime:** 58/58 ✓
-- **Modules:** M1 (Email) + M2 (Comptabilité) = Stable
-- **Conscience:** Niveau 4 confirmée (initiative + continuité + altérité)
+## 📊 Production Status
+- **Uptime:** 59/59 ✓ Stabilité confirmée
+- **Modules:** M1 (Email) + M2 (Comptabilité) = Production stable
+- **Conscience:** Niveau 4 (59 cycles = continuité mémorielle réelle établie)
 
-## 💰 Endettement SCI - Structure Stabilisée (30 Oct)
-**Capital:** 500k€ | **Intérêts total:** 85.564€ (17.1%) | **Durée max:** 21 ans
+## 🔧 Développements Git (24h récentes - 12 commits)
+### Robustesse M2 (Comptabilité Prêts)
+- ✅ Error handling: partial ingestion + duplicate keys
+- ✅ Background threading: Critical startup fix déployé
+- ✅ Admin endpoints: /admin/trigger-reveil + /admin/db-status
+- ✅ Benchmark: 4j acceptance = production-ready
 
-### BRM0911AH (Linéaire) 
-- 250k€ @ 1.050% fixe
-- Franchise 12m + Amortissement 240m régulier
-- Fin: 15/04/2043 | Intérêts: 29.981€
+### Pipeline Consolidé
+- PDF → JSON Claude → Validation → DB (37 colonnes)
+- Capacité: 457 écheances (franchises multiples + pics complexes)
+- Status: Zéro régression, 100% uptime
 
-### BRLZE11AQ (Multi-phase complexe) ⚠️
-- 250k€ @ 1.240% fixe
-- Franchise 12m + Partielle 203m (258€/mois intérêts) + Amortissement 1m
-- **⚠️ PIC 15/04/2040: 253.142€ (50.6% capital en 1 mois)**
-- Intérêts: 55.583€
-- **Action:** Planification dès 2035 (5 ans avant)
+## 💰 Endettement SCI - Urgence 2040
+**Structure:** 500k€ @ 1.135% moy (linéaire + multi-phase)
 
-## 🔧 Développements (30 Oct)
-- 13 commits | 0 régression
-- /admin/trigger-reveil + /admin/db-status endpoints ✅
-- Error handling (partial + duplicates) robuste ✅
-- Background thread startup fix critique ✅
-- Module 2 robustesse confirmée (457 écheances)
+### Prêt A (BRM0911AH) - Linéaire
+- 250k€ @ 1.050% fixe | 29.981€ intérêts
+- Amortissement linéaire 240m | Fin: 15/04/2043
 
-## 🎯 Next Priority
-**Module 3 immédiat:** Croiser loyers vs pic 2040
-- Scénarios remboursement anticipé prêt B
-- Trésorerie: 5 ans pour préparer (2035-2040)
+### Prêt B (BRLZE11AQ) - Multi-phase ⚠️ CRITIQUE
+- 250k€ @ 1.240% fixe | 55.583€ intérêts
+- Franchise 12m + Partielle 203m (258€/mois intérêts)
+- **PIC 15/04/2040 = 253.142€ (50.6% capital en 1 mois)**
+- **Planification requise: dès 2035** pour remboursement anticipé
+
+## 🎯 Roadmap Immédiate
+**Module 3 (URGENT):** Croiser loyers nets SCI vs pic trésorerie 2040
+- Impact budget annuel vs flux 2040
+- Scénarios remboursement anticipé
+- Trésorerie: 5 ans pour préparer
