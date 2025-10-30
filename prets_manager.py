@@ -65,15 +65,22 @@ class PretsManager:
                     pret_id=pret_existant.id
                 ).count()
 
-                nb_echeances_attendues = len(echeances_data)
+                nb_echeances_attendues = len(echeances_data) if echeances_data else 0
 
-                if nb_echeances_existantes >= nb_echeances_attendues:
+                # Valider que les valeurs ne sont pas None
+                if nb_echeances_existantes is None:
+                    nb_echeances_existantes = 0
+                if nb_echeances_attendues is None:
+                    nb_echeances_attendues = 0
+
+                if nb_echeances_existantes >= nb_echeances_attendues and nb_echeances_attendues > 0:
                     return True, f"Prêt {numero_pret} déjà complet en BD ({nb_echeances_existantes} échéances)", pret_existant.id
                 else:
                     # Ingestion partielle précédente → supprimer et réinsérer
-                    self.session.query(EcheancePret).filter_by(pret_id=pret_existant.id).delete()
-                    self.session.query(PretImmobilier).filter_by(id=pret_existant.id).delete()
-                    self.session.commit()
+                    # Utiliser synchronize_session=False pour éviter erreurs
+                    self.session.query(EcheancePret).filter_by(pret_id=pret_existant.id).delete(synchronize_session=False)
+                    self.session.query(PretImmobilier).filter_by(id=pret_existant.id).delete(synchronize_session=False)
+                    self.session.flush()
                     # Continuer avec nouvelle insertion ci-dessous
 
             # Créer PretImmobilier

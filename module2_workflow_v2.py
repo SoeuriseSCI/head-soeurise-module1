@@ -434,8 +434,19 @@ IMPORTANT: Limite-toi aux 24 premières échéances (les autres seront calculée
         contract_data = data['pret']
         echeances_extraites = data.get('echeances', [])
 
+        # Valider duree_mois (éviter NoneType comparison)
+        duree_mois = contract_data.get('duree_mois', 0)
+        if not duree_mois or duree_mois <= 0:
+            return {
+                "pret": {
+                    **contract_data,
+                    "_erreur": f"duree_mois invalide: {duree_mois}"
+                },
+                "echeances": []
+            }
+
         # Générer les échéances restantes (mois 25+)
-        if len(echeances_extraites) < contract_data['duree_mois']:
+        if len(echeances_extraites) < duree_mois:
             echeances_generees = self._generer_echeances(
                 contract_data,
                 start_month=len(echeances_extraites) + 1,
