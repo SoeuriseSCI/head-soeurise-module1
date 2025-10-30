@@ -446,12 +446,19 @@ IMPORTANT: Limite-toi aux 24 premières échéances (les autres seront calculée
             }
 
         # Générer les échéances restantes (mois 25+)
+        print(f"[PARSING] Échéances extraites: {len(echeances_extraites)}, duree_mois: {duree_mois}", flush=True)
+        if len(echeances_extraites) > 0:
+            print(f"[PARSING] Dernière échéance extraite: {echeances_extraites[-1].get('date_echeance')}", flush=True)
+
         if len(echeances_extraites) < duree_mois:
+            start_month_calc = len(echeances_extraites) + 1
+            print(f"[PARSING] Génération depuis mois {start_month_calc} jusqu'à {duree_mois}", flush=True)
             echeances_generees = self._generer_echeances(
                 contract_data,
-                start_month=len(echeances_extraites) + 1,
+                start_month=start_month_calc,
                 echeances_precedentes=echeances_extraites
             )
+            print(f"[PARSING] Échéances générées: {len(echeances_generees)}", flush=True)
             # Combiner: extraites + générées
             echeances_completes = echeances_extraites + echeances_generees
         else:
