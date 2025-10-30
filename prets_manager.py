@@ -126,14 +126,20 @@ class PretsManager:
             # Vérifier doublons dans echeances_data
             dates_vues = set()
             doublons = []
+            echeances_dedupliquees = []
+
             for ech_data in echeances_data:
                 date_str = ech_data.get('date_echeance')
                 if date_str in dates_vues:
                     doublons.append(date_str)
-                dates_vues.add(date_str)
+                else:
+                    dates_vues.add(date_str)
+                    echeances_dedupliquees.append(ech_data)
 
             if doublons:
-                print(f"[PRETS_MGR] ALERTE: {len(doublons)} dates en doublon détectées: {doublons[:5]}", flush=True)
+                print(f"[PRETS_MGR] ALERTE: {len(doublons)} dates en doublon détectées et SUPPRIMÉES: {doublons[:5]}", flush=True)
+                print(f"[PRETS_MGR] Échéances après déduplication: {len(echeances_dedupliquees)}/{len(echeances_data)}", flush=True)
+                echeances_data = echeances_dedupliquees
 
             # Créer EcheancePret pour chaque ligne
             nb_echeances = 0
