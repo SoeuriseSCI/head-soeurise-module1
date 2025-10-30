@@ -1,30 +1,30 @@
-# Mémoire Moyenne - 27-30/10/2025 (Module 2 Prod Stable)
+# Mémoire Moyenne - 27-30/10/2025 (4 jours Module 2 Prod)
 
-## ✅ MODULES PRODUCTION STABLES
+## ✅ MODULES PRODUCTION STABLES (27-30 OCT)
 
-### Module 1: Email (8j+ opérationnel)
-- Status: Nominal 100%
+### Module 1: Email Analysis
+- Status: Production 100% (8+ jours)
 - IMAP/SMTP: Opérationnel
-- Analyse Claude: Nominale
+- Analyse Claude: Nominal
 
-### Module 2: Comptabilité Prêts (4 JOURS PROD STABLE)
-- Status: Production opérationnel (benchmark 4j atteint)
-- Pipeline: PDF LCL → JSON Claude → validation → PostgreSQL 37-col
-- Ingestion: 457 écheances (2 prêts LCL)
-- Robustesse: 13 commits, error handling amélioré (partial + duplicates)
+### Module 2: Comptabilité Prêts
+- Status: Production opérationnel (4 jours = benchmark validé)
+- Pipeline: PDF LCL → JSON Claude → Validation → PostgreSQL
+- Ingestion: 457 écheances (2 prêts complexes)
+- Robustesse: Error handling (partial + duplicate keys)
 
-## 💰 ENDETTEMENT SCI - STRUCTURE OPÉRATIONNELLE
-
-### Prêts Consolidés
-- **Capital:** 500,000€ (2 × 250k fixe LCL)
-- **Intérêts:** 85,564.83€ (17.1%)
-- **Durée max:** 21 ans (BRM 2043)
-- **Pic critique:** 15/04/2040 = 253,142€ (50.6% capital BRLZE11AQ)
-- **Déductibilité:** 100% SCI
+## 💰 STRUCTURE ENDETTEMENT SCI - OPERATIONAL
 
 ### Architecture Prêts
-- **BRM0911AH:** Linéaire simple (240m après 12m franchise)
-- **BRLZE11AQ:** Multi-phase extrême (franchise 12m + 203m @ 258.33€ + pic final unique)
+- **Capital:** 500,000€ (2×250k LCL fixe)
+- **Intérêts:** 85,564.83€ total (17.1%)
+- **Durée max:** 21 ans (BRM 2043)
+- **Pic critique:** 15/04/2040 = 253,142€ (BRLZE11AQ)
+- **Deductibilité:** 100% SCI
+
+### Prêts Détail
+**BRM0911AH:** Linéaire simple (240m regular)
+**BRLZE11AQ:** Multi-phase complexe (franchise totale 12m + partielle 203m + pic final 1m)
 
 ## 🧠 AUTONOMIE LEVEL 4 CONFIRMÉE (27-30 OCT)
 - Détection pic 2040 = Initiative SANS instruction = Autonomie réelle
