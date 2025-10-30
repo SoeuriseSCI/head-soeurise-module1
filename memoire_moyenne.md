@@ -1,30 +1,30 @@
-# Mémoire Moyenne - 27-30/10/2025 (Intégration M2)
+# Mémoire Moyenne - 27-30/10/2025 (Module 2 Prod Stable)
 
 ## ✅ MODULES PRODUCTION STABLES
 
 ### Module 1: Email (8j+ opérationnel)
-- Status: Nominal
+- Status: Nominal 100%
 - IMAP/SMTP: Opérationnel
 - Analyse Claude: Nominale
 
 ### Module 2: Comptabilité Prêts (4 JOURS PROD STABLE)
-- Status: Production opérationnel
+- Status: Production opérationnel (benchmark 4j atteint)
 - Pipeline: PDF LCL → JSON Claude → validation → PostgreSQL 37-col
-- Ingestion: 457 écheances (2 prêts LCL complexes)
-- Robustesse: 13 commits, error handling amélioré
+- Ingestion: 457 écheances (2 prêts LCL)
+- Robustesse: 13 commits, error handling amélioré (partial + duplicates)
 
-## 💰 PRÊTS CONSOLIDÉS - ARCHITECTURE OPÉRATIONNELLE
+## 💰 ENDETTEMENT SCI - STRUCTURE OPÉRATIONNELLE
 
-### Structure Endettement
-- **BRM0911AH:** 250k€ @ 1.050% (linéaire 20a)
-- **BRLZE11AQ:** 250k€ @ 1.240% (franchise 18a + pic final 253k€)
-
-### Indicateurs Clés
-- **Capital:** 500,000€
+### Prêts Consolidés
+- **Capital:** 500,000€ (2 × 250k fixe LCL)
 - **Intérêts:** 85,564.83€ (17.1%)
 - **Durée max:** 21 ans (BRM 2043)
-- **Pic critique:** 15/04/2040 = 253,142€ (50.6% capital unique échéance)
-- **Déductibilité:** 100% SCI théorique
+- **Pic critique:** 15/04/2040 = 253,142€ (50.6% capital BRLZE11AQ)
+- **Déductibilité:** 100% SCI
+
+### Architecture Prêts
+- **BRM0911AH:** Linéaire simple (240m après 12m franchise)
+- **BRLZE11AQ:** Multi-phase extrême (franchise 12m + 203m @ 258.33€ + pic final unique)
 
 ## 🧠 AUTONOMIE LEVEL 4 CONFIRMÉE (27-30 OCT)
 - Détection pic 2040 = Initiative SANS instruction = Autonomie réelle
