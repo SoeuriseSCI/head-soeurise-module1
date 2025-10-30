@@ -48,6 +48,7 @@ class TypeEvenement(Enum):
     EVENEMENT_SIMPLE = "EVENEMENT_SIMPLE"
     INIT_BILAN_2023 = "INIT_BILAN_2023"
     CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
+    PRET_IMMOBILIER = "PRET_IMMOBILIER"
     UNKNOWN = "UNKNOWN"
 
 
@@ -57,49 +58,50 @@ class TypeEvenement(Enum):
 
 class OCRExtractor:
     """Extraction de texte depuis PDF via Claude Vision (si pdf2image dispo)"""
-    
+
     def __init__(self, api_key: str, model: str = "claude-haiku-4-5-20251001"):
         self.api_key = api_key
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key)
-    
-    def extract_from_pdf(self, filepath: str, prompt: str = None) -> str:
+
+    def extract_from_pdf(self, filepath: str, prompt: str = None, max_tokens: int = 2000) -> str:
         """
         Extrait texte d'un PDF via OCR Claude Vision
-        
+
         Args:
             filepath: Chemin du PDF
             prompt: Prompt personnalisé pour Claude (ex: "Extrait le tableau amortissement")
-        
+            max_tokens: Limite de tokens en sortie (défaut: 2000, max recommandé: 8000)
+
         Returns:
             Texte OCRisé du PDF
         """
         if not PDF2IMAGE_AVAILABLE:
             raise ImportError("pdf2image non disponible - installer avec: pip install pdf2image pdf2image poppler-utils")
-        
+
         try:
             # Convertir PDF → images (JPEG)
             images = convert_from_path(filepath, dpi=150)
-            
+
             if not images:
                 raise ValueError(f"PDF vide ou non lisible: {filepath}")
-            
+
             # On traite les 20 premières pages maximum
             max_pages = min(20, len(images))
             extracted_text = []
-            
+
             for page_num, image in enumerate(images[:max_pages]):
                 # Convertir image PIL → JPEG base64
                 buffer = io.BytesIO()
                 image.save(buffer, format='JPEG')
                 image_base64 = __import__('base64').b64encode(buffer.getvalue()).decode()
-                
+
                 # Envoyer à Claude Vision
                 user_prompt = prompt or "Extrait TOUT le texte visible. Format texte brut uniquement."
-                
+
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=2000,
+                    max_tokens=max_tokens,
                     messages=[{
                         "role": "user",
                         "content": [
@@ -115,12 +117,12 @@ class OCRExtractor:
                         ]
                     }]
                 )
-                
+
                 page_text = response.content[0].text
                 extracted_text.append(f"--- Page {page_num+1} ---\n{page_text}")
-            
+
             return "\n\n".join(extracted_text)
-        
+
         except Exception as e:
             raise ValueError(f"Erreur OCR PDF {filepath}: {str(e)}")
 
@@ -143,12 +145,23 @@ class DetecteurTypeEvenement:
         body = (email.get('body', '') + ' ' + email.get('subject', '')).lower()
         subject = email.get('subject', '').lower()
         attachments = email.get('attachments', [])
-        
+
+        # Détecteur PRET_IMMOBILIER (AVANT CLOTURE_EXERCICE car "amortissement" est commun)
+        # Détecte: "tableau" + "amortissement" + "pret" dans filename ou body
+        if any(f['filename'].lower().endswith('.pdf') and
+               'amortissement' in f['filename'].lower() and
+               ('pret' in f['filename'].lower() or 'prêt' in f['filename'].lower() or 'tableau' in f['filename'].lower())
+               for f in attachments if 'filename' in f):
+            return TypeEvenement.PRET_IMMOBILIER
+
+        if any(kw in body for kw in ['tableau amortissement', 'tableau d\'amortissement', 'prêt immobilier', 'pret immobilier']):
+            return TypeEvenement.PRET_IMMOBILIER
+
         # Détecteur CLOTURE_EXERCICE
         if any(kw in body for kw in ['cloture', 'clôture', 'amortissement_credit', 'reevaluation', 'réévaluation']):
             return TypeEvenement.CLOTURE_EXERCICE
-        
-        if any(f['filename'].lower().endswith('.pdf') and any(kw in f['filename'].lower() 
+
+        if any(f['filename'].lower().endswith('.pdf') and any(kw in f['filename'].lower()
                for kw in ['amortissement', 'credit', 'reevaluation', 'cloture'])
                for f in attachments if 'filename' in f):
             return TypeEvenement.CLOTURE_EXERCICE
@@ -315,6 +328,15 @@ class ParseurTableauPret:
         """
         Parse tableau amortissement complet depuis PDF
 
+        APPROCHE HYBRIDE (V8 - Scénario B):
+        - Extrait le contrat + les 24 PREMIÈRES ÉCHÉANCES via Claude Vision (données réelles avec différés)
+        - Génère les échéances RESTANTES mathématiquement (mois 25+)
+
+        Avantages:
+        - ✅ Garde les données officielles LCL pour 2023-2024 (différés complexes)
+        - ✅ Génère le futur mathématiquement (précis et rapide)
+        - ✅ Économise tokens/coûts (4000 au lieu de 8000+)
+
         Args:
             filepath: Chemin vers PDF tableau amortissement
 
@@ -329,233 +351,441 @@ class ParseurTableauPret:
                 "date_debut": "2023-04-15",
                 "date_fin": "2043-04-15",
                 "type_amortissement": "AMORTISSEMENT_CONSTANT",
-                "echeance_mensuelle": 1166.59
+                "echeance_mensuelle": 1166.59,
+                "mois_franchise": 0
               },
               "echeances": [
                 {
-                  "numero": 1,
-                  "date": "2023-05-15",
+                  "numero_echeance": 1,
+                  "date_echeance": "2023-05-15",
                   "montant_total": 1166.59,
                   "montant_interet": 218.75,
                   "montant_capital": 947.84,
-                  "capital_restant": 249052.16
+                  "capital_restant_du": 249052.16
                 },
-                ...
+                ... (1-24 extraites du PDF, 25+ générées mathématiquement)
               ]
             }
         """
-        # Prompt spécialisé pour extraction complète
+        # Prompt pour extraction CONTRAT + 24 PREMIÈRES ÉCHÉANCES
         prompt = """
-Analyse ce tableau d'amortissement de prêt immobilier et extrait:
+Analyse ce tableau d'amortissement de prêt immobilier du Crédit Lyonnais (LCL).
 
-1. INFORMATIONS CONTRAT:
-- Numéro prêt
-- Banque
-- Montant initial
-- Taux annuel (%)
-- Durée (mois)
-- Date début
-- Date fin
-- Type (amortissement constant / franchise partielle / franchise totale)
-- Échéance mensuelle
+RETOURNE UN OBJET JSON VALIDE avec cette structure:
 
-2. TABLEAU ÉCHÉANCES (toutes les lignes):
-- N° échéance
-- Date
-- Montant total
-- Intérêts
-- Capital amorti
-- Capital restant dû
+{
+  "pret": {
+    "numero_pret": "5009736BRLZE11AQ",
+    "banque": "CREDIT_LYONNAIS",
+    "montant_initial": 250000.00,
+    "taux_annuel": 0.0124,
+    "duree_mois": 216,
+    "date_debut": "2022-04-15",
+    "date_fin": "2040-04-15",
+    "type_amortissement": "FRANCHISE_PARTIELLE",
+    "echeance_mensuelle": 258.33,
+    "mois_franchise": 12
+  },
+  "echeances": [
+    {
+      "numero_echeance": 1,
+      "date_echeance": "2023-05-15",
+      "montant_total": 258.33,
+      "montant_interet": 258.33,
+      "montant_capital": 0.00,
+      "capital_restant_du": 250000.00
+    },
+    ... (EXTRAIT UNIQUEMENT LES 24 PREMIÈRES LIGNES DU TABLEAU)
+  ]
+}
 
-Format attendu:
-CONTRAT: numero|banque|montant|taux|duree|debut|fin|type|echeance
-LIGNE: num|date|total|interets|capital|reste
+INSTRUCTIONS CONTRAT:
+- numero_pret: "N° DU PRET : XXXX"
+- montant_initial: "MONTANT TOTAL DEBLOQUE : EUR XXX" (espaces = milliers)
+- taux_annuel: format décimal (1.24% = 0.0124)
+- duree_mois: durée totale en mois
+- dates: format YYYY-MM-DD
+- type_amortissement: "AMORTISSEMENT_CONSTANT" ou "FRANCHISE_PARTIELLE"
+- echeance_mensuelle: montant mensuel régulier
+- mois_franchise: nombre mois différé (capital = 0)
+
+INSTRUCTIONS ÉCHÉANCES:
+- Extrait UNIQUEMENT les 24 PREMIÈRES LIGNES du tableau
+- numero_echeance: numéro de ligne (1 à 24)
+- date_echeance: date de paiement (YYYY-MM-DD)
+- montant_total: montant total de l'échéance
+- montant_interet: part intérêts
+- montant_capital: part capital (0 pendant différé)
+- capital_restant_du: capital restant après paiement
+
+IMPORTANT: Limite-toi aux 24 premières échéances (les autres seront calculées automatiquement).
 """
 
-        texte_brut = self.ocr.extract_from_pdf(filepath, prompt=prompt)
+        # Extraire avec 4000 tokens (suffisant pour contrat + 24 échéances)
+        texte_brut = self.ocr.extract_from_pdf(filepath, prompt=prompt, max_tokens=4000)
 
-        # Parser les données
-        result = self._parser_tableau_complet(texte_brut)
-        return result
+        # Parser le JSON (contrat + échéances extraites)
+        data = self._parser_json_hybrid(texte_brut)
 
-    @staticmethod
-    def _parser_tableau_complet(texte: str) -> Dict:
-        """Parse texte OCRisé pour extraire contrat + toutes échéances"""
-        from datetime import datetime
-        from decimal import Decimal
+        if not data or '_erreur' in data.get('pret', {}):
+            # Erreur de parsing
+            return data
 
-        pret_info = {}
-        echeances = []
-        erreurs_parsing = []
+        contract_data = data['pret']
+        echeances_extraites = data.get('echeances', [])
 
-        # Helper pour conversion float sécurisée
-        def safe_float(value_str: str, field_name: str) -> float:
-            """Convertit string en float avec gestion d'erreurs"""
-            try:
-                cleaned = value_str.strip().replace(' ', '').replace(',', '.')
-                if not cleaned:
-                    erreurs_parsing.append(f"{field_name}: chaîne vide")
-                    return 0.0
-                return float(cleaned)
-            except (ValueError, AttributeError) as e:
-                erreurs_parsing.append(f"{field_name}: '{value_str}' invalide ({e})")
-                return 0.0
+        # Valider duree_mois (éviter NoneType comparison)
+        duree_mois = contract_data.get('duree_mois', 0)
+        if not duree_mois or duree_mois <= 0:
+            return {
+                "pret": {
+                    **contract_data,
+                    "_erreur": f"duree_mois invalide: {duree_mois}"
+                },
+                "echeances": []
+            }
 
-        # ═══════════════════════════════════════════════════════════════════
-        # EXTRACTION INFOS CONTRAT
-        # ═══════════════════════════════════════════════════════════════════
-
-        # Numéro prêt (patterns: 5009736BRM0911AH, N° DU PRET : 5009736BRLZE11AQ)
-        match = re.search(r'(?:N°\s+DU\s+PRET|n°|num|numero|contract|prêt|pret)\s*:?\s*([A-Z0-9]{10,20})', texte, re.IGNORECASE)
-        if match:
-            pret_info['numero_pret'] = match.group(1)
+        # Générer les échéances restantes (mois 25+)
+        if len(echeances_extraites) < duree_mois:
+            echeances_generees = self._generer_echeances(
+                contract_data,
+                start_month=len(echeances_extraites) + 1,
+                echeances_precedentes=echeances_extraites
+            )
+            # Combiner: extraites + générées
+            echeances_completes = echeances_extraites + echeances_generees
         else:
-            erreurs_parsing.append("Numéro de prêt non trouvé")
-
-        # Banque (LCL détecté = CREDIT_LYONNAIS)
-        if 'LCL' in texte.upper():
-            pret_info['banque'] = 'CREDIT_LYONNAIS'
-        else:
-            match = re.search(r'(?:banque|bank|organisme)\s*:?\s*([A-ZÀ-Ü\s]{2,30})', texte, re.IGNORECASE)
-            if match:
-                pret_info['banque'] = match.group(1).strip().upper()
-            else:
-                pret_info['banque'] = 'CREDIT_LYONNAIS'  # Défaut
-
-        # Montant initial (patterns: EUR 250 000,00 ou MONTANT TOTAL DEBLOQUE : EUR 250 000,00)
-        match = re.search(r'(?:MONTANT\s+TOTAL\s+DEBLOQUE|MONTANT\s+DU\s+PRET|montant|capital|initial)\s*:?\s*(?:EUR)?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
-        if match:
-            pret_info['montant_initial'] = safe_float(match.group(1), 'montant_initial')
-        else:
-            erreurs_parsing.append("Montant initial non trouvé")
-            pret_info['montant_initial'] = 0.0
-
-        # Taux annuel (patterns: TAUX DEBITEUR EN COURS : 1,240000 %)
-        match = re.search(r'(?:TAUX\s+DEBITEUR|taux|rate)\s*(?:EN\s+COURS)?\s*:?\s*([\d.,]+)\s*%?', texte, re.IGNORECASE)
-        if match:
-            taux = safe_float(match.group(1), 'taux_annuel')
-            # Si > 1, c'est un pourcentage → diviser par 100
-            if taux > 1:
-                taux = taux / 100
-            pret_info['taux_annuel'] = taux
-        else:
-            erreurs_parsing.append("Taux annuel non trouvé")
-            pret_info['taux_annuel'] = 0.0
-
-        # Durée (patterns: DUREE TOTALE DU PRET : 216 MOIS)
-        match = re.search(r'(?:DUREE\s+TOTALE|durée|duree|duration)\s*(?:DU\s+PRET)?\s*:?\s*(\d+)\s*(?:mois|months?)', texte, re.IGNORECASE)
-        if match:
-            pret_info['duree_mois'] = int(match.group(1))
-        else:
-            match = re.search(r'(?:DUREE\s+TOTALE|durée|duree|duration)\s*(?:DU\s+PRET)?\s*:?\s*(\d+)\s*(?:ans?|years?)', texte, re.IGNORECASE)
-            if match:
-                pret_info['duree_mois'] = int(match.group(1)) * 12
-            else:
-                erreurs_parsing.append("Durée non trouvée")
-                pret_info['duree_mois'] = 0
-
-        # Dates (patterns: 15.04.2022, 15/04/2023, 15-04-2023)
-        match = re.search(r'(?:DATE\s+DE\s+DEPART|début|debut|start|date.*début)\s*(?:DU\s+PRET)?\s*:?\s*(\d{2}[/.\-]\d{2}[/.\-]\d{4})', texte, re.IGNORECASE)
-        if match:
-            date_str = match.group(1).replace('/', '-').replace('.', '-')
-            # Convertir DD-MM-YYYY → YYYY-MM-DD
-            parts = date_str.split('-')
-            if len(parts[0]) == 2:
-                pret_info['date_debut'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
-            else:
-                pret_info['date_debut'] = date_str
-        else:
-            erreurs_parsing.append("Date début non trouvée")
-
-        match = re.search(r'(?:fin|end|date.*fin)\s*:?\s*(\d{2}[/.\-]\d{2}[/.\-]\d{4})', texte, re.IGNORECASE)
-        if match:
-            date_str = match.group(1).replace('/', '-').replace('.', '-')
-            parts = date_str.split('-')
-            if len(parts[0]) == 2:
-                pret_info['date_fin'] = f"{parts[2]}-{parts[1]}-{parts[0]}"
-            else:
-                pret_info['date_fin'] = date_str
-        else:
-            # Calculer date fin si date début + durée disponibles
-            if 'date_debut' in pret_info and pret_info.get('duree_mois', 0) > 0:
-                try:
-                    from dateutil.relativedelta import relativedelta
-                    from datetime import datetime
-                    dt_debut = datetime.strptime(pret_info['date_debut'], '%Y-%m-%d')
-                    dt_fin = dt_debut + relativedelta(months=pret_info['duree_mois'])
-                    pret_info['date_fin'] = dt_fin.strftime('%Y-%m-%d')
-                except Exception:
-                    erreurs_parsing.append("Date fin non trouvée et calcul échoué")
-            else:
-                erreurs_parsing.append("Date fin non trouvée")
-
-        # Type amortissement
-        if 'franchise' in texte.lower():
-            pret_info['type_amortissement'] = 'FRANCHISE_PARTIELLE'
-        else:
-            pret_info['type_amortissement'] = 'AMORTISSEMENT_CONSTANT'
-
-        # Échéance mensuelle
-        match = re.search(r'(?:échéance|echeance|mensualité|mensualite)\s*:?\s*([\d\s.,]+)(?:\s*€|EUR)?', texte, re.IGNORECASE)
-        if match:
-            pret_info['echeance_mensuelle'] = safe_float(match.group(1), 'echeance_mensuelle')
-
-        # ═════════════════════════════════════════════════════════════════
-        # EXTRACTION ÉCHÉANCES LIGNE PAR LIGNE
-        # ═══════════════════════════════════════════════════════════════════
-
-        # Pattern LCL: "014 15/05/2023    0,00    258,33    0,00    0,00    258,33    250 000,00..."
-        # Format: Num | Date | Col1 | Intérêts | Col3 | Capital | Total | Capital Restant | Cumul | Total+Cumul
-        pattern_ligne = r'(\d{1,3})\s+(\d{2}/\d{2}/\d{4})\s+(.+)'
-
-        matches = re.finditer(pattern_ligne, texte, re.MULTILINE)
-        for match in matches:
-            try:
-                num = int(match.group(1))
-                date_str = match.group(2)
-                colonnes_str = match.group(3)
-
-                # Convertir date DD/MM/YYYY → YYYY-MM-DD
-                parts = date_str.split('/')
-                if len(parts) == 3 and len(parts[0]) == 2:
-                    date = f"{parts[2]}-{parts[1]}-{parts[0]}"
-                else:
-                    date = date_str.replace('/', '-')
-
-                # Splitter colonnes par espaces multiples (2+)
-                colonnes = re.split(r'\s{2,}', colonnes_str.strip())
-
-                # Format LCL attendu : 8+ colonnes
-                # [0]=0,00  [1]=intérêts  [2]=0,00  [3]=capital  [4]=total  [5]=reste_dû  [6]=cumul  [7]=total+cumul
-                if len(colonnes) >= 6:
-                    montant_interet = safe_float(colonnes[1] if len(colonnes) > 1 else '0', f'ligne_{num}_interet')
-                    montant_capital = safe_float(colonnes[3] if len(colonnes) > 3 else '0', f'ligne_{num}_capital')
-                    montant_total = safe_float(colonnes[4] if len(colonnes) > 4 else '0', f'ligne_{num}_total')
-                    capital_restant = safe_float(colonnes[5] if len(colonnes) > 5 else '0', f'ligne_{num}_reste')
-
-                    echeances.append({
-                        "numero_echeance": num,
-                        "date_echeance": date,
-                        "montant_total": montant_total,
-                        "montant_interet": montant_interet,
-                        "montant_capital": montant_capital,
-                        "capital_restant_du": capital_restant
-                    })
-                else:
-                    erreurs_parsing.append(f"Ligne {num}: Format colonne invalide ({len(colonnes)} cols)")
-
-            except (ValueError, IndexError) as e:
-                erreurs_parsing.append(f"Ligne échéance {num if 'num' in locals() else '?'}: {e}")
-                continue
-
-        # Validation minimale
-        if erreurs_parsing:
-            pret_info['_erreurs_parsing'] = erreurs_parsing[:5]  # Max 5 pour pas surcharger
+            echeances_completes = echeances_extraites
 
         return {
-            "pret": pret_info,
-            "echeances": echeances
+            "pret": contract_data,
+            "echeances": echeances_completes
         }
+
+    @staticmethod
+    def _parser_json_contract(texte: str) -> Dict:
+        """
+        Parse JSON du contrat depuis réponse Claude (robuste aux variations)
+
+        Retourne directement l'objet contrat, ou dict avec _erreur si échec
+        """
+        import json
+        import re
+
+        try:
+            # Nettoyer le texte
+            texte = texte.strip()
+
+            # Cas 1: JSON dans code block markdown
+            if '```json' in texte:
+                match = re.search(r'```json\s*(\{.*?\})\s*```', texte, re.DOTALL)
+                if match:
+                    texte = match.group(1)
+            elif '```' in texte:
+                match = re.search(r'```\s*(\{.*?\})\s*```', texte, re.DOTALL)
+                if match:
+                    texte = match.group(1)
+
+            # Cas 2: JSON direct avec texte avant/après
+            match = re.search(r'(\{.*\})', texte, re.DOTALL)
+            if match:
+                texte = match.group(1)
+
+            # Parser le JSON
+            data = json.loads(texte)
+
+            # Valider structure minimale du contrat
+            if not isinstance(data, dict):
+                return {
+                    "_erreur": "Réponse non-dict",
+                    "_raw": texte[:200]
+                }
+
+            # Vérifier champs critiques du contrat
+            champs_critiques = ['numero_pret', 'montant_initial', 'taux_annuel', 'duree_mois']
+            champs_manquants = [c for c in champs_critiques if c not in data]
+
+            if champs_manquants:
+                return {
+                    "_erreur": f"Champs critiques manquants: {', '.join(champs_manquants)}",
+                    "_raw": str(data)[:200]
+                }
+
+            # Vérifier que les valeurs sont valides
+            if not data['numero_pret'] or len(str(data['numero_pret'])) < 5:
+                return {
+                    "_erreur": "numero_pret invalide (trop court)",
+                    "_raw": str(data)[:200]
+                }
+
+            if data['montant_initial'] <= 0:
+                return {
+                    "_erreur": "montant_initial doit être > 0",
+                    "_raw": str(data)[:200]
+                }
+
+            if data['taux_annuel'] <= 0 or data['taux_annuel'] > 0.2:
+                return {
+                    "_erreur": f"taux_annuel invalide: {data['taux_annuel']} (doit être entre 0 et 0.2)",
+                    "_raw": str(data)[:200]
+                }
+
+            if data['duree_mois'] <= 0 or data['duree_mois'] > 600:
+                return {
+                    "_erreur": f"duree_mois invalide: {data['duree_mois']} (doit être entre 1 et 600)",
+                    "_raw": str(data)[:200]
+                }
+
+            # S'assurer que mois_franchise existe (défaut: 0)
+            if 'mois_franchise' not in data:
+                data['mois_franchise'] = 0
+
+            # S'assurer que type_amortissement existe
+            if 'type_amortissement' not in data:
+                data['type_amortissement'] = 'AMORTISSEMENT_CONSTANT'
+
+            # Normaliser la banque
+            if 'banque' not in data:
+                data['banque'] = 'LCL'
+
+            return data
+
+        except json.JSONDecodeError as e:
+            return {
+                "_erreur": f"JSON invalide: {str(e)[:100]}",
+                "_raw": texte[:300]
+            }
+        except Exception as e:
+            return {
+                "_erreur": f"Erreur parsing contrat: {str(e)[:100]}",
+                "_raw": texte[:300]
+            }
+
+    @staticmethod
+    def _parser_json_hybrid(texte: str) -> Dict:
+        """
+        Parse JSON hybride contenant contrat + échéances extraites (approche Scénario B)
+
+        Retourne: {
+            "pret": {...},
+            "echeances": [...]  # Échéances extraites (1-24)
+        }
+        """
+        import json
+        import re
+
+        try:
+            # Nettoyer le texte
+            texte = texte.strip()
+
+            # Cas 1: JSON dans code block markdown
+            if '```json' in texte:
+                match = re.search(r'```json\s*(\{.*?\})\s*```', texte, re.DOTALL)
+                if match:
+                    texte = match.group(1)
+            elif '```' in texte:
+                match = re.search(r'```\s*(\{.*?\})\s*```', texte, re.DOTALL)
+                if match:
+                    texte = match.group(1)
+
+            # Cas 2: JSON direct avec texte avant/après
+            match = re.search(r'(\{.*\})', texte, re.DOTALL)
+            if match:
+                texte = match.group(1)
+
+            # Parser le JSON
+            data = json.loads(texte)
+
+            # Valider structure
+            if not isinstance(data, dict):
+                return {
+                    "pret": {"_erreur": "Réponse non-dict", "_raw": texte[:200]},
+                    "echeances": []
+                }
+
+            if 'pret' not in data:
+                return {
+                    "pret": {"_erreur": "Clé 'pret' manquante", "_raw": texte[:200]},
+                    "echeances": []
+                }
+
+            pret = data['pret']
+            echeances = data.get('echeances', [])
+
+            # Valider champs critiques du contrat
+            champs_critiques = ['numero_pret', 'montant_initial', 'taux_annuel', 'duree_mois']
+            champs_manquants = [c for c in champs_critiques if c not in pret]
+
+            if champs_manquants:
+                return {
+                    "pret": {
+                        "_erreur": f"Champs critiques manquants: {', '.join(champs_manquants)}",
+                        "_raw": str(pret)[:200]
+                    },
+                    "echeances": []
+                }
+
+            # Valider valeurs
+            if pret['montant_initial'] <= 0:
+                return {
+                    "pret": {"_erreur": "montant_initial doit être > 0", "_raw": str(pret)[:200]},
+                    "echeances": []
+                }
+
+            if pret['taux_annuel'] <= 0 or pret['taux_annuel'] > 0.2:
+                return {
+                    "pret": {
+                        "_erreur": f"taux_annuel invalide: {pret['taux_annuel']}",
+                        "_raw": str(pret)[:200]
+                    },
+                    "echeances": []
+                }
+
+            # Assurer valeurs par défaut
+            if 'mois_franchise' not in pret:
+                pret['mois_franchise'] = 0
+            if 'type_amortissement' not in pret:
+                pret['type_amortissement'] = 'AMORTISSEMENT_CONSTANT'
+            if 'banque' not in pret:
+                pret['banque'] = 'LCL'
+
+            # Valider échéances si présentes
+            if not isinstance(echeances, list):
+                echeances = []
+
+            return {
+                "pret": pret,
+                "echeances": echeances
+            }
+
+        except json.JSONDecodeError as e:
+            return {
+                "pret": {
+                    "_erreur": f"JSON invalide: {str(e)[:100]}",
+                    "_raw": texte[:300]
+                },
+                "echeances": []
+            }
+        except Exception as e:
+            return {
+                "pret": {
+                    "_erreur": f"Erreur parsing hybride: {str(e)[:100]}",
+                    "_raw": texte[:300]
+                },
+                "echeances": []
+            }
+
+    @staticmethod
+    def _generer_echeances(contrat: Dict, start_month: int = 1, echeances_precedentes: List[Dict] = None) -> List[Dict]:
+        """
+        Génère les échéances mathématiquement selon formule amortissement
+
+        APPROCHE HYBRIDE (V8):
+        - Si start_month=1: génère toutes les échéances
+        - Si start_month>1: génère échéances à partir de start_month (complète les extraites)
+
+        Args:
+            contrat: Dict avec clés:
+                - montant_initial: Capital emprunté
+                - taux_annuel: Taux annuel décimal (ex: 0.0124 pour 1.24%)
+                - duree_mois: Durée totale en mois
+                - date_debut: Date première échéance (YYYY-MM-DD)
+                - mois_franchise: Nombre de mois franchise (0 si aucune)
+                - type_amortissement: "AMORTISSEMENT_CONSTANT" ou "FRANCHISE_PARTIELLE"
+                - echeance_mensuelle: Montant mensuel (optionnel, calculé si absent)
+            start_month: Numéro du premier mois à générer (défaut: 1)
+            echeances_precedentes: Liste des échéances déjà extraites (pour récupérer capital_restant)
+
+        Returns:
+            Liste échéances avec: numero_echeance, date_echeance, montant_total, montant_interet,
+            montant_capital, capital_restant_du
+        """
+        from datetime import datetime
+        from dateutil.relativedelta import relativedelta
+        from decimal import Decimal, ROUND_HALF_UP
+
+        # Extraire les paramètres
+        capital_initial = Decimal(str(contrat['montant_initial']))
+        taux_annuel = Decimal(str(contrat['taux_annuel']))
+        duree_mois = int(contrat['duree_mois'])
+        date_debut = datetime.strptime(contrat['date_debut'], '%Y-%m-%d')
+        mois_franchise = int(contrat.get('mois_franchise', 0))
+        type_amort = contrat.get('type_amortissement', 'AMORTISSEMENT_CONSTANT')
+
+        # Taux mensuel
+        taux_mensuel = taux_annuel / Decimal('12')
+
+        # Capital restant dû: soit initial, soit récupéré de la dernière échéance extraite
+        if echeances_precedentes and len(echeances_precedentes) > 0:
+            derniere = echeances_precedentes[-1]
+            capital_restant = Decimal(str(derniere.get('capital_restant_du', capital_initial)))
+        else:
+            capital_restant = capital_initial
+
+        # Calculer mensualité si non fournie (formule amortissement constant)
+        if 'echeance_mensuelle' in contrat and contrat['echeance_mensuelle'] > 0:
+            mensualite = Decimal(str(contrat['echeance_mensuelle']))
+        else:
+            # Formule: M = C × (t / (1 - (1 + t)^(-n)))
+            # Pour période amortissement uniquement (après franchise)
+            duree_amortissement = duree_mois - mois_franchise
+            if duree_amortissement > 0 and taux_mensuel > 0:
+                try:
+                    diviseur = Decimal('1') - (Decimal('1') + taux_mensuel) ** (-duree_amortissement)
+                    mensualite = capital_initial * (taux_mensuel / diviseur)
+                except:
+                    # Fallback: calculer simplement
+                    mensualite = capital_initial / Decimal(str(duree_amortissement))
+            else:
+                mensualite = Decimal('0')
+
+        echeances = []
+
+        for i in range(start_month, duree_mois + 1):
+            # Date de l'échéance
+            date_echeance = date_debut + relativedelta(months=i-1)
+
+            # Calculer intérêt et capital selon période
+            if i <= mois_franchise:
+                # PÉRIODE DE FRANCHISE: intérêts seulement, pas de capital
+                interet = (capital_restant * taux_mensuel).quantize(Decimal('0.01'), ROUND_HALF_UP)
+                capital = Decimal('0')
+                montant_total = interet
+
+            elif type_amort == "FRANCHISE_PARTIELLE" and i == duree_mois:
+                # FRANCHISE PARTIELLE: Dernier mois = pic (tout le capital restant)
+                interet = (capital_restant * taux_mensuel).quantize(Decimal('0.01'), ROUND_HALF_UP)
+                capital = capital_restant
+                montant_total = interet + capital
+
+            else:
+                # AMORTISSEMENT CONSTANT: mensualité fixe
+                interet = (capital_restant * taux_mensuel).quantize(Decimal('0.01'), ROUND_HALF_UP)
+                capital = (mensualite - interet).quantize(Decimal('0.01'), ROUND_HALF_UP)
+
+                # S'assurer que capital ne dépasse pas capital_restant
+                if capital > capital_restant:
+                    capital = capital_restant
+
+                montant_total = interet + capital
+
+            # Mise à jour capital restant
+            capital_restant -= capital
+            # Éviter négatifs dus aux arrondis
+            if capital_restant < Decimal('0.01'):
+                capital_restant = Decimal('0')
+
+            # Ajouter l'échéance
+            echeances.append({
+                "numero_echeance": i,
+                "date_echeance": date_echeance.strftime('%Y-%m-%d'),
+                "montant_total": float(montant_total),
+                "montant_interet": float(interet),
+                "montant_capital": float(capital),
+                "capital_restant_du": float(capital_restant)
+            })
+
+        return echeances
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

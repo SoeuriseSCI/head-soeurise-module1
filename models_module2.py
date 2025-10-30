@@ -334,6 +334,112 @@ class RapportComptable(Base):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# DONNÉES DE RÉFÉRENCE - PRÊTS IMMOBILIERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class PretImmobilier(Base):
+    """
+    Table de référence : Prêts immobiliers (données contractuelles)
+    Source : Tableaux d'amortissement fournis par la banque
+    Usage : Ventilation intérêts/capital lors comptabilisation relevés bancaires
+    """
+    __tablename__ = 'prets_immobiliers'
+
+    id = Column(Integer, primary_key=True)
+
+    # Identification
+    numero_pret = Column(String(50), unique=True, nullable=False)  # Ex: 5009736BRM0911AH
+    banque = Column(String(100), nullable=False)  # Ex: LCL
+    libelle = Column(String(255))  # Ex: "Prêt acquisition SCPI"
+
+    # Montants
+    montant_initial = Column(Numeric(15, 2), nullable=False)  # Ex: 250000.00
+    taux_annuel = Column(Numeric(6, 4), nullable=False)  # Ex: 0.0105 (1.05%)
+
+    # Durée
+    duree_mois = Column(Integer, nullable=False)  # Ex: 240 mois
+    date_debut = Column(Date, nullable=False)  # Ex: 2023-04-15
+    date_fin = Column(Date, nullable=False)  # Ex: 2043-04-15
+
+    # Type amortissement
+    type_amortissement = Column(String(50), nullable=False)  # AMORTISSEMENT_CONSTANT | FRANCHISE_PARTIELLE | FRANCHISE_TOTALE
+    mois_franchise = Column(Integer, default=0)  # Ex: 180 mois (15 ans) pour prêt BRLZE
+
+    # Montants mensuels
+    echeance_mensuelle = Column(Numeric(15, 2))  # Ex: 1166.59 (prêt BRM)
+    interet_mensuel_franchise = Column(Numeric(15, 2))  # Ex: 258.33 (prêt BRLZE pendant franchise)
+
+    # Assurance (optionnel)
+    assurance_emprunteur = Column(Boolean, default=False)
+    assures = Column(String(255))  # Ex: "Emma Bergsten (50%), Pauline Bergsten (50%)"
+
+    # Source document
+    source_email_id = Column(String(255))
+    source_document = Column(String(500))  # Nom fichier PDF
+    date_ingestion = Column(DateTime, default=datetime.utcnow)
+
+    # Métadonnées
+    actif = Column(Boolean, default=True)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relations
+    echeances = relationship("EcheancePret", back_populates="pret", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<PretImmobilier({self.numero_pret} {self.banque} {self.montant_initial}€)>"
+
+
+class EcheancePret(Base):
+    """
+    Table de référence : Échéancier détaillé des prêts (ligne par ligne)
+    Source : Parsing tableaux d'amortissement
+    Usage : Lookup pour ventiler intérêts/capital lors comptabilisation
+    """
+    __tablename__ = 'echeances_prets'
+
+    id = Column(Integer, primary_key=True)
+
+    # Lien avec le prêt
+    pret_id = Column(Integer, ForeignKey('prets_immobiliers.id'), nullable=False)
+
+    # Identifiants échéance
+    numero_echeance = Column(Integer, nullable=False)  # 1, 2, 3... 240
+    date_echeance = Column(Date, nullable=False)  # Ex: 2023-05-15, 2023-06-15...
+
+    # Ventilation financière
+    montant_total = Column(Numeric(15, 2), nullable=False)  # Montant prélevé
+    montant_interet = Column(Numeric(15, 2), nullable=False)  # Partie intérêts (compte 661)
+    montant_capital = Column(Numeric(15, 2), nullable=False)  # Partie capital (compte 164)
+    capital_restant_du = Column(Numeric(15, 2), nullable=False)  # Capital restant après échéance
+
+    # Assurance (si applicable)
+    montant_assurance = Column(Numeric(15, 2), default=0)  # Assurance emprunteur
+
+    # Statut comptabilisation
+    comptabilise = Column(Boolean, default=False)
+    ecriture_comptable_id = Column(Integer, ForeignKey('ecritures_comptables.id'))
+    date_comptabilisation = Column(DateTime)
+
+    # Métadonnées
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relations
+    pret = relationship("PretImmobilier", back_populates="echeances")
+    ecriture = relationship("EcritureComptable")
+
+    # Contrainte unicité (un prêt ne peut avoir qu'une seule ligne pour une date donnée)
+    __table_args__ = (
+        UniqueConstraint('pret_id', 'date_echeance', name='uq_pret_date_echeance'),
+    )
+
+    def __repr__(self):
+        return f"<EcheancePret(Prêt #{self.pret_id} #{self.numero_echeance} {self.date_echeance} {self.montant_total}€)>"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # SESSION FACTORY
 # ═══════════════════════════════════════════════════════════════════════════════
 

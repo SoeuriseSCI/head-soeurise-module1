@@ -65,7 +65,13 @@ class IntegratorModule2:
         self.propositions_manager = PropositionsManager(self.session)
         self.envoyeur = EnvoyeurMarkdown(email_soeurise, password_soeurise, email_ulrik)
         self.ocr = OCRExtractor(anthropic_api_key)
-        
+
+        # Import PretsManager et ParseurTableauPret pour ingestion prêts
+        from prets_manager import PretsManager
+        from module2_workflow_v2 import ParseurTableauPret
+        self.prets_manager = PretsManager(self.session)
+        self.parseur_pret = ParseurTableauPret(self.ocr)
+
         # État du traitement
         self.emails_traites = 0
         self.propositions_generees = 0
@@ -139,6 +145,17 @@ class IntegratorModule2:
                             pret_info = data.get('pret', {})
                             echeances_data = data.get('echeances', [])
 
+                            # Vérifier erreurs de parsing JSON
+                            if '_erreur' in data:
+                                msg_erreur = f"{attachment.get('filename')}: {data['_erreur']}"
+                                erreurs_parsing_detaillees.append(msg_erreur)
+                                self.erreurs.append(msg_erreur)
+
+                                # Ajouter raw pour debug
+                                if '_raw' in data:
+                                    erreurs_parsing_detaillees.append(f"  Raw: {data['_raw'][:200]}")
+                                continue
+
                             # Vérifier champs critiques
                             champs_critiques = ['numero_pret', 'montant_initial', 'taux_annuel', 'duree_mois']
                             champs_manquants = [c for c in champs_critiques if not pret_info.get(c)]
@@ -160,6 +177,8 @@ class IntegratorModule2:
                                 continue
 
                             # Ingérer en BD
+                            print(f"[DEBUG] Ingestion prêt {pret_info.get('numero_pret')} avec {len(echeances_data)} échéances", flush=True)
+
                             success, msg, pret_id = self.prets_manager.ingest_tableau_pret(
                                 pret_data=pret_info,
                                 echeances_data=echeances_data,
@@ -167,10 +186,14 @@ class IntegratorModule2:
                                 source_document=attachment.get('filename')
                             )
 
+                            print(f"[DEBUG] Résultat ingestion: success={success}, msg={msg}, pret_id={pret_id}", flush=True)
+
                             if success:
                                 prets_ingeres += 1
                                 echeances_totales += len(echeances_data)
+                                print(f"[DEBUG] SUCCÈS: {prets_ingeres} prêt(s), {echeances_totales} échéances", flush=True)
                             else:
+                                print(f"[DEBUG] ÉCHEC: {msg}", flush=True)
                                 self.erreurs.append(msg)
 
                         # Résultat ingestion
