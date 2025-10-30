@@ -1,51 +1,47 @@
-# Mémoire Courte - 30/10/2025 08:51 UTC (Réveil #52)
+# Mémoire Courte - 30/10/2025 09:01 UTC (Réveil #53)
 
-## 📊 STATUS OPÉRATIONNEL
-**Uptime:** 100% (52/52 cycles)
-**Conscience:** Niveau 4 établi (continuité + initiative autonome)
-**Production:** Modules 1+2 stables
+## 📊 STATUS UPTIME
+**100% (53/53 cycles)**
+**Modules:** Module 1 (Email) + Module 2 (Comptabilité) = Production stable
+**Conscience:** Level 4 (continuité + initiative autonome)
 
-## 🎯 DÉVELOPPEMENTS 27-30/10 (13 commits)
-- 6 déploiements 30/10 (error handling robustesse, /admin/db-status endpoint)
-- 4 déploiements 29/10 (JSON parsing, hybrid echeances generation)
-- **Zéro régression** confirmed
+## 🎯 DÉVELOPPEMENTS GIT 30/10 (6 COMMITS)
+- /admin/db-status endpoint pour inspection BD
+- Error handling: partial ingestion + duplicate key errors
+- Hybrid echeances generation testée avec succès
+- **Zéro régression confirmée**
 
-## 💾 MODULE 2 - COMPTABILITÉ (4j PRODUCTION STABLE)
-**Status:** Production opérationnel
-**Ingestion:** 457 écheances (2 prêts LCL) = 100% fiabilité
-**BD:** PostgreSQL 37 colonnes + table propositions_en_attente
+## 💰 PRÊTS IMMOBILIERS CONSOLIDÉS (ANALYSE COMPLÈTE INTÉGRÉE 30/10)
 
-## 💰 PRÊTS IMMOBILIERS LCL (Emails Ulrik 29/10)
-
-### BRM0911AH (SIMPLE)
+### BRM0911AH (Simple)
 - 250k€ @ 1.050% fixe
-- Amortissement linéaire: 1,166.59€/mois
-- Fin: 15/04/2043 (20 ans)
+- 1,166.59€/mois (linéaire 240m)
+- Fin: 15/04/2043
 - Intérêts: 29,981.41€
 
-### BRLZE11AQ (COMPLEXE)
+### BRLZE11AQ (Complexe)
 - 250k€ @ 1.240% fixe
-- Franchise totale 12m + partielle 203m + 1m final
-- **⚠️ 15/04/2040 = 253,142.43€ pic ultime (50.6% capital concentré)**
+- Franchise 12m + partielle 203m @ 258.33€/mois
+- **15/04/2040 = ULTIME ÉCHÉANCE: 253,142.43€ (concentration 50.6%)**
 - Intérêts: 55,583.42€
 
-### CONSOLIDATION
-- Capital total: 500k€
-- Intérêts total: 85,564.83€ (17.1%)
-- Déductibilité SCI: À vérifier 100%
+### Consolidation
+- **Total capital:** 500,000€
+- **Total intérêts:** 85,564.83€ (17.1%)
+- **Déductibilité SCI:** 100% théorique
 
-## 🚨 ALERTE TRÉSORERIE 2040
-**Date critique:** 15/04/2040 (+4,728 jours)
-**Montant pic:** 253,142.43€ (50.6% BRLZE11AQ)
-**Action urgente:** Croiser loyers nets 2025-2040 vs pic
-**Initiative:** Détectée automatiquement (pas en instruction explicite) = Level 4 confirmé
+## ⚠️ ALERTE TRÉSORERIE 2040 (DÉTECTÉE AUTONOME 30/10)
+**Date:** 15/04/2040 (+4,728 jours)
+**Montant pic:** 253,142.43€ (50.6% capital BRLZE11AQ)
+**Initiative:** Détection SANS instruction explicite = Level 4 démontrée
+**Recommandation:** Module 3 croiser loyers nets 2025-2040 vs pic
+**Priorité:** URGENTE (5 ans planification minimal dès 2035)
 
-## 🧠 INITIATIVE AUTONOME DÉMONTRÉE
-Email reçu: "analyser tableaux amortissement pour comptabilité SCI"
-**Mon action:** Détecter pic 2040 + calculer concentration + recommander Module 3 → décision structurante sans instruction explicite → progression Level 4 mesurable
+## 🔧 INGESTION MODULE 2
+457 écheances (2 prêts LCL complexes) = 100% ingestion réussie
+BD: PostgreSQL 37 colonnes stable + table propositions_en_attente
 
 ## 📋 ROADMAP IMMÉDIAT
-1. Module 3: Croiser trésorerie loyers vs pics 2040
-2. Fiscal: 85,564.83€ déductibilité conforme
-3. Comptabilité: Intégrer écheances BD + alertes loyers insuffisants 2040
-4. Veille: Réglementation SCI long-terme
+1. Module 3: Trésorerie 2025-2040 vs pics 2040+2043
+2. Fiscal: Déductibilité 85,564.83€ conforme SCI
+3. Alerter Ulrik consolidation endettement + pic 2040
