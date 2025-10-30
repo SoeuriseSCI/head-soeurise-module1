@@ -410,15 +410,21 @@ INSTRUCTIONS CONTRAT:
 - mois_franchise: nombre mois différé (capital = 0)
 
 INSTRUCTIONS ÉCHÉANCES:
-- Extrait UNIQUEMENT les 24 PREMIÈRES LIGNES du tableau
-- numero_echeance: numéro de ligne (1 à 24)
+- **IGNORE les lignes "ECH" ou "DBL" sans numéro au début du tableau**
+- **EXTRAIT UNIQUEMENT les 24 PREMIÈRES LIGNES NUMÉROTÉES** (ex: 014, 015, 016... jusqu'à 037)
+- Ces lignes numérotées commencent généralement après la période de franchise totale
+- numero_echeance: utilise le numéro de la ligne (ex: ligne "014" → numero_echeance: 14)
 - date_echeance: date de paiement (YYYY-MM-DD)
 - montant_total: montant total de l'échéance
 - montant_interet: part intérêts
 - montant_capital: part capital (0 pendant différé)
 - capital_restant_du: capital restant après paiement
 
-IMPORTANT: Limite-toi aux 24 premières échéances (les autres seront calculées automatiquement).
+IMPORTANT:
+- Saute toutes les lignes ECH/DBL au début
+- Commence à la PREMIÈRE ligne avec un numéro (généralement 014)
+- Extrais exactement 24 lignes numérotées consécutives
+- Les autres échéances seront calculées automatiquement
 """
 
         # Extraire avec 4000 tokens (suffisant pour contrat + 24 échéances)

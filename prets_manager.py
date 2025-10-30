@@ -123,23 +123,21 @@ class PretsManager:
                 self.session.flush()
                 print(f"[PRETS_MGR] Échéances orphelines supprimées", flush=True)
 
-            # Vérifier doublons dans echeances_data
+            # Vérifier doublons dans echeances_data (ne devrait JAMAIS arriver)
             dates_vues = set()
             doublons = []
-            echeances_dedupliquees = []
 
             for ech_data in echeances_data:
                 date_str = ech_data.get('date_echeance')
                 if date_str in dates_vues:
                     doublons.append(date_str)
-                else:
-                    dates_vues.add(date_str)
-                    echeances_dedupliquees.append(ech_data)
+                dates_vues.add(date_str)
 
             if doublons:
-                print(f"[PRETS_MGR] ALERTE: {len(doublons)} dates en doublon détectées et SUPPRIMÉES: {doublons[:5]}", flush=True)
-                print(f"[PRETS_MGR] Échéances après déduplication: {len(echeances_dedupliquees)}/{len(echeances_data)}", flush=True)
-                echeances_data = echeances_dedupliquees
+                erreur_msg = f"ERREUR PARSING: {len(doublons)} dates en doublon détectées: {doublons[:10]}. Le parsing a échoué à extraire correctement les échéances numérotées."
+                print(f"[PRETS_MGR] {erreur_msg}", flush=True)
+                self.session.rollback()
+                return False, erreur_msg, None
 
             # Créer EcheancePret pour chaque ligne
             nb_echeances = 0
