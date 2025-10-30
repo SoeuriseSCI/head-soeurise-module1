@@ -58,49 +58,50 @@ class TypeEvenement(Enum):
 
 class OCRExtractor:
     """Extraction de texte depuis PDF via Claude Vision (si pdf2image dispo)"""
-    
+
     def __init__(self, api_key: str, model: str = "claude-haiku-4-5-20251001"):
         self.api_key = api_key
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key)
-    
-    def extract_from_pdf(self, filepath: str, prompt: str = None) -> str:
+
+    def extract_from_pdf(self, filepath: str, prompt: str = None, max_tokens: int = 2000) -> str:
         """
         Extrait texte d'un PDF via OCR Claude Vision
-        
+
         Args:
             filepath: Chemin du PDF
             prompt: Prompt personnalisé pour Claude (ex: "Extrait le tableau amortissement")
-        
+            max_tokens: Limite de tokens en sortie (défaut: 2000, max recommandé: 8000)
+
         Returns:
             Texte OCRisé du PDF
         """
         if not PDF2IMAGE_AVAILABLE:
             raise ImportError("pdf2image non disponible - installer avec: pip install pdf2image pdf2image poppler-utils")
-        
+
         try:
             # Convertir PDF → images (JPEG)
             images = convert_from_path(filepath, dpi=150)
-            
+
             if not images:
                 raise ValueError(f"PDF vide ou non lisible: {filepath}")
-            
+
             # On traite les 20 premières pages maximum
             max_pages = min(20, len(images))
             extracted_text = []
-            
+
             for page_num, image in enumerate(images[:max_pages]):
                 # Convertir image PIL → JPEG base64
                 buffer = io.BytesIO()
                 image.save(buffer, format='JPEG')
                 image_base64 = __import__('base64').b64encode(buffer.getvalue()).decode()
-                
+
                 # Envoyer à Claude Vision
                 user_prompt = prompt or "Extrait TOUT le texte visible. Format texte brut uniquement."
-                
+
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=2000,
+                    max_tokens=max_tokens,
                     messages=[{
                         "role": "user",
                         "content": [
@@ -116,12 +117,12 @@ class OCRExtractor:
                         ]
                     }]
                 )
-                
+
                 page_text = response.content[0].text
                 extracted_text.append(f"--- Page {page_num+1} ---\n{page_text}")
-            
+
             return "\n\n".join(extracted_text)
-        
+
         except Exception as e:
             raise ValueError(f"Erreur OCR PDF {filepath}: {str(e)}")
 
@@ -327,14 +328,14 @@ class ParseurTableauPret:
         """
         Parse tableau amortissement complet depuis PDF
 
-        NOUVELLE APPROCHE (V7):
-        - Extrait SEULEMENT les infos du contrat via Claude Vision (évite limite tokens)
-        - Génère les échéances MATHÉMATIQUEMENT avec formule d'amortissement
+        APPROCHE HYBRIDE (V8 - Scénario B):
+        - Extrait le contrat + les 24 PREMIÈRES ÉCHÉANCES via Claude Vision (données réelles avec différés)
+        - Génère les échéances RESTANTES mathématiquement (mois 25+)
 
         Avantages:
-        - Pas de limite tokens (petit JSON seulement)
-        - Plus rapide (pas besoin OCR 240 lignes)
-        - Exact et reproductible mathématiquement
+        - ✅ Garde les données officielles LCL pour 2023-2024 (différés complexes)
+        - ✅ Génère le futur mathématiquement (précis et rapide)
+        - ✅ Économise tokens/coûts (4000 au lieu de 8000+)
 
         Args:
             filepath: Chemin vers PDF tableau amortissement
@@ -355,68 +356,99 @@ class ParseurTableauPret:
               },
               "echeances": [
                 {
-                  "numero": 1,
-                  "date": "2023-05-15",
+                  "numero_echeance": 1,
+                  "date_echeance": "2023-05-15",
                   "montant_total": 1166.59,
                   "montant_interet": 218.75,
                   "montant_capital": 947.84,
-                  "capital_restant": 249052.16
+                  "capital_restant_du": 249052.16
                 },
-                ...  (généré mathématiquement, pas extrait du PDF)
+                ... (1-24 extraites du PDF, 25+ générées mathématiquement)
               ]
             }
         """
-        # Prompt pour extraction CONTRAT SEULEMENT (pas d'échéances!)
+        # Prompt pour extraction CONTRAT + 24 PREMIÈRES ÉCHÉANCES
         prompt = """
 Analyse ce tableau d'amortissement de prêt immobilier du Crédit Lyonnais (LCL).
 
-RETOURNE UNIQUEMENT UN OBJET JSON VALIDE avec LES INFORMATIONS DU CONTRAT:
+RETOURNE UN OBJET JSON VALIDE avec cette structure:
 
 {
-  "numero_pret": "5009736BRLZE11AQ",
-  "banque": "CREDIT_LYONNAIS",
-  "montant_initial": 250000.00,
-  "taux_annuel": 0.0124,
-  "duree_mois": 216,
-  "date_debut": "2022-04-15",
-  "date_fin": "2040-04-15",
-  "type_amortissement": "FRANCHISE_PARTIELLE",
-  "echeance_mensuelle": 258.33,
-  "mois_franchise": 12
+  "pret": {
+    "numero_pret": "5009736BRLZE11AQ",
+    "banque": "CREDIT_LYONNAIS",
+    "montant_initial": 250000.00,
+    "taux_annuel": 0.0124,
+    "duree_mois": 216,
+    "date_debut": "2022-04-15",
+    "date_fin": "2040-04-15",
+    "type_amortissement": "FRANCHISE_PARTIELLE",
+    "echeance_mensuelle": 258.33,
+    "mois_franchise": 12
+  },
+  "echeances": [
+    {
+      "numero_echeance": 1,
+      "date_echeance": "2023-05-15",
+      "montant_total": 258.33,
+      "montant_interet": 258.33,
+      "montant_capital": 0.00,
+      "capital_restant_du": 250000.00
+    },
+    ... (EXTRAIT UNIQUEMENT LES 24 PREMIÈRES LIGNES DU TABLEAU)
+  ]
 }
 
-INSTRUCTIONS:
-- numero_pret: cherche "N° DU PRET : XXXX"
-- montant_initial: cherche "MONTANT TOTAL DEBLOQUE : EUR XXX" (utilise les espaces comme séparateurs de milliers)
-- taux_annuel: format décimal (ex: 1.24% = 0.0124, ou 1.240000% = 0.0124)
-- duree_mois: durée totale du prêt en mois
-- date_debut: date première échéance (format YYYY-MM-DD)
-- date_fin: date dernière échéance (format YYYY-MM-DD)
+INSTRUCTIONS CONTRAT:
+- numero_pret: "N° DU PRET : XXXX"
+- montant_initial: "MONTANT TOTAL DEBLOQUE : EUR XXX" (espaces = milliers)
+- taux_annuel: format décimal (1.24% = 0.0124)
+- duree_mois: durée totale en mois
+- dates: format YYYY-MM-DD
 - type_amortissement: "AMORTISSEMENT_CONSTANT" ou "FRANCHISE_PARTIELLE"
-- echeance_mensuelle: montant mensuel régulier (pendant période amortissement, hors franchise)
-- mois_franchise: nombre de mois de franchise (0 si aucune franchise, sinon compte les mois où capital = 0)
+- echeance_mensuelle: montant mensuel régulier
+- mois_franchise: nombre mois différé (capital = 0)
 
-NE RETOURNE QUE LE JSON DU CONTRAT, PAS LES ÉCHÉANCES (elles seront générées mathématiquement).
+INSTRUCTIONS ÉCHÉANCES:
+- Extrait UNIQUEMENT les 24 PREMIÈRES LIGNES du tableau
+- numero_echeance: numéro de ligne (1 à 24)
+- date_echeance: date de paiement (YYYY-MM-DD)
+- montant_total: montant total de l'échéance
+- montant_interet: part intérêts
+- montant_capital: part capital (0 pendant différé)
+- capital_restant_du: capital restant après paiement
+
+IMPORTANT: Limite-toi aux 24 premières échéances (les autres seront calculées automatiquement).
 """
 
-        texte_brut = self.ocr.extract_from_pdf(filepath, prompt=prompt)
+        # Extraire avec 4000 tokens (suffisant pour contrat + 24 échéances)
+        texte_brut = self.ocr.extract_from_pdf(filepath, prompt=prompt, max_tokens=4000)
 
-        # Parser le JSON du contrat
-        contract_data = self._parser_json_contract(texte_brut)
+        # Parser le JSON (contrat + échéances extraites)
+        data = self._parser_json_hybrid(texte_brut)
 
-        if not contract_data or '_erreur' in contract_data:
-            # Erreur de parsing, retourner avec _erreur
-            return {
-                "pret": contract_data,
-                "echeances": []
-            }
+        if not data or '_erreur' in data.get('pret', {}):
+            # Erreur de parsing
+            return data
 
-        # Générer les échéances mathématiquement
-        echeances = self._generer_echeances(contract_data)
+        contract_data = data['pret']
+        echeances_extraites = data.get('echeances', [])
+
+        # Générer les échéances restantes (mois 25+)
+        if len(echeances_extraites) < contract_data['duree_mois']:
+            echeances_generees = self._generer_echeances(
+                contract_data,
+                start_month=len(echeances_extraites) + 1,
+                echeances_precedentes=echeances_extraites
+            )
+            # Combiner: extraites + générées
+            echeances_completes = echeances_extraites + echeances_generees
+        else:
+            echeances_completes = echeances_extraites
 
         return {
             "pret": contract_data,
-            "echeances": echeances
+            "echeances": echeances_completes
         }
 
     @staticmethod
@@ -519,12 +551,127 @@ NE RETOURNE QUE LE JSON DU CONTRAT, PAS LES ÉCHÉANCES (elles seront générée
             }
 
     @staticmethod
-    def _generer_echeances(contrat: Dict) -> List[Dict]:
+    def _parser_json_hybrid(texte: str) -> Dict:
+        """
+        Parse JSON hybride contenant contrat + échéances extraites (approche Scénario B)
+
+        Retourne: {
+            "pret": {...},
+            "echeances": [...]  # Échéances extraites (1-24)
+        }
+        """
+        import json
+        import re
+
+        try:
+            # Nettoyer le texte
+            texte = texte.strip()
+
+            # Cas 1: JSON dans code block markdown
+            if '```json' in texte:
+                match = re.search(r'```json\s*(\{.*?\})\s*```', texte, re.DOTALL)
+                if match:
+                    texte = match.group(1)
+            elif '```' in texte:
+                match = re.search(r'```\s*(\{.*?\})\s*```', texte, re.DOTALL)
+                if match:
+                    texte = match.group(1)
+
+            # Cas 2: JSON direct avec texte avant/après
+            match = re.search(r'(\{.*\})', texte, re.DOTALL)
+            if match:
+                texte = match.group(1)
+
+            # Parser le JSON
+            data = json.loads(texte)
+
+            # Valider structure
+            if not isinstance(data, dict):
+                return {
+                    "pret": {"_erreur": "Réponse non-dict", "_raw": texte[:200]},
+                    "echeances": []
+                }
+
+            if 'pret' not in data:
+                return {
+                    "pret": {"_erreur": "Clé 'pret' manquante", "_raw": texte[:200]},
+                    "echeances": []
+                }
+
+            pret = data['pret']
+            echeances = data.get('echeances', [])
+
+            # Valider champs critiques du contrat
+            champs_critiques = ['numero_pret', 'montant_initial', 'taux_annuel', 'duree_mois']
+            champs_manquants = [c for c in champs_critiques if c not in pret]
+
+            if champs_manquants:
+                return {
+                    "pret": {
+                        "_erreur": f"Champs critiques manquants: {', '.join(champs_manquants)}",
+                        "_raw": str(pret)[:200]
+                    },
+                    "echeances": []
+                }
+
+            # Valider valeurs
+            if pret['montant_initial'] <= 0:
+                return {
+                    "pret": {"_erreur": "montant_initial doit être > 0", "_raw": str(pret)[:200]},
+                    "echeances": []
+                }
+
+            if pret['taux_annuel'] <= 0 or pret['taux_annuel'] > 0.2:
+                return {
+                    "pret": {
+                        "_erreur": f"taux_annuel invalide: {pret['taux_annuel']}",
+                        "_raw": str(pret)[:200]
+                    },
+                    "echeances": []
+                }
+
+            # Assurer valeurs par défaut
+            if 'mois_franchise' not in pret:
+                pret['mois_franchise'] = 0
+            if 'type_amortissement' not in pret:
+                pret['type_amortissement'] = 'AMORTISSEMENT_CONSTANT'
+            if 'banque' not in pret:
+                pret['banque'] = 'LCL'
+
+            # Valider échéances si présentes
+            if not isinstance(echeances, list):
+                echeances = []
+
+            return {
+                "pret": pret,
+                "echeances": echeances
+            }
+
+        except json.JSONDecodeError as e:
+            return {
+                "pret": {
+                    "_erreur": f"JSON invalide: {str(e)[:100]}",
+                    "_raw": texte[:300]
+                },
+                "echeances": []
+            }
+        except Exception as e:
+            return {
+                "pret": {
+                    "_erreur": f"Erreur parsing hybride: {str(e)[:100]}",
+                    "_raw": texte[:300]
+                },
+                "echeances": []
+            }
+
+    @staticmethod
+    def _generer_echeances(contrat: Dict, start_month: int = 1, echeances_precedentes: List[Dict] = None) -> List[Dict]:
         """
         Génère les échéances mathématiquement selon formule amortissement
 
-        Cette approche évite la limite de tokens Claude (240+ lignes) et garantit
-        la précision mathématique.
+        APPROCHE HYBRIDE (V8):
+        - Si start_month=1: génère toutes les échéances
+        - Si start_month>1: génère échéances à partir de start_month (complète les extraites)
 
         Args:
             contrat: Dict avec clés:
@@ -535,10 +682,12 @@ NE RETOURNE QUE LE JSON DU CONTRAT, PAS LES ÉCHÉANCES (elles seront générée
                 - mois_franchise: Nombre de mois franchise (0 si aucune)
                 - type_amortissement: "AMORTISSEMENT_CONSTANT" ou "FRANCHISE_PARTIELLE"
                 - echeance_mensuelle: Montant mensuel (optionnel, calculé si absent)
+            start_month: Numéro du premier mois à générer (défaut: 1)
+            echeances_precedentes: Liste des échéances déjà extraites (pour récupérer capital_restant)
 
         Returns:
-            Liste échéances avec: numero, date, montant_total, montant_interet,
-            montant_capital, capital_restant
+            Liste échéances avec: numero_echeance, date_echeance, montant_total, montant_interet,
+            montant_capital, capital_restant_du
         """
         from datetime import datetime
         from dateutil.relativedelta import relativedelta
@@ -555,8 +704,12 @@ NE RETOURNE QUE LE JSON DU CONTRAT, PAS LES ÉCHÉANCES (elles seront générée
         # Taux mensuel
         taux_mensuel = taux_annuel / Decimal('12')
 
-        # Capital restant dû (varie à chaque échéance)
-        capital_restant = capital_initial
+        # Capital restant dû: soit initial, soit récupéré de la dernière échéance extraite
+        if echeances_precedentes and len(echeances_precedentes) > 0:
+            derniere = echeances_precedentes[-1]
+            capital_restant = Decimal(str(derniere.get('capital_restant_du', capital_initial)))
+        else:
+            capital_restant = capital_initial
 
         # Calculer mensualité si non fournie (formule amortissement constant)
         if 'echeance_mensuelle' in contrat and contrat['echeance_mensuelle'] > 0:
@@ -577,7 +730,7 @@ NE RETOURNE QUE LE JSON DU CONTRAT, PAS LES ÉCHÉANCES (elles seront générée
 
         echeances = []
 
-        for i in range(1, duree_mois + 1):
+        for i in range(start_month, duree_mois + 1):
             # Date de l'échéance
             date_echeance = date_debut + relativedelta(months=i-1)
 
