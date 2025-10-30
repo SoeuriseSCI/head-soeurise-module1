@@ -1091,6 +1091,52 @@ def index():
         'architecture': 'V3.6.2 logic + V3.7 security + V4.1 robustness'
     }), 200
 
+@app.route('/admin/db-status')
+def admin_db_status():
+    """Affiche l'état des tables prêts (pour debug)"""
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Récupérer prêts
+        cur.execute("""
+            SELECT id, numero_pret, banque, montant_initial, taux_annuel,
+                   duree_mois, type_amortissement, mois_franchise,
+                   date_debut, date_fin, actif, created_at
+            FROM prets_immobiliers
+            ORDER BY id
+        """)
+        prets = cur.fetchall()
+
+        # Récupérer comptage échéances
+        cur.execute("""
+            SELECT pret_id, COUNT(*) as nb_echeances,
+                   MIN(date_echeance) as premiere_echeance,
+                   MAX(date_echeance) as derniere_echeance
+            FROM echeances_prets
+            GROUP BY pret_id
+            ORDER BY pret_id
+        """)
+        echeances_stats = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        # Formatter pour JSON
+        result = {
+            'prets': [dict(p) for p in prets],
+            'echeances_stats': [dict(e) for e in echeances_stats],
+            'timestamp': datetime.now().isoformat()
+        }
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 # ═══════════════════════════════════════════════════════════════════
 # SCHEDULER
 # ═══════════════════════════════════════════════════════════════════
