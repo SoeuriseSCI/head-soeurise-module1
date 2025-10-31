@@ -160,13 +160,10 @@ class PretsManager:
             self.session.commit()
             print(f"[PRETS_MGR] COMMIT RÉUSSI pour prêt {numero_pret}", flush=True)
 
-            # Générer automatiquement les échéances manquantes à partir du 15/05/2024
-            nb_echeances_generees = self._generer_echeances_manquantes(pret)
-            if nb_echeances_generees > 0:
-                print(f"[PRETS_MGR] {nb_echeances_generees} échéances supplémentaires générées automatiquement", flush=True)
-                nb_echeances += nb_echeances_generees
+            # NOTE: Les échéances sont déjà complétées par module2_workflow_v2.py::_generer_echeances()
+            # Pas besoin de générer ici avec _generer_echeances_manquantes()
 
-            message = f"Prêt {numero_pret} ingéré : {nb_echeances} échéances stockées (dont {nb_echeances_generees} générées)"
+            message = f"Prêt {numero_pret} ingéré : {nb_echeances} échéances stockées"
             return True, message, pret.id
 
         except IntegrityError as e:

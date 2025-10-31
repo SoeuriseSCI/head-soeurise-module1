@@ -451,8 +451,21 @@ IMPORTANT:
                 "echeances": []
             }
 
+        # Dédupliquer les échéances extraites par date (au cas où doublon ECH + numérotée)
+        dates_vues = set()
+        echeances_dedupliquees = []
+        for ech in echeances_extraites:
+            date_ech = ech.get('date_echeance')
+            if date_ech not in dates_vues:
+                dates_vues.add(date_ech)
+                echeances_dedupliquees.append(ech)
+            else:
+                print(f"[PARSING] Doublon détecté et ignoré: {date_ech}", flush=True)
+
+        echeances_extraites = echeances_dedupliquees
+
         # Générer les échéances restantes (mois 25+)
-        print(f"[PARSING] Échéances extraites: {len(echeances_extraites)}, duree_mois: {duree_mois}", flush=True)
+        print(f"[PARSING] Échéances extraites (après dédup): {len(echeances_extraites)}, duree_mois: {duree_mois}", flush=True)
         if len(echeances_extraites) > 0:
             print(f"[PARSING] Dernière échéance extraite: {echeances_extraites[-1].get('date_echeance')}", flush=True)
 
