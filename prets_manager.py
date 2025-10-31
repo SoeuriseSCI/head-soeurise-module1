@@ -160,7 +160,13 @@ class PretsManager:
             self.session.commit()
             print(f"[PRETS_MGR] COMMIT RÉUSSI pour prêt {numero_pret}", flush=True)
 
-            message = f"Prêt {numero_pret} ingéré : {nb_echeances} échéances stockées"
+            # Générer automatiquement les échéances manquantes à partir du 15/05/2024
+            nb_echeances_generees = self._generer_echeances_manquantes(pret)
+            if nb_echeances_generees > 0:
+                print(f"[PRETS_MGR] {nb_echeances_generees} échéances supplémentaires générées automatiquement", flush=True)
+                nb_echeances += nb_echeances_generees
+
+            message = f"Prêt {numero_pret} ingéré : {nb_echeances} échéances stockées (dont {nb_echeances_generees} générées)"
             return True, message, pret.id
 
         except IntegrityError as e:
@@ -325,6 +331,105 @@ class PretsManager:
             "montant_initial": float(p.montant_initial),
             "echeance_mensuelle": float(p.echeance_mensuelle) if p.echeance_mensuelle else None
         } for p in prets]
+
+    def _generer_echeances_manquantes(self, pret: PretImmobilier) -> int:
+        """
+        Génère automatiquement les échéances manquantes à partir du 15/05/2024
+
+        Args:
+            pret: Objet PretImmobilier avec échéances déjà insérées
+
+        Returns:
+            Nombre d'échéances générées
+        """
+        from dateutil.relativedelta import relativedelta
+
+        # Récupérer toutes les échéances existantes, triées par date
+        echeances_existantes = self.session.query(EcheancePret).filter_by(
+            pret_id=pret.id
+        ).order_by(EcheancePret.date_echeance).all()
+
+        if not echeances_existantes:
+            print(f"[PRETS_MGR] Aucune échéance existante pour générer la suite", flush=True)
+            return 0
+
+        # Dernière échéance extraite
+        derniere_echeance = echeances_existantes[-1]
+        date_ref = date(2024, 5, 15)  # Date de référence : 15/05/2024
+
+        # Si la dernière échéance est avant le 15/05/2024, on ne génère rien
+        if derniere_echeance.date_echeance < date_ref:
+            print(f"[PRETS_MGR] Dernière échéance ({derniere_echeance.date_echeance}) avant 15/05/2024, pas de génération", flush=True)
+            return 0
+
+        # Si on a déjà toutes les échéances (jusqu'à date_fin), on ne génère rien
+        if pret.date_fin and derniere_echeance.date_echeance >= pret.date_fin:
+            print(f"[PRETS_MGR] Échéances déjà complètes jusqu'à {pret.date_fin}", flush=True)
+            return 0
+
+        # Paramètres pour génération
+        taux_mensuel = pret.taux_annuel / Decimal('12') / Decimal('100')  # Taux annuel → mensuel décimal
+        capital_restant = derniere_echeance.capital_restant_du
+        date_courante = derniere_echeance.date_echeance
+        numero_echeance = derniere_echeance.numero_echeance
+        mensualite = pret.echeance_mensuelle if pret.echeance_mensuelle else derniere_echeance.montant_total
+
+        print(f"[PRETS_MGR] Génération auto depuis {date_courante} (capital restant: {capital_restant}€)", flush=True)
+        print(f"[PRETS_MGR] Taux mensuel: {taux_mensuel}, Mensualité: {mensualite}€", flush=True)
+
+        nb_generees = 0
+        max_echeances = 500  # Limite de sécurité
+
+        while capital_restant > Decimal('0.01') and nb_generees < max_echeances:
+            # Date suivante (+1 mois)
+            date_courante = date_courante + relativedelta(months=1)
+
+            # Vérifier si on dépasse date_fin
+            if pret.date_fin and date_courante > pret.date_fin:
+                break
+
+            # Calculer intérêts
+            montant_interet = capital_restant * taux_mensuel
+
+            # Calculer capital amorti
+            montant_capital = mensualite - montant_interet
+
+            # Si capital > capital_restant, c'est la dernière échéance
+            if montant_capital >= capital_restant:
+                montant_capital = capital_restant
+                montant_total = montant_interet + montant_capital
+                capital_restant = Decimal('0')
+            else:
+                montant_total = mensualite
+                capital_restant -= montant_capital
+
+            # Créer échéance
+            numero_echeance += 1
+            nouvelle_echeance = EcheancePret(
+                pret_id=pret.id,
+                numero_echeance=numero_echeance,
+                date_echeance=date_courante,
+                montant_total=montant_total,
+                montant_interet=montant_interet,
+                montant_capital=montant_capital,
+                capital_restant_du=capital_restant,
+                montant_assurance=Decimal('0'),
+                comptabilise=False
+            )
+            self.session.add(nouvelle_echeance)
+            nb_generees += 1
+
+            # Commit tous les 50 pour éviter surcharge mémoire
+            if nb_generees % 50 == 0:
+                self.session.commit()
+                print(f"[PRETS_MGR] {nb_generees} échéances générées (commit intermédiaire)", flush=True)
+
+        # Commit final
+        if nb_generees > 0:
+            self.session.commit()
+            print(f"[PRETS_MGR] {nb_generees} échéances générées au total", flush=True)
+
+        return nb_generees
 
     @staticmethod
     def _parse_date(date_str: any) -> Optional[date]:
