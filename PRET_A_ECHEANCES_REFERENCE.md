@@ -248,7 +248,7 @@
 
 ---
 
-**Total des échéances**: 217
+**Total des échéances**: 216
 **Total capital remboursé**: 250 000,00 EUR
 **Total intérêts payés**: 55 847,62 EUR
-**Coût total du crédit**: 306 097,62 EUR (hors frais de dossier de 250 EUR)
+**Coût total du crédit**: 305 847,62 EUR (hors frais de dossier de 250 EUR)
