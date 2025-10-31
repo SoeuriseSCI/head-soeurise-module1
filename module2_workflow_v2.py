@@ -410,11 +410,30 @@ INSTRUCTIONS CONTRAT:
 - mois_franchise: nombre mois différé (capital = 0)
 
 INSTRUCTIONS ÉCHÉANCES:
-- **IGNORE les lignes "DBL" ET la PREMIÈRE ligne "ECH"** (header du tableau)
-- **EXTRAIT les 24 PREMIÈRES LIGNES NON IGNORÉES** (environ 12 lignes "ECH" + 12 lignes numérotées)
-- Les lignes "ECH" (sauf la première) contiennent les échéances de la période de franchise
-- Les lignes numérotées (ex: 014, 015, 016...) sont les échéances post-franchise
-- numero_echeance: numéro séquentiel (1, 2, 3... pour ECH, puis numéro réel pour lignes numérotées)
+CRITIQUE: Tu DOIS extraire EXACTEMENT 24 échéances, pas moins !
+
+Méthode d'extraction:
+1. IGNORER toutes les lignes "DBL" (double month, format DBL)
+2. IGNORER la PREMIÈRE ligne "ECH" (c'est le header du tableau)
+3. À partir de là, EXTRAIRE LES 24 LIGNES SUIVANTES qui contiennent des dates d'échéances:
+   - Ces 24 lignes incluent les lignes "ECH" (après la première) ET les lignes numérotées
+   - Format ECH : "ECH  15/05/2023  258.00€  0.00€  250000.00€"
+   - Format numéroté : "014  15/04/2024  1166.00€  951.27€  249048.73€"
+
+Structure attendue (exemple):
+- Lignes DBL → IGNORER
+- Ligne "ECH 15/05/2023" (première ECH) → IGNORER
+- Ligne "ECH 15/06/2023" → EXTRAIRE (1/24)
+- Ligne "ECH 15/07/2023" → EXTRAIRE (2/24)
+- ... (10 autres lignes ECH)
+- Ligne "014 15/04/2024" → EXTRAIRE (13/24)
+- Ligne "015 15/05/2024" → EXTRAIRE (14/24)
+- ... (10 autres lignes numérotées)
+- Ligne "025 15/03/2025" → EXTRAIRE (24/24) ← DERNIÈRE LIGNE À EXTRAIRE
+
+VÉRIFICATION: Si tu n'as pas 24 échéances dans ta liste, CONTINUE À EXTRAIRE !
+
+- numero_echeance: numéro séquentiel (1, 2, 3... pour toutes les lignes)
 - date_echeance: date de paiement (YYYY-MM-DD)
 - montant_total: montant total de l'échéance
 - montant_interet: part intérêts
@@ -422,13 +441,12 @@ INSTRUCTIONS ÉCHÉANCES:
 - capital_restant_du: capital restant après paiement
 
 IMPORTANT:
-- Ignore uniquement les lignes "DBL" et la toute première ligne "ECH"
-- Extrais exactement 24 lignes (mix de ECH + numérotées)
-- Les autres échéances seront calculées automatiquement à partir du 15/05/2024
+- NE T'ARRÊTE PAS avant d'avoir 24 échéances !
+- Les autres échéances (25+) seront calculées automatiquement
 """
 
-        # Extraire avec 4000 tokens (suffisant pour contrat + 24 échéances)
-        texte_brut = self.ocr.extract_from_pdf(filepath, prompt=prompt, max_tokens=4000)
+        # Extraire avec 8000 tokens pour garantir les 24 échéances complètes
+        texte_brut = self.ocr.extract_from_pdf(filepath, prompt=prompt, max_tokens=8000)
 
         # Parser le JSON (contrat + échéances extraites)
         data = self._parser_json_hybrid(texte_brut)
