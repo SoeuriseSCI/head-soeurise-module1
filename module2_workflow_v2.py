@@ -741,12 +741,15 @@ IMPORTANT:
         # Taux mensuel
         taux_mensuel = taux_annuel / Decimal('12')
 
-        # Capital restant dû: soit initial, soit récupéré de la dernière échéance extraite
+        # Capital restant dû ET date de départ : récupérer de la dernière échéance extraite si existe
         if echeances_precedentes and len(echeances_precedentes) > 0:
             derniere = echeances_precedentes[-1]
             capital_restant = Decimal(str(derniere.get('capital_restant_du', capital_initial)))
+            # Date de départ = date de la dernière échéance extraite
+            date_reference = datetime.strptime(derniere['date_echeance'], '%Y-%m-%d')
         else:
             capital_restant = capital_initial
+            date_reference = None  # Pas utilisé si pas de précédentes
 
         # Calculer mensualité si non fournie (formule amortissement constant)
         if 'echeance_mensuelle' in contrat and contrat['echeance_mensuelle'] > 0:
@@ -766,10 +769,17 @@ IMPORTANT:
                 mensualite = Decimal('0')
 
         echeances = []
+        compteur_mois = 1  # Compteur pour les mois à ajouter à date_reference
 
         for i in range(start_month, duree_mois + 1):
             # Date de l'échéance
-            date_echeance = date_debut + relativedelta(months=i-1)
+            if echeances_precedentes and len(echeances_precedentes) > 0:
+                # Partir de la dernière échéance extraite + compteur mois
+                date_echeance = date_reference + relativedelta(months=compteur_mois)
+                compteur_mois += 1
+            else:
+                # Partir de date_debut (génération complète)
+                date_echeance = date_debut + relativedelta(months=i-1)
 
             # Calculer intérêt et capital selon période
             if i <= mois_franchise:
