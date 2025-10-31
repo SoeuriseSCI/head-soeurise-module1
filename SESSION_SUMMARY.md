@@ -1,14 +1,25 @@
-# Session Summary - Corrections Parsing Tableaux Amortissement
+# Session Summary - Corrections Parsing Tableaux Amortissement (FINALE)
 
 **Date:** 30-31 octobre 2025
 **Branches:** `claude/review-previous-session-011CUXYwLNG2gaeperhySx9e`
-**Status:** ✅ Production-ready | Corrections déjà mergées via PR #46, #47
+**Status:** ✅ CORRIGÉ selon specs utilisateur | Commit `ae78f01` + `326bb89`
+
+---
+
+## ⚠️ CORRECTION UTILISATEUR (31/10/2025)
+
+**Feedback utilisateur:**
+> "Pas d'accord. Le prompt corrigé devrait dire 'ignore les lignes "DBL" et la première ligne "ECH", extrait les 24 premières lignes non ignorées (donc 12 lignes avec "ECH" et 12 lignes numérotées)". Pour la génération des autres lignes, prévoir de générer à partir de l'échéance du 15/05/2024"
+
+**Impact:**
+- ❌ Ma correction initiale (commits `0efa815`, `b3bdfab`) était **INCORRECTE** - ignorait toutes les lignes ECH
+- ✅ Nouvelle correction (commit `ae78f01`) applique les **vraies spécifications** utilisateur
 
 ---
 
 ## 🎯 Objectif
 
-Corriger les problèmes de parsing des tableaux d'amortissement PDF qui causaient des **dates dupliquées** dans les échéances.
+Corriger les problèmes de parsing des tableaux d'amortissement PDF selon les **spécifications utilisateur**.
 
 ---
 
@@ -78,6 +89,64 @@ if doublons:
 ```
 
 **Impact:** Si des doublons sont détectés, l'insertion échoue → force la correction du prompt de parsing.
+
+---
+
+## ✅ SOLUTIONS FINALES (Commit ae78f01 - Selon specs utilisateur)
+
+### 1. Prompt Corrigé - Extraction 24 Lignes (12 ECH + 12 Numérotées)
+**Fichier:** `module2_workflow_v2.py:412-427`
+**Commit:** `ae78f01` 🐛 FIX: Correct parsing per user specs
+
+**Nouvelle logique (CORRECTE):**
+```python
+INSTRUCTIONS ÉCHÉANCES:
+- **IGNORE les lignes "DBL" ET la PREMIÈRE ligne "ECH"** (header du tableau)
+- **EXTRAIT les 24 PREMIÈRES LIGNES NON IGNORÉES** (environ 12 lignes "ECH" + 12 lignes numérotées)
+- Les lignes "ECH" (sauf la première) contiennent les échéances de la période de franchise
+- Les lignes numérotées (ex: 014, 015, 016...) sont les échéances post-franchise
+
+IMPORTANT:
+- Ignore uniquement les lignes "DBL" et la toute première ligne "ECH"
+- Extrais exactement 24 lignes (mix de ECH + numérotées)
+- Les autres échéances seront calculées automatiquement à partir du 15/05/2024
+```
+
+**Pourquoi c'est important:**
+- Les lignes "ECH" contiennent les **vrais paiements de franchise** (12 mois)
+- Les ignorer perdait des données comptables essentielles
+- Maintenant : historique complet franchise + amortissement initial
+
+### 2. Génération Automatique à partir du 15/05/2024
+**Fichier:** `prets_manager.py:335-432`
+**Commit:** `ae78f01`
+
+**Nouvelle fonction:** `_generer_echeances_manquantes(pret)`
+
+**Logique:**
+```python
+# 1. Point de départ : dernière échéance extraite (≈ 15/05/2024)
+derniere_echeance = echeances_existantes[-1]
+date_ref = date(2024, 5, 15)
+
+# 2. Si dernière ≥ 15/05/2024 → génération activée
+if derniere_echeance.date_echeance >= date_ref:
+    # 3. Calcul mensuel jusqu'à date_fin
+    while capital_restant > 0:
+        date_courante += relativedelta(months=1)
+
+        montant_interet = capital_restant * (taux_annuel / 12 / 100)
+        montant_capital = echeance_mensuelle - montant_interet
+        capital_restant -= montant_capital
+
+        # Créer échéance en BD
+        nouvelle_echeance = EcheancePret(...)
+        session.add(nouvelle_echeance)
+```
+
+**Résultat attendu:**
+- Prêt A: 24 extraites + 228 générées = **252 échéances totales**
+- Prêt B: 24 extraites + 192 générées = **216 échéances totales**
 
 ### 3. Logs de Diagnostic
 **Commit:** `b269f6e` 🔍 Add parsing logs to diagnose duplicate dates
