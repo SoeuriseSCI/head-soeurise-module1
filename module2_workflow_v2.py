@@ -86,13 +86,11 @@ class OCRExtractor:
             if not images:
                 raise ValueError(f"PDF vide ou non lisible: {filepath}")
 
-            # Pour les tableaux d'amortissement, on saute la page 1 (couverture)
-            # et on traite les pages 2-20 qui contiennent le vrai tableau
-            start_page = 1 if len(images) > 1 else 0  # Page 2 (index 1) si PDF multi-pages
+            # On traite les 20 premières pages maximum
             max_pages = min(20, len(images))
             extracted_text = []
 
-            for page_num, image in enumerate(images[start_page:max_pages], start=start_page):
+            for page_num, image in enumerate(images[:max_pages]):
                 # Convertir image PIL → JPEG base64
                 buffer = io.BytesIO()
                 image.save(buffer, format='JPEG')
