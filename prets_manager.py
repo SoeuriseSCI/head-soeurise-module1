@@ -428,6 +428,70 @@ class PretsManager:
 
         return nb_generees
 
+    def inserer_pret_et_echeances(self,
+                                   pret_data: Dict,
+                                   echeances_data: List[Dict]) -> Tuple[bool, str, Optional[int]]:
+        """
+        Insère un prêt et ses échéances en BD
+
+        Wrapper de ingest_tableau_pret() pour compatibilité avec tools V6
+
+        Args:
+            pret_data: Données du prêt
+            echeances_data: Liste des échéances
+
+        Returns:
+            (success, message, pret_id)
+        """
+        return self.ingest_tableau_pret(
+            pret_data=pret_data,
+            echeances_data=echeances_data,
+            source_email_id=None,
+            source_document=pret_data.get('fichier_reference')
+        )
+
+    def get_echeance(self, numero_pret: str, date_echeance: str) -> Optional[EcheancePret]:
+        """
+        Récupère l'objet EcheancePret pour un prêt et une date donnés
+
+        Version simplifiée de lookup_echeance() qui retourne l'objet ORM directement
+        Utilisée par les tools de Function Calling
+
+        Args:
+            numero_pret: Numéro du prêt (ex: '5009736BRM0911AH')
+            date_echeance: Date au format YYYY-MM-DD ou objet date
+
+        Returns:
+            EcheancePret ou None si non trouvée
+        """
+        # Parser la date si c'est une string
+        if isinstance(date_echeance, str):
+            date_echeance = self._parse_date(date_echeance)
+
+        if not date_echeance:
+            return None
+
+        # Trouver le prêt
+        pret = self.session.query(PretImmobilier).filter_by(
+            numero_pret=numero_pret,
+            actif=True
+        ).first()
+
+        if not pret:
+            return None
+
+        # Chercher l'échéance
+        from sqlalchemy import and_
+
+        echeance = self.session.query(EcheancePret).filter(
+            and_(
+                EcheancePret.pret_id == pret.id,
+                EcheancePret.date_echeance == date_echeance
+            )
+        ).first()
+
+        return echeance
+
     @staticmethod
     def _parse_date(date_str: any) -> Optional[date]:
         """Parse string ou date object vers date"""
