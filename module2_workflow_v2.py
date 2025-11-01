@@ -80,20 +80,20 @@ class OCRExtractor:
             raise ImportError("pdf2image non disponible - installer avec: pip install pdf2image pdf2image poppler-utils")
 
         try:
-            # Convertir PDF → images (JPEG)
-            images = convert_from_path(filepath, dpi=150)
+            # Convertir PDF → images (JPEG) - DPI réduit pour économiser mémoire
+            images = convert_from_path(filepath, dpi=100)  # Réduit de 150 à 100 (-44% pixels)
 
             if not images:
                 raise ValueError(f"PDF vide ou non lisible: {filepath}")
 
-            # On traite les 20 premières pages maximum
-            max_pages = min(20, len(images))
+            # Limiter à 10 pages pour économiser mémoire (Render 512 MB)
+            max_pages = min(10, len(images))
             extracted_text = []
 
             for page_num, image in enumerate(images[:max_pages]):
-                # Convertir image PIL → JPEG base64
+                # Convertir image PIL → JPEG base64 avec compression
                 buffer = io.BytesIO()
-                image.save(buffer, format='JPEG')
+                image.save(buffer, format='JPEG', quality=85, optimize=True)
                 image_base64 = __import__('base64').b64encode(buffer.getvalue()).decode()
 
                 # Envoyer à Claude Vision
@@ -120,6 +120,13 @@ class OCRExtractor:
 
                 page_text = response.content[0].text
                 extracted_text.append(f"--- Page {page_num+1} ---\n{page_text}")
+
+                # Libérer mémoire image et buffer
+                buffer.close()
+                del image, buffer, image_base64
+
+            # Libérer liste images complète
+            del images
 
             return "\n\n".join(extracted_text)
 
