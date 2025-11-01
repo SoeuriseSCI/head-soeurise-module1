@@ -118,8 +118,9 @@ class IntegratorModule2:
                 if type_evt == TypeEvenement.UNKNOWN:  # ✅ COMPARAISON ENUM FIX
                     continue
 
-                # ✅ Traitement PRET_IMMOBILIER (Ingestion tableaux amortissement)
-                if type_evt == TypeEvenement.PRET_IMMOBILIER:
+                # ⚠️ DÉSACTIVÉ: Ingestion directe prêts (remplacé par workflow V6 avec propositions)
+                # Pour réactiver l'ingestion directe, décommenter le bloc ci-dessous
+                if False and type_evt == TypeEvenement.PRET_IMMOBILIER:
                     try:
                         # Traiter chaque PDF d'attachments
                         attachments = email.get('attachments', [])

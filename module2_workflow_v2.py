@@ -167,7 +167,8 @@ class DetecteurTypeEvenement:
             return TypeEvenement.CLOTURE_EXERCICE
         
         # Détecteur INIT_BILAN_2023
-        if any(kw in body for kw in ['bilan 2023', 'bilan_2023', 'bilan initial', 'initialisation comptable']):
+        if any(kw in body for kw in ['bilan 2023', 'bilan_2023', 'bilan initial', 'initialisation comptable',
+                                      'bilan d\'ouverture', 'bilan ouverture', "bilan d'ouverture"]):
             return TypeEvenement.INIT_BILAN_2023
         
         if any(f['filename'].lower().endswith('.pdf') and 'bilan' in f['filename'].lower() and '2023' in f['filename'].lower()
