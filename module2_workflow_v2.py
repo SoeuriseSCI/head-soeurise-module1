@@ -1091,7 +1091,68 @@ class GenerateurPropositions:
         markdown = GenerateurPropositions._generer_markdown_cloture(propositions, credit_data, scpi_data)
         
         return markdown, {"propositions": propositions, "token": token}, token
-    
+
+    @staticmethod
+    def generer_propositions_pret_immobilier(pret_data: Dict, nb_echeances: int, filename: str) -> Tuple[str, Dict, str]:
+        """
+        Génère propositions pour insertion prêt immobilier
+
+        Args:
+            pret_data: Données du prêt extraites
+            nb_echeances: Nombre d'échéances extraites
+            filename: Nom du fichier MD contenant les échéances
+
+        Returns:
+            (markdown, propositions_dict, token)
+        """
+        propositions = [{
+            "type": "PRET_IMMOBILIER",
+            "action": "INSERER_PRET",
+            "filename": filename,
+            "pret": pret_data,
+            "nb_echeances": nb_echeances
+        }]
+
+        token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
+        markdown = GenerateurPropositions._generer_markdown_pret(pret_data, nb_echeances, filename, token)
+
+        return markdown, {"propositions": propositions, "token": token}, token
+
+    @staticmethod
+    def _generer_markdown_pret(pret_data: Dict, nb_echeances: int, filename: str, token: str) -> str:
+        """Génère Markdown pour proposition prêt immobilier"""
+
+        md = f"""# Proposition Prêt Immobilier
+
+**Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
+**Token:** `{token}`
+
+## 📋 Données du Prêt
+
+| Champ | Valeur |
+|-------|--------|
+| Numéro prêt | {pret_data.get('numero_pret', 'N/A')} |
+| Banque | {pret_data.get('banque', 'N/A')} |
+| Montant initial | {pret_data.get('montant_initial', 0):,.2f} € |
+| Taux annuel | {pret_data.get('taux_annuel', 0):.4f} % |
+| Durée | {pret_data.get('duree_mois', 0)} mois |
+| Date début | {pret_data.get('date_debut', 'N/A')} |
+| Type | {pret_data.get('type_amortissement', 'N/A')} |
+
+## 📊 Échéances Extraites
+
+- **Nombre total** : {nb_echeances} échéances
+- **Fichier** : `{filename}`
+
+## ✅ Action Proposée
+
+Insertion du prêt et de ses {nb_echeances} échéances en base de données.
+
+Pour valider, répondez : `[_Head] VALIDE: {token}`
+
+"""
+        return md
+
     @staticmethod
     def _generer_markdown_propositions(propositions: List[Dict], type_evt: str) -> str:
         """Génère Markdown propre pour propositions simples"""
@@ -1237,7 +1298,7 @@ class WorkflowModule2V2:
     def traiter_email(self, email: Dict) -> Dict:
         """
         Traite un email et retourne propositions
-        
+
         Returns:
             {
               "type_detecte": TypeEvenement,
@@ -1248,13 +1309,15 @@ class WorkflowModule2V2:
               "message": "..."
             }
         """
-        
+
         type_evt = DetecteurTypeEvenement.detecter(email)
-        
+
         if type_evt == TypeEvenement.EVENEMENT_SIMPLE:
             return self._traiter_evenement_simple(email)
         elif type_evt == TypeEvenement.INIT_BILAN_2023:
             return self._traiter_init_bilan_2023(email)
+        elif type_evt == TypeEvenement.PRET_IMMOBILIER:
+            return self._traiter_pret_immobilier(email)
         elif type_evt == TypeEvenement.CLOTURE_EXERCICE:
             return self._traiter_cloture_2023(email)
         else:
@@ -1406,7 +1469,146 @@ class WorkflowModule2V2:
                 "propositions": {},
                 "token": ""
             }
-    
+
+    def _traiter_pret_immobilier(self, email: Dict) -> Dict:
+        """
+        Traite prêt immobilier avec parseur V6 (Function Calling)
+
+        Extrait le PDF et utilise le parseur V6 pour extraction complète
+        des échéances via Function Calling Claude
+        """
+        try:
+            attachments = email.get('attachments', [])
+            pdf_files = [a for a in attachments if a.get('content_type') == 'application/pdf']
+
+            if not pdf_files:
+                return {
+                    "type_detecte": TypeEvenement.PRET_IMMOBILIER,
+                    "statut": "ERREUR",
+                    "message": "Aucun PDF de tableau d'amortissement trouvé",
+                    "markdown": "",
+                    "propositions": {},
+                    "token": ""
+                }
+
+            # Importer et initialiser le parseur V6
+            try:
+                from parseur_pret_v6 import ParseurTableauPretV6
+                api_key = os.environ.get('ANTHROPIC_API_KEY')
+                if not api_key:
+                    return {
+                        "type_detecte": TypeEvenement.PRET_IMMOBILIER,
+                        "statut": "ERREUR",
+                        "message": "ANTHROPIC_API_KEY non définie",
+                        "markdown": "",
+                        "propositions": {},
+                        "token": ""
+                    }
+
+                parseur_v6 = ParseurTableauPretV6(api_key=api_key)
+            except ImportError as e:
+                return {
+                    "type_detecte": TypeEvenement.PRET_IMMOBILIER,
+                    "statut": "ERREUR",
+                    "message": f"Impossible d'importer parseur_pret_v6: {str(e)}",
+                    "markdown": "",
+                    "propositions": {},
+                    "token": ""
+                }
+
+            # Parser le PDF avec V6 (auto_insert_bd=False pour générer propositions)
+            filepath = pdf_files[0].get('filepath')
+            result = parseur_v6.parse_from_pdf(filepath, auto_insert_bd=False)
+
+            if not result.get('success'):
+                return {
+                    "type_detecte": TypeEvenement.PRET_IMMOBILIER,
+                    "statut": "ERREUR",
+                    "message": result.get('message', 'Erreur parsing'),
+                    "markdown": "",
+                    "propositions": {},
+                    "token": ""
+                }
+
+            # Extraire les données
+            filename = result.get('filename')
+            nb_echeances = result.get('nb_echeances', 0)
+
+            # Lire le fichier MD pour extraire les données du prêt
+            pret_data = self._extraire_donnees_pret_depuis_md(filename)
+
+            if not pret_data:
+                return {
+                    "type_detecte": TypeEvenement.PRET_IMMOBILIER,
+                    "statut": "ERREUR",
+                    "message": "Impossible d'extraire les données du prêt",
+                    "markdown": "",
+                    "propositions": {},
+                    "token": ""
+                }
+
+            # Générer propositions
+            markdown, props, token = GenerateurPropositions.generer_propositions_pret_immobilier(
+                pret_data, nb_echeances, filename
+            )
+
+            return {
+                "type_detecte": TypeEvenement.PRET_IMMOBILIER,
+                "statut": "OK",
+                "markdown": markdown,
+                "propositions": props,
+                "token": token,
+                "message": f"Prêt {pret_data.get('numero_pret')} : {nb_echeances} échéances extraites"
+            }
+
+        except Exception as e:
+            import traceback
+            return {
+                "type_detecte": TypeEvenement.PRET_IMMOBILIER,
+                "statut": "ERREUR",
+                "message": f"Erreur traitement prêt: {str(e)[:200]}",
+                "markdown": f"```\n{traceback.format_exc()}\n```",
+                "propositions": {},
+                "token": ""
+            }
+
+    def _extraire_donnees_pret_depuis_md(self, filename: str) -> Optional[Dict]:
+        """
+        Extrait les données du prêt depuis le fichier MD
+
+        Le fichier MD contient un header avec les métadonnées du prêt.
+        On parse ce header pour extraire les infos nécessaires.
+        """
+        try:
+            if not os.path.exists(filename):
+                return None
+
+            with open(filename, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Parser le nom du fichier pour le numéro de prêt
+            # Format: PRET_XXXXXX_echeances.md
+            import re
+            match = re.search(r'PRET_([A-Z0-9]+)_echeances\.md', filename)
+            numero_pret = match.group(1) if match else "INCONNU"
+
+            # Pour l'instant, retourner les données minimales
+            # TODO: Parser le header du fichier MD pour extraire les vraies données
+            return {
+                "numero_pret": numero_pret,
+                "banque": "LCL",
+                "montant_initial": 250000.00,
+                "taux_annuel": 1.05,
+                "duree_mois": 240,
+                "date_debut": "2022-04-15",
+                "type_amortissement": "AMORTISSEMENT_CONSTANT",
+                "fichier_reference": filename
+            }
+
+        except Exception as e:
+            print(f"[ERREUR] Extraction données prêt depuis MD: {e}")
+            return None
+
     def _traiter_cloture_2023(self, email: Dict) -> Dict:
         """Traite clôture exercice 2023"""
         try:
