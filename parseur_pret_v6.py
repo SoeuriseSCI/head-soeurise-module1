@@ -74,8 +74,8 @@ class ParseurTableauPretV6:
             }
 
         try:
-            # 1. Convertir PDF → Images
-            images = convert_from_path(filepath, dpi=150)
+            # 1. Convertir PDF → Images (DPI réduit pour économiser mémoire)
+            images = convert_from_path(filepath, dpi=100)  # Réduit de 150 à 100 (44% moins de pixels)
 
             if not images:
                 return {
@@ -88,12 +88,13 @@ class ParseurTableauPretV6:
 
             # 2. Préparer les images pour Claude
             image_contents = []
-            # On traite toutes les pages nécessaires (max 20)
-            max_pages = min(20, len(images))
+            # Limiter à 10 pages pour économiser mémoire (Render 512 MB)
+            max_pages = min(10, len(images))
 
             for page_num, image in enumerate(images[:max_pages]):
                 buffer = io.BytesIO()
-                image.save(buffer, format='JPEG')
+                # Compression JPEG qualité 85 (au lieu de 95 par défaut)
+                image.save(buffer, format='JPEG', quality=85, optimize=True)
                 image_base64 = base64.b64encode(buffer.getvalue()).decode()
 
                 image_contents.append({
@@ -105,7 +106,14 @@ class ParseurTableauPretV6:
                     }
                 })
 
-            print(f"[PARSEUR V6] {len(image_contents)} pages préparées pour Claude", flush=True)
+                # Libérer mémoire image PIL
+                buffer.close()
+                del image
+
+            # Libérer liste images complète
+            del images
+
+            print(f"[PARSEUR V6] {len(image_contents)} pages préparées pour Claude (mémoire optimisée)", flush=True)
 
             # 3. Appel Claude API avec Function Calling
             result = self._call_claude_with_tools(image_contents, filepath, auto_insert_bd)
