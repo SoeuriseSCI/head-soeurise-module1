@@ -136,21 +136,64 @@ class ParseurTableauPretV6:
         """
 
         # Prompt système
-        system_prompt = """Tu es un expert en extraction de tableaux d'amortissement de prêts immobiliers.
+        system_prompt = """Tu es un expert en extraction de tableaux d'amortissement de prêts immobiliers LCL/Crédit Lyonnais.
 
 Ton rôle :
-1. Analyser le PDF (tableau d'amortissement LCL/Crédit Lyonnais)
+1. Analyser le PDF (tableau d'amortissement LCL)
 2. Extraire les paramètres du prêt (numéro, montant, taux, durée, dates)
 3. Extraire TOUTES les échéances ligne par ligne (généralement 200-300 lignes)
-4. Sauvegarder les échéances dans un fichier MD avec le tool extract_all_echeances_to_file
-5. Insérer en base de données avec le tool insert_pret_from_file
+4. Sauvegarder avec le tool extract_all_echeances_to_file
+5. Insérer en BD avec le tool insert_pret_from_file (OBLIGATOIRE après l'extraction)
 
-IMPORTANT pour l'extraction :
-- Extrait TOUTES les échéances du tableau, pas seulement 24 !
-- Ignore les lignes "DBL" (double month)
-- Ignore la première ligne "ECH" avec frais de dossier (ex: "ECH 15/04/2022 0,00 0,00 0,00 250,00")
-- Extrais toutes les autres lignes ECH + lignes numérotées
-- Pour chaque échéance, extrait : date, montant_total, montant_capital, montant_interet, capital_restant_du
+FORMAT DU TABLEAU LCL (colonnes à lire de gauche à droite) :
+┌────────┬──────────┬────────────┬────────────┬────────────┬───────────────┐
+│ Type   │   Date   │ Montant    │ Capital    │ Intérêts   │ Capital Restant│
+│ Ligne  │          │ Échéance   │ Amorti     │ Payés      │ Dû            │
+├────────┼──────────┼────────────┼────────────┼────────────┼───────────────┤
+│ DBL    │15/04/2022│    0,00    │    0,00    │  250 000,00│     0,00      │ ← IGNORER (double month)
+│ ECH    │15/04/2022│    0,00    │    0,00    │    0,00    │    250,00     │ ← IGNORER (frais dossier)
+│ ECH    │15/05/2022│    0,00    │    0,00    │  250 000,00│     0,00      │ ← EXTRAIRE
+│ ECH    │15/06/2022│    0,00    │    0,00    │  250 000,00│     0,00      │ ← EXTRAIRE
+│ ...    │   ...    │    ...     │    ...     │    ...     │     ...       │
+│ 014    │15/05/2023│ 1 166,59   │    0,00    │  250 000,00│  1 494,37     │ ← EXTRAIRE (ligne numérotée)
+│ 015    │15/06/2023│ 1 166,59   │    0,00    │  250 000,00│  1 494,37     │ ← EXTRAIRE
+└────────┴──────────┴────────────┴────────────┴────────────┴───────────────┘
+
+RÈGLES D'EXTRACTION STRICTES :
+✅ EXTRAIRE :
+   - Lignes "ECH" SAUF la toute première (frais de dossier)
+   - Lignes numérotées (001, 002, ..., 240)
+
+❌ IGNORER :
+   - Lignes "DBL" (double month)
+   - Première ligne "ECH" (frais de dossier)
+
+⚠️ MAPPING DES COLONNES (VÉRIFIE LE PDF) :
+Dans le tableau LCL, tu trouveras ces colonnes dans cet ordre :
+1. Type de ligne (ECH, DBL, numéro)
+2. Date
+3-6. Les 4 valeurs numériques qui correspondent à :
+   - Montant échéance (mensualité payée, peut être 0 pendant franchise)
+   - Capital amorti (remboursé, souvent 0 en début de prêt IN FINE)
+   - Intérêts payés POUR CETTE ÉCHÉANCE (pas cumulatif, ex: 258.33)
+   - Capital restant dû APRÈS cette échéance (ex: 250000.00)
+
+ATTENTION: Les colonnes peuvent varier selon le format LCL. Identifie-les en regardant :
+- Pendant la franchise : capital amorti = 0, intérêts = petit montant ou 0
+- Pendant amortissement : capital amorti augmente progressivement
+- Capital restant dû diminue progressivement (sauf IN FINE où il reste constant)
+
+Pour chaque ligne extraite, tu dois déterminer :
+- date_echeance : Date (format YYYY-MM-DD)
+- montant_total : Montant de l'échéance/mensualité
+- montant_capital : Capital amorti
+- montant_interet : Intérêts payés pour CETTE échéance uniquement
+- capital_restant_du : Capital restant dû APRÈS cette échéance
+
+EXEMPLES ATTENDUS (format sortie) :
+Franchise totale → 2022-05-15:0.00:0.00:0.00:250000.00
+IN FINE (intérêts seuls) → 2023-05-15:258.33:0.00:258.33:250000.00
+Amortissement constant → 2024-05-15:1166.59:955.68:210.91:240079.37
 """
 
         # Message utilisateur avec images
@@ -159,52 +202,66 @@ IMPORTANT pour l'extraction :
             "content": [
                 {
                     "type": "text",
-                    "text": """Analyse ce tableau d'amortissement de prêt immobilier.
+                    "text": """Analyse ce tableau d'amortissement de prêt immobilier LCL.
 
-Étape 1 : EXTRACTION DES PARAMÈTRES DU PRÊT
-Extrait depuis la page 1 :
+📋 ÉTAPE 1 : EXTRACTION PARAMÈTRES DU PRÊT (Page 1)
+Extrait :
 - Numéro du prêt (ex: "N° DU PRET : 5009736BRM0911AH")
-- Nom du prêt/intitulé (ex: "SOLUTION P IMMO A TAUX FIXE")
-- Banque : "LCL" ou "CREDIT_LYONNAIS"
+- Intitulé (ex: "SOLUTION P IMMO A TAUX FIXE" ou "INVESTIMUR")
+- Banque : "LCL"
 - Montant initial (ex: "MONTANT TOTAL DEBLOQUE : EUR 250 000,00")
-- Taux d'intérêt annuel (ex: "TAUX DEBITEUR EN COURS : 1,050000 %")
-- Durée totale en mois (ex: "DUREE TOTALE DU PRET : 252 MOIS")
-- Date de début du prêt (ex: "DATE DE DEPART DU PRET : 15.04.2022")
+- Taux annuel (ex: "TAUX DEBITEUR EN COURS : 1,050000 %")
+- Durée totale (ex: "DUREE TOTALE DU PRET : 252 MOIS")
+- Date de début (ex: "DATE DE DEPART DU PRET : 15.04.2022")
 - Date début amortissement (ex: "DATE DEBUT AMORTISSEMENT : 15.04.2023")
-- Type de prêt : détermine automatiquement
-  * Si capital = 0 pendant plusieurs mois puis capital régulier → "AMORTISSEMENT_CONSTANT"
-  * Si capital = 0 tout le temps puis ballon final → "IN_FINE"
 
-Étape 2 : EXTRACTION DE TOUTES LES ÉCHÉANCES
-Parcours TOUTES les pages du tableau (page 2+) et extrait CHAQUE ligne d'échéance :
+Détermine le type de prêt :
+- "IN_FINE" : Si capital remboursé = 0 pendant presque toute la durée, puis ballon final
+- "AMORTISSEMENT_CONSTANT" : Si capital remboursé augmente progressivement chaque mois
 
-Format des lignes :
-- Lignes "DBL" : IGNORE (ex: "DBL 10/05/2022 0,00 0,00 250 000,00 0,00")
-- Première "ECH" : IGNORE (frais de dossier, ex: "ECH 15/04/2022 0,00 0,00 250,00 250,00")
-- Autres lignes "ECH" : EXTRAIT (ex: "ECH 15/05/2022 0,00 0,00 250 000,00 35,96")
-- Lignes numérotées : EXTRAIT (ex: "014 15/05/2023 1 166,59 0,00 250 000,00 1 494,37")
+📊 ÉTAPE 2 : EXTRACTION DE **TOUTES** LES ÉCHÉANCES (Pages 2+)
+Va page par page et extrait CHAQUE ligne d'échéance du tableau.
 
-Pour chaque ligne extraite :
-- date_echeance : format YYYY-MM-DD
-- montant_total : montant de l'échéance (peut être 0 durant franchise)
-- montant_capital : part de capital remboursé
-- montant_interet : part d'intérêts payés
-- capital_restant_du : capital restant APRÈS cette échéance
+RÈGLES STRICTES D'EXTRACTION :
+✅ À EXTRAIRE (devrait donner 216-252 lignes au total) :
+   - Lignes "ECH" sauf la toute première
+   - Lignes numérotées (001, 002, 003, ...)
 
-Étape 3 : SAUVEGARDE
-Une fois toutes les échéances extraites, appelle le tool :
+❌ À IGNORER :
+   - Lignes "DBL" (double month - indiquées par "DBL")
+   - Première ligne "ECH" uniquement (frais de dossier)
+
+⚠️ VÉRIFICATION :
+- Assure-toi d'avoir extrait TOUTES les pages du tableau (pas juste 2-3 pages)
+- Vérifie que les dates sont séquentielles (15/05/2022, 15/06/2022, 15/07/2022, ...)
+- Compte : tu dois obtenir entre 216 et 252 échéances selon le prêt
+
+💾 ÉTAPE 3 : SAUVEGARDE (OBLIGATOIRE)
+Appelle le tool :
 extract_all_echeances_to_file(
     numero_pret="...",
-    filename="PRET_XXX_echeances.md",
-    echeances=[...toutes les échéances...]
+    filename="PRET_{numero}_echeances.md",
+    echeances=[...toutes les 216-252 échéances...]
 )
 
-Étape 4 : INSERTION EN BD (si demandé)
-Appelle le tool :
+🗄️ ÉTAPE 4 : INSERTION EN BASE DE DONNÉES (OBLIGATOIRE)
+Immédiatement après l'étape 3, appelle le tool :
 insert_pret_from_file(
-    filename="PRET_XXX_echeances.md",
-    pret_params={...}
+    filename="PRET_{numero}_echeances.md",
+    pret_params={
+        "numero_pret": "...",
+        "intitule": "...",
+        "banque": "LCL",
+        "montant_initial": ...,
+        "taux_annuel": ...,
+        "duree_mois": ...,
+        "date_debut": "YYYY-MM-DD",
+        "date_debut_amortissement": "YYYY-MM-DD",
+        "type_pret": "IN_FINE" ou "AMORTISSEMENT_CONSTANT"
+    }
 )
+
+Tu DOIS appeler ces 2 tools dans l'ordre pour compléter la tâche.
 """
                 },
                 *image_contents
@@ -225,7 +282,7 @@ insert_pret_from_file(
             # Appel API avec tools
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=16000,  # Permettre beaucoup d'échéances
+                max_tokens=32000,  # Augmenté pour gérer 252 échéances (était 16000)
                 system=system_prompt,
                 messages=messages,
                 tools=ALL_TOOLS
