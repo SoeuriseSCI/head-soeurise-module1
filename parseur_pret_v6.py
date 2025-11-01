@@ -282,10 +282,11 @@ Tu DOIS appeler ces 2 tools dans l'ordre pour compléter la tâche.
             # Appel API avec tools
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=32000,  # Augmenté pour gérer 252 échéances (était 16000)
+                max_tokens=20000,  # Compromis pour éviter timeout de 10 min (était 16000, essayé 32000)
                 system=system_prompt,
                 messages=messages,
-                tools=ALL_TOOLS
+                tools=ALL_TOOLS,
+                timeout=600.0  # 10 minutes timeout
             )
 
             print(f"[PARSEUR V6] Stop reason: {response.stop_reason}", flush=True)
