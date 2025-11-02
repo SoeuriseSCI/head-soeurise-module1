@@ -189,6 +189,109 @@ TOOL_QUERY_PRET_ECHEANCE = {
 }
 
 # ============================================================================
+# TOOLS POUR BILAN D'OUVERTURE
+# ============================================================================
+
+TOOL_EXTRACT_BILAN_ACCOUNTS = {
+    "name": "extract_bilan_accounts",
+    "description": """Extrait TOUS les comptes du bilan d'ouverture depuis un PDF de bilan comptable.
+
+    IMPORTANT : Extraire les comptes des pages BILAN - ACTIF DÉTAILLÉ et BILAN - PASSIF DÉTAILLÉ.
+
+    Format attendu :
+    - Les montants peuvent contenir des espaces (ex: "500 032" → 500032.00)
+    - Les montants peuvent être négatifs (ex: "-50 003" → -50003.00)
+    - Ignorer les lignes de totaux intermédiaires (TOTAL ACTIF IMMOBILISÉ, etc.)
+    - Extraire uniquement les comptes avec numéros de 1 à 3 chiffres (101, 120, 161, 280, etc.)
+
+    Comptes ACTIF (débit au bilan d'ouverture) :
+    - 280 : Titres immobilisés (SCPI)
+    - 290 : Provisions (montant NÉGATIF)
+    - 412 : Créances
+    - 502 : Valeurs mobilières
+    - 512 : Banque
+
+    Comptes PASSIF (crédit au bilan d'ouverture) :
+    - 101 : Capital social
+    - 120 : Report à nouveau (peut être négatif si déficitaire)
+    - 130 : Résultat de l'exercice (peut être négatif si perte)
+    - 161 : Emprunts
+    - 401 : Dettes fournisseurs
+    - 444 : Comptes courants associés
+
+    Validation :
+    - Total ACTIF doit = Total PASSIF
+    - Si Report à nouveau (120) est négatif, c'est normal (déficit cumulé)
+    """,
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "exercice": {
+                "type": "string",
+                "description": "Année de l'exercice comptable (ex: '2023')"
+            },
+            "date_bilan": {
+                "type": "string",
+                "description": "Date du bilan au format YYYY-MM-DD (ex: '2023-12-31')"
+            },
+            "comptes_actif": {
+                "type": "array",
+                "description": "Tous les comptes de l'ACTIF du bilan",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "numero_compte": {
+                            "type": "string",
+                            "description": "Numéro de compte (ex: '280', '512')"
+                        },
+                        "libelle": {
+                            "type": "string",
+                            "description": "Libellé du compte (ex: 'Titres immobilisés SCPI', 'Banque LCL')"
+                        },
+                        "montant": {
+                            "type": "number",
+                            "description": "Montant en EUR (peut être négatif pour provisions)"
+                        }
+                    },
+                    "required": ["numero_compte", "libelle", "montant"]
+                }
+            },
+            "comptes_passif": {
+                "type": "array",
+                "description": "Tous les comptes du PASSIF du bilan",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "numero_compte": {
+                            "type": "string",
+                            "description": "Numéro de compte (ex: '101', '161', '120')"
+                        },
+                        "libelle": {
+                            "type": "string",
+                            "description": "Libellé du compte (ex: 'Capital', 'Emprunts LCL', 'Report à nouveau')"
+                        },
+                        "montant": {
+                            "type": "number",
+                            "description": "Montant en EUR (peut être négatif pour report à nouveau déficitaire)"
+                        }
+                    },
+                    "required": ["numero_compte", "libelle", "montant"]
+                }
+            },
+            "total_actif": {
+                "type": "number",
+                "description": "Total de l'actif en EUR (doit être égal au total passif)"
+            },
+            "total_passif": {
+                "type": "number",
+                "description": "Total du passif en EUR (doit être égal au total actif)"
+            }
+        },
+        "required": ["exercice", "date_bilan", "comptes_actif", "comptes_passif", "total_actif", "total_passif"]
+    }
+}
+
+# ============================================================================
 # TOOLS POUR COMPTABILITÉ
 # ============================================================================
 
@@ -290,6 +393,7 @@ ALL_TOOLS = [
     TOOL_EXTRACT_ALL_ECHEANCES,
     TOOL_INSERT_PRET_FROM_FILE,
     TOOL_QUERY_PRET_ECHEANCE,
+    TOOL_EXTRACT_BILAN_ACCOUNTS,
     TOOL_CREATE_ECRITURE_COMPTABLE,
     TOOL_UPDATE_MEMOIRE
 ]

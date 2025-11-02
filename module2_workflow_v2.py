@@ -187,54 +187,75 @@ class DetecteurTypeEvenement:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class ParseurBilan2023:
-    """Parse un PDF bilan 2023 et extrait les comptes avec soldes"""
-    
-    def __init__(self, ocr_extractor: OCRExtractor):
-        self.ocr = ocr_extractor
-    
-    def parse_from_pdf(self, filepath: str) -> List[Dict]:
+    """
+    Parse bilan d'ouverture depuis PDF avec V6 Function Calling
+
+    Architecture V6 : Utilise Claude API avec Function Calling pour extraction structurée
+    """
+
+    def __init__(self, api_key: str = None):
         """
-        Parse bilan 2023 depuis PDF
-        
+        Args:
+            api_key: Clé API Anthropic (si None, utilise ANTHROPIC_API_KEY env var)
+        """
+        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+        if not self.api_key:
+            print("[WARNING] ParseurBilan2023: ANTHROPIC_API_KEY non définie", flush=True)
+
+    def parse_from_pdf(self, filepath: str, exercice: str = "2023") -> Dict:
+        """
+        Parse bilan d'ouverture depuis PDF avec V6 Function Calling
+
+        Args:
+            filepath: Chemin vers PDF bilan
+            exercice: Année de l'exercice (ex: "2023")
+
         Returns:
-            [{"compte": "101", "libelle": "Capital", "solde": 100000}, ...]
+            {
+                "success": True,
+                "exercice": "2023",
+                "comptes_actif": [...],
+                "comptes_passif": [...],
+                "total_actif": 463618.00,
+                "total_passif": 463618.00,
+                "equilibre": True
+            }
         """
-        # OCRiser le PDF
-        texte_brut = self.ocr.extract_from_pdf(
-            filepath,
-            prompt="Extrait le tableau bilan 2023 avec colonnes: N° compte | Libellé | Solde"
-        )
-        
-        # Parser le texte
-        comptes = self._parser_texte_bilan(texte_brut)
-        return comptes
-    
-    @staticmethod
-    def _parser_texte_bilan(texte: str) -> List[Dict]:
-        """Parse tableau bilan depuis texte OCRisé"""
-        comptes = []
-        
-        # Pattern: "101  Capital    100000" ou "101 | Capital | 100000"
-        # On cherche des lignes avec: numéro (1-3 chiffres) | texte | nombre
-        pattern = r'(\d{1,3})\s+([A-Za-z\s]+?)\s+(\d+(?:[.,]\d+)*)'
-        
-        matches = re.finditer(pattern, texte)
-        for match in matches:
-            num_compte = match.group(1)
-            libelle = match.group(2).strip()
-            solde_str = match.group(3).replace(',', '.')
-            
-            try:
-                solde = float(solde_str)
-                comptes.append({
-                    "compte": num_compte,
-                    "libelle": libelle,
-                    "solde": solde
-                })
-            except ValueError:
-                continue
-        
-        return comptes
+        try:
+            from parseur_bilan_v6 import parse_bilan_v6
+
+            if not self.api_key:
+                return {
+                    "success": False,
+                    "error": "ANTHROPIC_API_KEY non définie",
+                    "message": "Impossible de parser le bilan sans clé API"
+                }
+
+            print(f"[PARSEUR BILAN V6] Parsing PDF: {os.path.basename(filepath)}", flush=True)
+
+            # Utiliser le parseur V6
+            result = parse_bilan_v6(filepath, self.api_key, exercice)
+
+            if result.get('success'):
+                print(f"[PARSEUR BILAN V6] ✓ Extraction réussie: {result.get('nb_comptes', 0)} comptes", flush=True)
+                print(f"[PARSEUR BILAN V6] Total ACTIF: {result.get('total_actif', 0):.2f}€", flush=True)
+                print(f"[PARSEUR BILAN V6] Total PASSIF: {result.get('total_passif', 0):.2f}€", flush=True)
+                print(f"[PARSEUR BILAN V6] Équilibre: {'OK' if result.get('equilibre') else 'ERREUR'}", flush=True)
+            else:
+                print(f"[PARSEUR BILAN V6] ✗ Échec: {result.get('message', 'Erreur inconnue')}", flush=True)
+
+            return result
+
+        except Exception as e:
+            print(f"[PARSEUR BILAN V6 ERROR] {str(e)}", flush=True)
+            import traceback
+            traceback.print_exc()
+
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Erreur lors du parsing V6: {str(e)}"
+            }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1291,7 +1312,7 @@ class WorkflowModule2V2:
         self.api_key = api_key
         self.database_url = database_url
         self.ocr = OCRExtractor(api_key)
-        self.parseur_bilan = ParseurBilan2023(self.ocr)
+        self.parseur_bilan = ParseurBilan2023(api_key)  # V6: utilise Function Calling
         self.parseur_credit = ParseurAmortissementCredit(self.ocr)
         self.parseur_scpi = ParseurReevalorationSCPI(self.ocr)
     
@@ -1433,16 +1454,50 @@ class WorkflowModule2V2:
                         "token": ""
                     }
 
-                # Parser le premier PDF (bilan 2023)
+                # Parser le premier PDF (bilan 2023) avec V6
                 filepath = pdf_files[0].get('filepath')
-                comptes = self.parseur_bilan.parse_from_pdf(filepath)
+                result_v6 = self.parseur_bilan.parse_from_pdf(filepath, exercice="2023")
                 source = f"PDF {pdf_files[0].get('filename', 'inconnu')}"
+
+                # Vérifier succès du parsing V6
+                if not result_v6.get('success'):
+                    return {
+                        "type_detecte": TypeEvenement.INIT_BILAN_2023,
+                        "statut": "ERREUR",
+                        "message": f"Parsing V6 échoué: {result_v6.get('message', 'Erreur inconnue')}",
+                        "markdown": "",
+                        "propositions": {},
+                        "token": ""
+                    }
+
+                # Transformer les comptes V6 en format compatible avec le générateur
+                comptes = []
+
+                # Comptes ACTIF (débit au bilan)
+                for compte_actif in result_v6.get('comptes_actif', []):
+                    comptes.append({
+                        "compte": compte_actif['numero_compte'],
+                        "libelle": compte_actif['libelle'],
+                        "solde": compte_actif['montant'],
+                        "type_bilan": "ACTIF",
+                        "sens": "DEBIT"
+                    })
+
+                # Comptes PASSIF (crédit au bilan)
+                for compte_passif in result_v6.get('comptes_passif', []):
+                    comptes.append({
+                        "compte": compte_passif['numero_compte'],
+                        "libelle": compte_passif['libelle'],
+                        "solde": compte_passif['montant'],
+                        "type_bilan": "PASSIF",
+                        "sens": "CREDIT"
+                    })
 
             if not comptes:
                 return {
                     "type_detecte": TypeEvenement.INIT_BILAN_2023,
                     "statut": "ERREUR",
-                    "message": "Impossible d'extraire les comptes du bilan",
+                    "message": "Aucun compte extrait du bilan",
                     "markdown": "",
                     "propositions": {},
                     "token": ""
@@ -1457,7 +1512,7 @@ class WorkflowModule2V2:
                 "markdown": markdown,
                 "propositions": props,
                 "token": token,
-                "message": f"{len(comptes)} comptes importés depuis {source}"
+                "message": f"{len(comptes)} comptes importés depuis {source} (V6)"
             }
 
         except Exception as e:
