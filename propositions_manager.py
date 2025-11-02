@@ -148,12 +148,21 @@ class PropositionsManager:
             ou None si non trouvée
         """
 
-        # Normaliser le token (enlever espaces, mettre en majuscules)
-        token = token.strip().upper()
+        # Normaliser le token selon le format
+        token = token.strip()
 
-        # Si le token ne commence pas par HEAD-, l'ajouter
-        if not token.startswith("HEAD-"):
-            token = f"HEAD-{token}"
+        # Déterminer le format du token :
+        # - Si 32 caractères hexadécimaux → MD5 complet (format workflow v2)
+        # - Sinon → Token court avec préfixe HEAD-
+
+        if len(token) == 32 and all(c in '0123456789abcdefABCDEF' for c in token):
+            # MD5 complet : normaliser en lowercase (format BD)
+            token = token.lower()
+        else:
+            # Token court : mettre en majuscules et ajouter HEAD- si nécessaire
+            token = token.upper()
+            if not token.startswith("HEAD-"):
+                token = f"HEAD-{token}"
 
         # Chercher la proposition
         proposition = self.session.query(PropositionEnAttente).filter_by(token=token).first()
@@ -226,10 +235,17 @@ class PropositionsManager:
             True si validée avec succès, False sinon
         """
 
-        # Normaliser le token
-        token = token.strip().upper()
-        if not token.startswith("HEAD-"):
-            token = f"HEAD-{token}"
+        # Normaliser le token selon le format
+        token = token.strip()
+
+        if len(token) == 32 and all(c in '0123456789abcdefABCDEF' for c in token):
+            # MD5 complet : normaliser en lowercase
+            token = token.lower()
+        else:
+            # Token court : mettre en majuscules et ajouter HEAD- si nécessaire
+            token = token.upper()
+            if not token.startswith("HEAD-"):
+                token = f"HEAD-{token}"
 
         # Chercher la proposition
         proposition = self.session.query(PropositionEnAttente).filter_by(token=token).first()
@@ -263,10 +279,17 @@ class PropositionsManager:
             True si rejetée avec succès, False sinon
         """
 
-        # Normaliser le token
-        token = token.strip().upper()
-        if not token.startswith("HEAD-"):
-            token = f"HEAD-{token}"
+        # Normaliser le token selon le format
+        token = token.strip()
+
+        if len(token) == 32 and all(c in '0123456789abcdefABCDEF' for c in token):
+            # MD5 complet : normaliser en lowercase
+            token = token.lower()
+        else:
+            # Token court : mettre en majuscules et ajouter HEAD- si nécessaire
+            token = token.upper()
+            if not token.startswith("HEAD-"):
+                token = f"HEAD-{token}"
 
         # Chercher la proposition
         proposition = self.session.query(PropositionEnAttente).filter_by(token=token).first()
