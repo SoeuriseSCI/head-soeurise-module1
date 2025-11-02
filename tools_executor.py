@@ -257,6 +257,75 @@ def execute_query_pret_echeance(tool_input: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ============================================================================
+# TOOL EXECUTORS - BILAN D'OUVERTURE
+# ============================================================================
+
+def execute_extract_bilan_accounts(tool_input: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extrait tous les comptes du bilan d'ouverture et retourne le résultat
+
+    Args:
+        tool_input: {
+            "exercice": "2023",
+            "date_bilan": "2023-12-31",
+            "comptes_actif": [...],
+            "comptes_passif": [...],
+            "total_actif": 463618.00,
+            "total_passif": 463618.00
+        }
+
+    Returns:
+        {
+            "success": True,
+            "nb_comptes": 10,
+            "total_actif": 463618.00,
+            "total_passif": 463618.00,
+            "equilibre": True,
+            "comptes": {...}
+        }
+    """
+    try:
+        exercice = tool_input['exercice']
+        date_bilan = tool_input['date_bilan']
+        comptes_actif = tool_input['comptes_actif']
+        comptes_passif = tool_input['comptes_passif']
+        total_actif = tool_input['total_actif']
+        total_passif = tool_input['total_passif']
+
+        # Validation de l'équilibre
+        equilibre = abs(total_actif - total_passif) < 0.01
+
+        nb_comptes = len(comptes_actif) + len(comptes_passif)
+
+        print(f"[TOOL] Bilan {exercice}: {len(comptes_actif)} comptes ACTIF, {len(comptes_passif)} comptes PASSIF", flush=True)
+        print(f"[TOOL] Total ACTIF: {total_actif:.2f}€, Total PASSIF: {total_passif:.2f}€, Équilibre: {equilibre}", flush=True)
+
+        if not equilibre:
+            print(f"[TOOL WARNING] Bilan non équilibré! Différence: {abs(total_actif - total_passif):.2f}€", flush=True)
+
+        return {
+            "success": True,
+            "exercice": exercice,
+            "date_bilan": date_bilan,
+            "nb_comptes": nb_comptes,
+            "comptes_actif": comptes_actif,
+            "comptes_passif": comptes_passif,
+            "total_actif": total_actif,
+            "total_passif": total_passif,
+            "equilibre": equilibre,
+            "message": f"Bilan {exercice} extrait: {nb_comptes} comptes, équilibre={'OK' if equilibre else 'ERREUR'}"
+        }
+
+    except Exception as e:
+        print(f"[TOOL ERROR] extract_bilan_accounts: {str(e)}", flush=True)
+        return {
+            "success": False,
+            "error": str(e),
+            "message": f"Erreur lors de l'extraction du bilan: {str(e)}"
+        }
+
+
+# ============================================================================
 # TOOL EXECUTORS - COMPTABILITÉ
 # ============================================================================
 
@@ -430,6 +499,7 @@ TOOL_EXECUTORS = {
     "extract_all_echeances_to_file": execute_extract_all_echeances_to_file,
     "insert_pret_from_file": execute_insert_pret_from_file,
     "query_pret_echeance": execute_query_pret_echeance,
+    "extract_bilan_accounts": execute_extract_bilan_accounts,
     "create_ecriture_comptable": execute_create_ecriture_comptable,
     "update_memoire": execute_update_memoire
 }
