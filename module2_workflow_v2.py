@@ -1489,7 +1489,7 @@ class WorkflowModule2V2:
 
                 # Parser le premier PDF (bilan 2023) avec V6
                 filepath = pdf_files[0].get('filepath')
-                result_v6 = self.parseur_bilan.parse_from_pdf(filepath, exercice="2023")
+                result_v6 = self.parseur_bilan.parse_from_pdf(filepath, start_page=3, max_pages=4)
                 source = f"PDF {pdf_files[0].get('filename', 'inconnu')}"
 
                 # Vérifier succès du parsing V6
@@ -1504,26 +1504,14 @@ class WorkflowModule2V2:
                     }
 
                 # Transformer les comptes V6 en format compatible avec le générateur
+                # V6 retourne {"comptes": [{"numero": "280", "libelle": "...", "solde": 500032, "type_bilan": "ACTIF"}, ...]}
                 comptes = []
-
-                # Comptes ACTIF
-                # Ne pas forcer le sens car _determiner_sens_compte() le calculera en fonction du signe
-                for compte_actif in result_v6.get('comptes_actif', []):
+                for compte_v6 in result_v6.get('comptes', []):
                     comptes.append({
-                        "compte": compte_actif['numero_compte'],
-                        "libelle": compte_actif['libelle'],
-                        "solde": compte_actif['montant'],  # Conserver le signe (ex: -50003 pour provision)
-                        "type_bilan": "ACTIF"
-                    })
-
-                # Comptes PASSIF
-                # Ne pas forcer le sens car _determiner_sens_compte() le calculera en fonction du signe
-                for compte_passif in result_v6.get('comptes_passif', []):
-                    comptes.append({
-                        "compte": compte_passif['numero_compte'],
-                        "libelle": compte_passif['libelle'],
-                        "solde": compte_passif['montant'],  # Conserver le signe (ex: -57992 pour RAN)
-                        "type_bilan": "PASSIF"
+                        "compte": compte_v6['numero'],
+                        "libelle": compte_v6['libelle'],
+                        "solde": compte_v6['solde'],  # Conserver le signe (ex: -50003 pour provision)
+                        "type_bilan": compte_v6['type_bilan']
                     })
 
             if not comptes:

@@ -152,17 +152,31 @@ class ParseurBilan2023V6:
 
 Ton rôle :
 1. Analyser les pages du bilan comptable (ACTIF et PASSIF)
-2. Extraire TOUS les comptes individuels (pas les totaux/sous-totaux)
-3. Pour chaque compte, identifier :
-   - Numéro de compte (généralement 3 chiffres : 101, 280, 512, etc.)
-   - Libellé complet
-   - Montant NET (colonne finale, pas brut ni amortissements)
-   - Type (ACTIF ou PASSIF)
+2. Extraire UNIQUEMENT les 11 comptes listés ci-dessous (PAS d'autres)
+3. Pour chaque compte, identifier le montant NET (colonne N, pas N-1)
 4. Appeler le tool extract_bilan_comptes avec la liste complète
 
-RÈGLES D'EXTRACTION :
-- ✅ EXTRAIRE uniquement les comptes individuels
-- ❌ IGNORER les totaux ("TOTAL ACTIF", "TOTAL PASSIF", etc.)
+COMPTES À EXTRAIRE (EXACTEMENT CES 11 COMPTES, PAS D'AUTRES) :
+
+**ACTIF** (5 comptes) :
+- 280 : Titres immobilisés (SCPI)
+- 290 : Provisions pour dépréciation (NÉGATIF)
+- 412 : Autres créances
+- 502 : Actions, autres titres
+- 512 : Banque (LCL)
+
+**PASSIF** (6 comptes) :
+- 101 : Capital social
+- 120 : Report à nouveau (peut être NÉGATIF si déficitaire)
+- 130 : Résultat de l'exercice (peut être NÉGATIF si perte)
+- 161 : Emprunts auprès établissements de crédit
+- 401 : Fournisseurs
+- 444 : Compte courant associés (Ulrik)
+
+RÈGLES D'EXTRACTION STRICTES :
+- ✅ EXTRAIRE UNIQUEMENT ces 11 comptes (même si montant = 0)
+- ❌ IGNORER TOUS les autres comptes (164, 405, etc.)
+- ❌ IGNORER les totaux ("TOTAL ACTIF", "TOTAL PASSIF", "Situation nette", etc.)
 - ❌ IGNORER les sous-totaux de sections
 - ❌ IGNORER les en-têtes de colonnes
 - ❌ IGNORER les notes de bas de page
@@ -174,31 +188,30 @@ FORMATS DE MONTANTS À GÉRER :
 - Avec symbole € : "1 000 €" → 1000
 - Avec parenthèses (négatif) : "(57 992)" → -57992
 
-STRUCTURE DU BILAN FRANÇAIS :
-**ACTIF** (ce que possède la société) :
-- Immobilisations (comptes 2xx)
-- Créances (comptes 4xx)
-- Disponibilités (comptes 5xx)
-
-**PASSIF** (ce que doit la société) :
-- Capitaux propres (comptes 1xx)
-- Dettes (comptes 4xx, 1xx emprunts)
+VALIDATION :
+- Tu DOIS extraire exactement 11 comptes (5 ACTIF + 6 PASSIF)
+- Si tu n'en trouves que 9 ou 10, cherche le(s) compte(s) manquant(s)
+- Total ACTIF attendu ≈ 463 618 €
+- Total PASSIF attendu ≈ 463 618 €
 
 EXEMPLES D'EXTRACTION :
 ```
 Page bilan ACTIF :
-280  Titres immobilisés SCPI    500 032 €
-→ {"numero": "280", "libelle": "Titres immobilisés SCPI", "solde": 500032, "type_bilan": "ACTIF"}
+280  Titres immobilisés (SCPI)          500 032 €
+→ {"numero": "280", "libelle": "Titres immobilisés (SCPI)", "solde": 500032, "type_bilan": "ACTIF"}
+
+290  Provisions dépréciation           (50 003) €
+→ {"numero": "290", "libelle": "Provisions dépréciation", "solde": -50003, "type_bilan": "ACTIF"}
 
 Page bilan PASSIF :
-101  Capital                     1 000 €
-→ {"numero": "101", "libelle": "Capital", "solde": 1000, "type_bilan": "PASSIF"}
+161  Emprunts LCL                      497 993 €
+→ {"numero": "161", "libelle": "Emprunts LCL", "solde": 497993, "type_bilan": "PASSIF"}
 
-120  Report à nouveau          (57 992) €
+120  Report à nouveau                  (57 992) €
 → {"numero": "120", "libelle": "Report à nouveau", "solde": -57992, "type_bilan": "PASSIF"}
 ```
 
-IMPORTANT : Après avoir extrait TOUS les comptes, appelle OBLIGATOIREMENT le tool extract_bilan_comptes().
+IMPORTANT : Après avoir extrait les 10 comptes, appelle OBLIGATOIREMENT le tool extract_bilan_comptes().
 """
 
         # Construire les messages avec les images
