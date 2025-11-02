@@ -12,7 +12,14 @@ print("🔍 INSPECTION DE LA BASE DE DONNÉES")
 print("=" * 80)
 print()
 
-session = get_session()
+# Récupérer DATABASE_URL depuis l'environnement
+DATABASE_URL = os.getenv('DATABASE_URL')
+if not DATABASE_URL:
+    print("❌ ERREUR : DATABASE_URL non définie")
+    print("💡 Définissez la variable d'environnement DATABASE_URL")
+    sys.exit(1)
+
+session = get_session(DATABASE_URL)
 
 # Exercices comptables
 print("📅 EXERCICES COMPTABLES")
