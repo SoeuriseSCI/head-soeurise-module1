@@ -425,12 +425,24 @@ class OrchestratorValidations:
         
         # PHASE 7: Validation integrite
         valide, msg_erreur = self.validateur.valider_propositions(propositions, token_email)
-        
+
         if not valide:
             # Creer EvenementComptable rejete
+            # Parser la date email ou utiliser datetime.now() si absente
+            from email.utils import parsedate_to_datetime
+            email_date = None
+            if email.get('date'):
+                try:
+                    email_date = parsedate_to_datetime(email.get('date'))
+                except:
+                    email_date = datetime.now()
+            else:
+                email_date = datetime.now()
+
             evt_rejet = EvenementComptable(
                 email_id=email.get('email_id'),
                 email_from=email.get('from'),
+                email_date=email_date,
                 email_subject=email.get('subject', ''),
                 email_body=email.get('body', '')[:1000],
                 type_evenement=type_evenement,
@@ -440,7 +452,7 @@ class OrchestratorValidations:
             )
             self.session.add(evt_rejet)
             self.session.commit()
-            
+
             return {
                 "validation_detectee": True,
                 "statut": "ERREUR",
