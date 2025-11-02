@@ -18,6 +18,7 @@ Tables utilisées :
 """
 
 from datetime import datetime, date
+from dateutil.relativedelta import relativedelta
 from typing import Dict, List, Optional, Tuple
 from decimal import Decimal
 from sqlalchemy.orm import Session
@@ -89,15 +90,25 @@ class PretsManager:
                     # Continuer avec nouvelle insertion ci-dessous
 
             # Créer PretImmobilier
+            # Parser les dates
+            date_debut = self._parse_date(pret_data.get('date_debut'))
+            date_fin = self._parse_date(pret_data.get('date_fin'))
+            duree_mois = pret_data.get('duree_mois', 0)
+
+            # Calculer date_fin si manquante (date_debut + duree_mois)
+            if date_debut and not date_fin and duree_mois > 0:
+                date_fin = date_debut + relativedelta(months=duree_mois)
+                print(f"[PRETS_MGR] date_fin calculée automatiquement: {date_fin}", flush=True)
+
             pret = PretImmobilier(
                 numero_pret=numero_pret,
                 banque=pret_data.get('banque', 'INCONNU'),
                 libelle=pret_data.get('libelle', f"Prêt {numero_pret}"),
                 montant_initial=Decimal(str(pret_data.get('montant_initial', 0))),
                 taux_annuel=Decimal(str(pret_data.get('taux_annuel', 0))),
-                duree_mois=pret_data.get('duree_mois', 0),
-                date_debut=self._parse_date(pret_data.get('date_debut')),
-                date_fin=self._parse_date(pret_data.get('date_fin')),
+                duree_mois=duree_mois,
+                date_debut=date_debut,
+                date_fin=date_fin,
                 type_amortissement=pret_data.get('type_amortissement', 'AMORTISSEMENT_CONSTANT'),
                 mois_franchise=pret_data.get('mois_franchise', 0),
                 echeance_mensuelle=Decimal(str(pret_data.get('echeance_mensuelle', 0))) if pret_data.get('echeance_mensuelle') else None,
