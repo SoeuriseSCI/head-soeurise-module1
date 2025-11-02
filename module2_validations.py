@@ -28,6 +28,7 @@ from models_module2 import (
 )
 from module2_workflow_v2 import ParseurMarkdownJSON
 from propositions_manager import PropositionsManager
+from prets_manager import PretsManager
 
 
 # DETECTEUR VALIDATIONS
@@ -224,9 +225,10 @@ class ValidateurIntegriteJSON:
 
 class ProcesseurInsertion:
     """Insere les propositions validees en tant que EcritureComptable"""
-    
+
     def __init__(self, session: Session):
         self.session = session
+        self.prets_manager = PretsManager(session)
     
     def inserer_propositions_simple(self, 
                                    propositions: List[Dict],
@@ -364,6 +366,94 @@ class ProcesseurInsertion:
         except Exception as e:
             self.session.rollback()
             return False, f"Erreur globale: {str(e)[:100]}", []
+
+    def inserer_propositions_pret(self,
+                                  propositions: List[Dict],
+                                  evt_original_id: str,
+                                  evt_validation_id: str,
+                                  email_validation_from: str) -> Tuple[bool, str, List[int]]:
+        """
+        Insère prêt immobilier et ses échéances en BD
+
+        Args:
+            propositions: Liste avec 1 proposition PRET_IMMOBILIER
+            evt_original_id: ID email original
+            evt_validation_id: ID email validation
+            email_validation_from: Email valideur
+
+        Returns:
+            (success, message, [pret_id])
+        """
+        try:
+            # Vérifier qu'il y a exactement 1 proposition
+            if len(propositions) != 1:
+                return False, f"Attendu 1 proposition PRET, recu {len(propositions)}", []
+
+            prop = propositions[0]
+
+            # Extraire les données
+            filename = prop.get('filename', '')
+            pret_data = prop.get('pret', {})
+            nb_echeances = prop.get('nb_echeances', 0)
+
+            if not filename:
+                return False, "Filename manquant dans proposition PRET", []
+
+            if not pret_data:
+                return False, "Données prêt manquantes dans proposition", []
+
+            # Lire et parser le fichier MD contenant les échéances
+            import os
+            from pathlib import Path
+
+            # Le fichier est à la racine du projet
+            filepath = Path(__file__).parent / filename
+
+            if not filepath.exists():
+                return False, f"Fichier échéances non trouvé: {filename}", []
+
+            # Parser les échéances depuis le fichier MD
+            echeances_data = []
+            with open(filepath, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    # Ignorer les lignes vides, headers et séparateurs
+                    if not line or line.startswith('#') or line.startswith('**') or line.startswith('---'):
+                        continue
+
+                    # Format: date:total:capital:interet:restant_du
+                    parts = line.split(':')
+                    if len(parts) == 5:
+                        try:
+                            echeance = {
+                                'date_echeance': parts[0],
+                                'montant_total': float(parts[1]),
+                                'montant_capital': float(parts[2]),
+                                'montant_interet': float(parts[3]),
+                                'capital_restant_du': float(parts[4])
+                            }
+                            echeances_data.append(echeance)
+                        except ValueError:
+                            continue  # Ignorer les lignes mal formatées
+
+            if not echeances_data:
+                return False, f"Aucune échéance trouvée dans {filename}", []
+
+            # Insérer le prêt et ses échéances via PretsManager
+            success, message, pret_id = self.prets_manager.inserer_pret_et_echeances(
+                pret_data=pret_data,
+                echeances_data=echeances_data
+            )
+
+            if not success:
+                return False, f"Erreur insertion prêt: {message}", []
+
+            # Retourner le pret_id dans une liste pour cohérence avec autres insertions
+            return True, f"Prêt {pret_data.get('numero_pret', '?')} inséré avec {len(echeances_data)} échéances", [pret_id] if pret_id else []
+
+        except Exception as e:
+            self.session.rollback()
+            return False, f"Erreur insertion prêt: {str(e)[:100]}", []
 
 
 # ORCHESTRATOR VALIDATIONS
@@ -506,6 +596,10 @@ class OrchestratorValidations:
             )
         elif type_evenement == 'CLOTURE_EXERCICE':
             succes, msg, ids = self.processeur.inserer_propositions_cloture(
+                propositions, email_original_id, email.get('email_id'), email.get('from')
+            )
+        elif type_evenement == 'PRET_IMMOBILIER':
+            succes, msg, ids = self.processeur.inserer_propositions_pret(
                 propositions, email_original_id, email.get('email_id'), email.get('from')
             )
         else:
