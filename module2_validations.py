@@ -161,36 +161,61 @@ class ValidateurIntegriteJSON:
         
         # 2. Verifier chaque proposition
         for i, prop in enumerate(propositions):
-            
-            # Verifier structure
-            required_keys = ['compte_debit', 'compte_credit', 'montant', 'numero_ecriture']
-            for key in required_keys:
-                if key not in prop:
-                    return False, f"Proposition {i}: cle '{key}' manquante"
-            
-            # Verifier montant
-            try:
-                montant = Decimal(str(prop['montant']))
-                # Accepter montant >= 0 (les montants = 0 sont valides pour bilans d'ouverture)
-                if montant < 0:
-                    return False, f"Proposition {i}: montant ne peut pas etre negatif (trouve: {montant})"
-            except (ValueError, TypeError):
-                return False, f"Proposition {i}: montant invalide '{prop['montant']}'"
-            
-            # Verifier comptes existent
-            compte_debit = self.session.query(PlanCompte).filter_by(
-                numero_compte=str(prop['compte_debit'])
-            ).first()
-            
-            if not compte_debit:
-                return False, f"Proposition {i}: compte debit '{prop['compte_debit']}' n'existe pas"
-            
-            compte_credit = self.session.query(PlanCompte).filter_by(
-                numero_compte=str(prop['compte_credit'])
-            ).first()
-            
-            if not compte_credit:
-                return False, f"Proposition {i}: compte credit '{prop['compte_credit']}' n'existe pas"
+
+            # Gérer différents types de propositions
+            prop_type = prop.get('type', '')
+
+            if prop_type == 'PRET_IMMOBILIER':
+                # Validation spécifique pour les prêts immobiliers
+                required_keys_pret = ['type', 'action', 'pret', 'nb_echeances']
+                for key in required_keys_pret:
+                    if key not in prop:
+                        return False, f"Proposition {i} (PRET): cle '{key}' manquante"
+
+                # Vérifier que pret contient les données minimales
+                pret_data = prop.get('pret', {})
+                if not isinstance(pret_data, dict):
+                    return False, f"Proposition {i} (PRET): 'pret' doit etre un dict"
+
+                # Vérifier nb_echeances
+                try:
+                    nb_ech = int(prop.get('nb_echeances', 0))
+                    if nb_ech <= 0:
+                        return False, f"Proposition {i} (PRET): nb_echeances doit etre > 0 (trouve: {nb_ech})"
+                except (ValueError, TypeError):
+                    return False, f"Proposition {i} (PRET): nb_echeances invalide"
+
+            else:
+                # Validation pour écritures comptables classiques (BILAN, CLOTURE, EVENEMENT_SIMPLE)
+                # Verifier structure
+                required_keys = ['compte_debit', 'compte_credit', 'montant', 'numero_ecriture']
+                for key in required_keys:
+                    if key not in prop:
+                        return False, f"Proposition {i}: cle '{key}' manquante"
+
+                # Verifier montant
+                try:
+                    montant = Decimal(str(prop['montant']))
+                    # Accepter montant >= 0 (les montants = 0 sont valides pour bilans d'ouverture)
+                    if montant < 0:
+                        return False, f"Proposition {i}: montant ne peut pas etre negatif (trouve: {montant})"
+                except (ValueError, TypeError):
+                    return False, f"Proposition {i}: montant invalide '{prop['montant']}'"
+
+                # Verifier comptes existent
+                compte_debit = self.session.query(PlanCompte).filter_by(
+                    numero_compte=str(prop['compte_debit'])
+                ).first()
+
+                if not compte_debit:
+                    return False, f"Proposition {i}: compte debit '{prop['compte_debit']}' n'existe pas"
+
+                compte_credit = self.session.query(PlanCompte).filter_by(
+                    numero_compte=str(prop['compte_credit'])
+                ).first()
+
+                if not compte_credit:
+                    return False, f"Proposition {i}: compte credit '{prop['compte_credit']}' n'existe pas"
         
         return True, ""
 
