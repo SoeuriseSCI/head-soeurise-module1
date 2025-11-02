@@ -171,8 +171,9 @@ class ValidateurIntegriteJSON:
             # Verifier montant
             try:
                 montant = Decimal(str(prop['montant']))
-                if montant <= 0:
-                    return False, f"Proposition {i}: montant doit etre > 0 (trouve: {montant})"
+                # Accepter montant >= 0 (les montants = 0 sont valides pour bilans d'ouverture)
+                if montant < 0:
+                    return False, f"Proposition {i}: montant ne peut pas etre negatif (trouve: {montant})"
             except (ValueError, TypeError):
                 return False, f"Proposition {i}: montant invalide '{prop['montant']}'"
             
