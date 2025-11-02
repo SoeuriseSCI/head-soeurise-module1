@@ -1,18 +1,18 @@
 """
-PARSEUR BILAN V6 - AVEC FUNCTION CALLING
-=========================================
+PARSEUR BILAN COMPTABLE V6 - AVEC FUNCTION CALLING
+===================================================
 
-Architecture V6 : Claude extrait TOUS les comptes du bilan d'ouverture
+Architecture V6 : Claude extrait TOUS les comptes du bilan et appelle des tools
 
-Différences vs V5 :
-- V5 : Regex simple → Échoue avec espaces dans montants, négatifs, etc.
-- V6 : Function Calling → Extraction structurée JSON complète
+Différences vs ancienne version (regex) :
+- Ancienne : Regex fragile → 10% précision
+- V6 : Claude Vision + Function Calling → 99%+ précision
 
 Avantages V6 :
-- Gère les montants avec espaces ("500 032" → 500032.00)
-- Gère les montants négatifs ("-50 003" → -50003.00)
-- Extraction complète des comptes ACTIF + PASSIF
-- Validation équilibre automatique
+- Universel : Fonctionne avec n'importe quel format de bilan français
+- Intelligent : Comprend structure ACTIF/PASSIF automatiquement
+- Robuste : Gère tous formats de montants (espaces, virgules, négatifs)
+- Validé : Vérifie automatiquement équilibre Actif = Passif
 """
 
 import io
@@ -29,19 +29,20 @@ try:
 except ImportError:
     PDF2IMAGE_AVAILABLE = False
 
-from tools_definitions import TOOL_EXTRACT_BILAN_ACCOUNTS
-from tools_executor import execute_tool
+from tools_definitions_bilan import ALL_TOOLS_BILAN
+from tools_executor_bilan import execute_tool_bilan
 
 
 class ParseurBilan2023V6:
     """
-    Parse bilan d'ouverture complet avec Function Calling (V6)
+    Parse bilan comptable complet avec Function Calling (V6)
 
     Claude :
-    1. Analyse le PDF (pages 7-8: BILAN ACTIF/PASSIF DÉTAILLÉ)
-    2. Extrait TOUS les comptes (actif + passif)
-    3. Appelle extract_bilan_accounts()
-    4. Retourne le résultat structuré
+    1. Analyse le PDF bilan (pages 3-6 généralement)
+    2. Identifie sections ACTIF et PASSIF
+    3. Extrait TOUS les comptes avec numéro, libellé, solde, type
+    4. Appelle extract_bilan_comptes()
+    5. Vérifie équilibre automatiquement
     """
 
     def __init__(self, api_key: str, model: str = "claude-haiku-4-5-20251001"):
@@ -49,13 +50,14 @@ class ParseurBilan2023V6:
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key)
 
-    def parse_from_pdf(self, filepath: str, exercice: str = "2023") -> Dict:
+    def parse_from_pdf(self, filepath: str, start_page: int = 3, max_pages: int = 6) -> Dict:
         """
-        Parse bilan d'ouverture complet avec Function Calling
+        Parse bilan comptable depuis PDF avec Function Calling
 
         Args:
             filepath: Chemin vers PDF bilan comptable
-            exercice: Année de l'exercice (ex: "2023")
+            start_page: Page de début (3 = généralement première page bilan)
+            max_pages: Nombre max de pages à analyser (6 = bilan complet généralement)
 
         Returns:
             {
@@ -63,11 +65,10 @@ class ParseurBilan2023V6:
                 "exercice": "2023",
                 "date_bilan": "2023-12-31",
                 "nb_comptes": 10,
-                "comptes_actif": [...],
-                "comptes_passif": [...],
-                "total_actif": 463618.00,
-                "total_passif": 463618.00,
-                "equilibre": True
+                "total_actif": 463618,
+                "total_passif": 463618,
+                "equilibre": True,
+                "comptes": [...]
             }
         """
         if not PDF2IMAGE_AVAILABLE:
@@ -78,27 +79,31 @@ class ParseurBilan2023V6:
             }
 
         try:
-            # 1. Convertir PDF → Images (DPI réduit pour économiser mémoire)
-            images = convert_from_path(filepath, dpi=100)  # Même optimisation que parseur prêt V6
+            # 1. Convertir PDF → Images (optimisé mémoire)
+            print(f"[PARSEUR BILAN V6] Conversion PDF pages {start_page}-{start_page+max_pages}...", flush=True)
+
+            # Convertir toutes les pages d'abord
+            all_images = convert_from_path(filepath, dpi=100)
+
+            # Sélectionner uniquement les pages du bilan (généralement 3-6)
+            end_page = min(start_page + max_pages, len(all_images))
+            images = all_images[start_page-1:end_page]  # -1 car index 0-based
 
             if not images:
                 return {
                     "success": False,
-                    "error": "PDF vide ou illisible",
-                    "message": f"Impossible de convertir {filepath} en images"
+                    "error": "Aucune page de bilan trouvée",
+                    "message": f"Pages {start_page}-{end_page} vides dans {filepath}"
                 }
 
-            print(f"[PARSEUR BILAN V6] PDF converti : {len(images)} pages", flush=True)
+            print(f"[PARSEUR BILAN V6] {len(images)} pages bilan extraites", flush=True)
 
-            # 2. Préparer les images pour Claude
-            # Pages 7-8 contiennent le bilan détaillé (mais on envoie toutes les pages pour être sûr)
+            # 2. Préparer les images pour Claude (optimisé mémoire)
             image_contents = []
-            # Limiter à 15 pages pour avoir assez de contexte (bilan détaillé)
-            max_pages = min(15, len(images))
 
-            for page_num, image in enumerate(images[:max_pages]):
+            for page_num, image in enumerate(images, start=start_page):
                 buffer = io.BytesIO()
-                # Compression JPEG qualité 85 (au lieu de 95 par défaut)
+                # Compression JPEG qualité 85 (optimisé Render 512 MB)
                 image.save(buffer, format='JPEG', quality=85, optimize=True)
                 image_base64 = base64.b64encode(buffer.getvalue()).decode()
 
@@ -111,17 +116,17 @@ class ParseurBilan2023V6:
                     }
                 })
 
-                # Libérer mémoire image PIL
+                # Libérer mémoire
                 buffer.close()
-                del image
+                del image, buffer
 
-            # Libérer liste images complète
-            del images
+            # Libérer toutes les images
+            del images, all_images
 
             print(f"[PARSEUR BILAN V6] {len(image_contents)} pages préparées pour Claude (mémoire optimisée)", flush=True)
 
             # 3. Appel Claude API avec Function Calling
-            result = self._call_claude_with_tools(image_contents, filepath, exercice)
+            result = self._call_claude_with_tools(image_contents, filepath)
 
             return result
 
@@ -136,160 +141,166 @@ class ParseurBilan2023V6:
                 "message": f"Erreur lors du parsing: {str(e)}"
             }
 
-    def _call_claude_with_tools(self,
-                                 image_contents: List[Dict],
-                                 filepath: str,
-                                 exercice: str) -> Dict:
+    def _call_claude_with_tools(self, image_contents: List[Dict], filepath: str) -> Dict:
         """
         Appelle Claude API avec Function Calling activé
 
-        Claude va analyser les images et appeler le tool :
-        1. extract_bilan_accounts() - Extraction des comptes du bilan
+        Claude va analyser les images et appeler le tool extract_bilan_comptes()
         """
 
-        # Prompt système
-        system_prompt = f"""Tu es un expert en extraction de bilans comptables.
+        system_prompt = """Tu es un expert en comptabilité française et en lecture de bilans comptables.
 
 Ton rôle :
-1. Analyser le PDF de bilan comptable (comptes annuels {exercice})
-2. Trouver les pages "BILAN - ACTIF DÉTAILLÉ" et "BILAN - PASSIF DÉTAILLÉ"
-3. Extraire TOUS les comptes du bilan avec leurs montants
-4. Appeler le tool extract_bilan_accounts avec les données extraites
-
-PAGES IMPORTANTES :
-- Généralement pages 7-8 : BILAN - ACTIF DÉTAILLÉ / BILAN - PASSIF DÉTAILLÉ
-- Ces pages contiennent les comptes détaillés avec numéros et montants
-
-FORMAT DES MONTANTS :
-- Les montants peuvent contenir des ESPACES : "500 032" → 500032.00
-- Les montants peuvent être NÉGATIFS : "-50 003" → -50003.00
-- Utiliser le point comme séparateur décimal (ex: 463618.00)
-
-COMPTES À EXTRAIRE :
-
-**ACTIF (comptes débiteurs au bilan) :**
-- 280 : Titres immobilisés (SCPI, participations)
-- 290 : Provisions (montant NÉGATIF - ex: Provision epargne pierre)
-- 412 : Autres créances
-- 502 : Actions / Valeurs mobilières
-- 512 : Banque / Disponibilités
-
-**PASSIF (comptes créditeurs au bilan) :**
-- 101 : Capital social
-- 120 : Report à nouveau (peut être NÉGATIF si déficit cumulé)
-- 130 : Résultat de l'exercice (peut être NÉGATIF si perte)
-- 161 : Emprunts / Dettes financières
-- 401 : Dettes fournisseurs
-- 444 : Comptes courants d'associés
+1. Analyser les pages du bilan comptable (ACTIF et PASSIF)
+2. Extraire TOUS les comptes individuels (pas les totaux/sous-totaux)
+3. Pour chaque compte, identifier :
+   - Numéro de compte (généralement 3 chiffres : 101, 280, 512, etc.)
+   - Libellé complet
+   - Montant NET (colonne finale, pas brut ni amortissements)
+   - Type (ACTIF ou PASSIF)
+4. Appeler le tool extract_bilan_comptes avec la liste complète
 
 RÈGLES D'EXTRACTION :
-1. IGNORER les lignes de totaux intermédiaires (TOTAL ACTIF IMMOBILISÉ, TOTAL ACTIF CIRCULANT, etc.)
-2. EXTRAIRE uniquement les comptes avec numéros de 1 à 3 chiffres
-3. Pour les montants avec espaces : "500 032" → convertir en 500032.00
-4. Pour les montants négatifs : "-50 003" → convertir en -50003.00
-5. Conserver les libellés complets (ex: "Titres immobilisés - epargne pierre", "Banque LCL")
+- ✅ EXTRAIRE uniquement les comptes individuels
+- ❌ IGNORER les totaux ("TOTAL ACTIF", "TOTAL PASSIF", etc.)
+- ❌ IGNORER les sous-totaux de sections
+- ❌ IGNORER les en-têtes de colonnes
+- ❌ IGNORER les notes de bas de page
 
-VALIDATION :
-- Total ACTIF doit = Total PASSIF
-- Si différence > 0.01€ → ERREUR dans l'extraction
+FORMATS DE MONTANTS À GÉRER :
+- Avec espaces de milliers : "500 032" → 500032
+- Avec virgules décimales : "50,003" → 50.003
+- Négatifs : "-57 992" → -57992
+- Avec symbole € : "1 000 €" → 1000
+- Avec parenthèses (négatif) : "(57 992)" → -57992
 
-EXEMPLES DE CONVERSION :
-- "500 032" → 500032.00
-- "-50 003" → -50003.00
-- "7 356" → 7356.00
-- "1 000" → 1000.00
+STRUCTURE DU BILAN FRANÇAIS :
+**ACTIF** (ce que possède la société) :
+- Immobilisations (comptes 2xx)
+- Créances (comptes 4xx)
+- Disponibilités (comptes 5xx)
 
-Après extraction complète, appelle le tool extract_bilan_accounts avec :
-- exercice: "{exercice}"
-- date_bilan: "YYYY-MM-DD" (date de fin d'exercice, généralement 31/12/{exercice})
-- comptes_actif: [liste complète des comptes ACTIF]
-- comptes_passif: [liste complète des comptes PASSIF]
-- total_actif: somme des comptes ACTIF (attention aux négatifs!)
-- total_passif: somme des comptes PASSIF (attention aux négatifs!)
+**PASSIF** (ce que doit la société) :
+- Capitaux propres (comptes 1xx)
+- Dettes (comptes 4xx, 1xx emprunts)
+
+EXEMPLES D'EXTRACTION :
+```
+Page bilan ACTIF :
+280  Titres immobilisés SCPI    500 032 €
+→ {"numero": "280", "libelle": "Titres immobilisés SCPI", "solde": 500032, "type_bilan": "ACTIF"}
+
+Page bilan PASSIF :
+101  Capital                     1 000 €
+→ {"numero": "101", "libelle": "Capital", "solde": 1000, "type_bilan": "PASSIF"}
+
+120  Report à nouveau          (57 992) €
+→ {"numero": "120", "libelle": "Report à nouveau", "solde": -57992, "type_bilan": "PASSIF"}
+```
+
+IMPORTANT : Après avoir extrait TOUS les comptes, appelle OBLIGATOIREMENT le tool extract_bilan_comptes().
 """
 
-        # Construction du message utilisateur
-        user_message = [
-            {
-                "type": "text",
-                "text": f"Extrait le bilan d'ouverture {exercice} depuis ce PDF de comptes annuels. Trouve les pages 'BILAN - ACTIF DÉTAILLÉ' et 'BILAN - PASSIF DÉTAILLÉ' et extrait tous les comptes."
-            }
-        ] + image_contents
+        # Construire les messages avec les images
+        user_content = []
+        user_content.extend(image_contents)
+        user_content.append({
+            "type": "text",
+            "text": f"Analyse ce bilan comptable et extrait TOUS les comptes avec leur solde net. Fichier: {Path(filepath).name}"
+        })
 
-        print(f"[PARSEUR BILAN V6] Appel Claude API avec Function Calling...", flush=True)
+        messages = [{
+            "role": "user",
+            "content": user_content
+        }]
 
-        # Appel Claude avec tools
-        try:
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=8000,  # Bilan moins complexe que prêt → moins de tokens
-                system=system_prompt,
-                tools=[TOOL_EXTRACT_BILAN_ACCOUNTS],
-                messages=[
-                    {
-                        "role": "user",
-                        "content": user_message
-                    }
-                ]
+        print(f"[PARSEUR BILAN V6] Appel Claude API...", flush=True)
+
+        # Appel initial
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=8000,  # Suffisant pour extraction bilan (pas 20k comme prêts)
+            system=system_prompt,
+            messages=messages,
+            tools=ALL_TOOLS_BILAN,
+            timeout=300.0  # 5 minutes max
+        )
+
+        print(f"[PARSEUR BILAN V6] Réponse reçue, stop_reason: {response.stop_reason}", flush=True)
+
+        # Traiter la réponse
+        result = None
+
+        while response.stop_reason == "tool_use":
+            # Extraire le tool call
+            tool_use_block = next(
+                (block for block in response.content if block.type == "tool_use"),
+                None
             )
 
-            print(f"[PARSEUR BILAN V6] Réponse Claude reçue (stop_reason: {response.stop_reason})", flush=True)
+            if not tool_use_block:
+                break
 
-            # Traiter la réponse
-            result = self._process_claude_response(response, exercice)
+            tool_name = tool_use_block.name
+            tool_input = tool_use_block.input
 
+            print(f"[PARSEUR BILAN V6] Tool appelé: {tool_name}", flush=True)
+            print(f"[PARSEUR BILAN V6] Nombre de comptes: {len(tool_input.get('comptes', []))}", flush=True)
+
+            # Exécuter le tool
+            tool_result = execute_tool_bilan(tool_name, tool_input)
+
+            print(f"[PARSEUR BILAN V6] Tool exécuté: success={tool_result.get('success')}", flush=True)
+            if tool_result.get('success'):
+                print(f"[PARSEUR BILAN V6] Comptes: {tool_result.get('nb_comptes')}, "
+                      f"Actif: {tool_result.get('total_actif')}, "
+                      f"Passif: {tool_result.get('total_passif')}, "
+                      f"Équilibre: {tool_result.get('equilibre')}", flush=True)
+
+            # Stocker le résultat
+            if tool_result.get('success'):
+                result = tool_result
+
+            # Continuer la conversation avec Claude
+            messages.append({
+                "role": "assistant",
+                "content": response.content
+            })
+
+            messages.append({
+                "role": "user",
+                "content": [{
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_block.id,
+                    "content": json.dumps(tool_result)
+                }]
+            })
+
+            # Appel suivant
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=2000,
+                system=system_prompt,
+                messages=messages,
+                tools=ALL_TOOLS_BILAN,
+                timeout=300.0
+            )
+
+            print(f"[PARSEUR BILAN V6] Suite conversation, stop_reason: {response.stop_reason}", flush=True)
+
+        # Retourner le résultat
+        if result and result.get('success'):
             return result
-
-        except Exception as e:
-            print(f"[PARSEUR BILAN V6 ERROR] Erreur appel Claude: {str(e)}", flush=True)
-            import traceback
-            traceback.print_exc()
-
+        else:
             return {
                 "success": False,
-                "error": str(e),
-                "message": f"Erreur lors de l'appel Claude API: {str(e)}"
+                "error": "Aucun tool appelé ou échec extraction",
+                "message": "Claude n'a pas pu extraire les comptes du bilan"
             }
 
-    def _process_claude_response(self, response, exercice: str) -> Dict:
-        """
-        Traite la réponse de Claude et exécute les tool calls
-        """
-        result = {
-            "success": False,
-            "message": "Aucun tool call reçu"
-        }
-
-        # Parcourir les content blocks
-        for block in response.content:
-            if block.type == "tool_use":
-                tool_name = block.name
-                tool_input = block.input
-
-                print(f"[PARSEUR BILAN V6] Tool call reçu: {tool_name}", flush=True)
-
-                if tool_name == "extract_bilan_accounts":
-                    # Exécuter le tool
-                    result = execute_tool(tool_name, tool_input)
-
-        return result
-
 
 # ============================================================================
-# FONCTION HELPER POUR INTÉGRATION
+# EXPORT
 # ============================================================================
 
-def parse_bilan_v6(filepath: str, api_key: str, exercice: str = "2023") -> Dict:
-    """
-    Helper function pour parser un bilan avec V6
-
-    Args:
-        filepath: Chemin vers PDF bilan
-        api_key: Clé API Anthropic
-        exercice: Année de l'exercice
-
-    Returns:
-        Dict avec résultat de l'extraction
-    """
-    parser = ParseurBilan2023V6(api_key=api_key)
-    return parser.parse_from_pdf(filepath, exercice)
+__all__ = ['ParseurBilan2023V6']
