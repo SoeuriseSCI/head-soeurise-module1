@@ -140,18 +140,26 @@ class OCRExtractor:
 
 class DetecteurTypeEvenement:
     """Détecte le type d'événement comptable depuis un email"""
-    
+
     @staticmethod
     def detecter(email: Dict) -> TypeEvenement:
         """
         Détecte le type d'événement
-        
+
         Returns:
             TypeEvenement enum (EVENEMENT_SIMPLE | INIT_BILAN_2023 | CLOTURE_EXERCICE | UNKNOWN)
         """
         body = (email.get('body', '') + ' ' + email.get('subject', '')).lower()
         subject = email.get('subject', '').lower()
         attachments = email.get('attachments', [])
+
+        # ⚠️ PRIORITÉ 0: Détecter emails de VALIDATION en premier
+        # Si l'email contient [_Head] VALIDE:, ce n'est PAS un nouvel événement comptable
+        # Retourner UNKNOWN pour que traiter_emails_entrants() l'ignore
+        # et traiter_validations() le traite correctement
+        import re
+        if re.search(r'\[_Head\]\s*VALIDE:', body, re.IGNORECASE):
+            return TypeEvenement.UNKNOWN
 
         # Détecteur PRET_IMMOBILIER (AVANT CLOTURE_EXERCICE car "amortissement" est commun)
         # Détecte: "tableau" + "amortissement" + "pret" dans filename ou body
