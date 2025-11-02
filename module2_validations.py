@@ -463,34 +463,25 @@ class OrchestratorValidations:
             }
         
         # PHASE 8-9: Insertion + Update
-        
-        # Recuperer l'email original (source des propositions)
-        evt_original = self.session.query(EvenementComptable).filter_by(
-            statut='EN_ATTENTE_VALIDATION',
-            type_evenement=type_evenement
-        ).order_by(EvenementComptable.email_date.desc()).first()
-        
-        if not evt_original:
-            return {
-                "validation_detectee": True,
-                "statut": "ERREUR",
-                "message": f"Impossible de trouver l'evenement original ({type_evenement})",
-                "ecritures_creees": 0,
-                "type_evenement": type_evenement
-            }
-        
+
+        # Utiliser les données de la proposition (pas besoin de chercher EvenementComptable)
+        # Dans l'architecture V2, on ne crée pas d'EvenementComptable lors de la génération
+        # On a déjà toutes les infos dans proposition_data
+
+        email_original_id = proposition_data.get('email_id') or 'UNKNOWN'
+
         # Choisir la fonction d'insertion selon le type
         if type_evenement == 'EVENEMENT_SIMPLE':
             succes, msg, ids = self.processeur.inserer_propositions_simple(
-                propositions, evt_original.email_id, email.get('email_id'), email.get('from')
+                propositions, email_original_id, email.get('email_id'), email.get('from')
             )
         elif type_evenement == 'INIT_BILAN_2023':
             succes, msg, ids = self.processeur.inserer_propositions_init_bilan(
-                propositions, evt_original.email_id, email.get('email_id'), email.get('from')
+                propositions, email_original_id, email.get('email_id'), email.get('from')
             )
         elif type_evenement == 'CLOTURE_EXERCICE':
             succes, msg, ids = self.processeur.inserer_propositions_cloture(
-                propositions, evt_original.email_id, email.get('email_id'), email.get('from')
+                propositions, email_original_id, email.get('email_id'), email.get('from')
             )
         else:
             succes, msg, ids = False, f"Type evenement inconnu: {type_evenement}", []
@@ -503,18 +494,12 @@ class OrchestratorValidations:
                 "ecritures_creees": 0,
                 "type_evenement": type_evenement
             }
-        
-        # Mettre a jour l'evenement original
-        evt_original.statut = 'INSERE_EN_DB'
-        evt_original.email_validation_id = email.get('email_id')
-        evt_original.ecritures_creees = ids
-        evt_original.traite_at = datetime.now()
 
         # Marquer la proposition comme validée dans la table propositions_en_attente
         self.propositions_manager.valider_proposition(
             token=token_email,
             validee_par=email.get('from'),
-            notes=f"Validée via email le {datetime.now()}"
+            notes=f"Validée via email le {datetime.now()}, {len(ids)} écritures insérées"
         )
 
         self.session.commit()
