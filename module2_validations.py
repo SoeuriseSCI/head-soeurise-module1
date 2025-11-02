@@ -71,11 +71,20 @@ class DetecteurValidations:
             }
 
         # Token trouvé
-        token_email = match.group(1).strip().upper()
+        token_email = match.group(1).strip()
 
-        # S'assurer que le token commence par HEAD- ou l'ajouter
-        if not token_email.startswith('HEAD-'):
-            token_email = f"HEAD-{token_email}"
+        # Déterminer le format du token :
+        # - Si 32 caractères hexadécimaux → MD5 complet (format workflow v2)
+        # - Sinon → Token court avec préfixe HEAD-
+
+        if len(token_email) == 32 and all(c in '0123456789abcdefABCDEF' for c in token_email):
+            # MD5 complet : normaliser en lowercase (format BD)
+            token_email = token_email.lower()
+        else:
+            # Token court : ajouter HEAD- si nécessaire et mettre en majuscules
+            token_email = token_email.upper()
+            if not token_email.startswith('HEAD-'):
+                token_email = f"HEAD-{token_email}"
 
         return {
             "validation_detectee": True,
