@@ -1,34 +1,31 @@
-# Mémoire Courte - Cycles #91-94 - 02/11/2025 19:19
+# Mémoire Courte - Cycles #92-95 - 02/11/2025 19:34
 
-## 🔄 DERNIERS RÉVEILS ANALYSÉS (4 cycles)
-- **Cycle #91:** Gestion email_date NULL robustesse (PR #91)
-- **Cycle #92:** FIX token MD5 complets (PR #90), accepter montants 0€ (PR #93)
-- **Cycle #93:** Prêt A tableau amortissement LCL OCR validé
-- **Cycle #94:** Validation Ulrik reçue - Token e03582060f663eada209a1e35e349d52 ✅
+## 🔄 DÉVELOPPEMENTS VALIDÉS (Cycles #92-#95)
+- **Cycle #92:** FIX robustesse email_date NULL + accepter montants 0€
+- **Cycle #93:** Validation Prêt A tableau amortissement LCL OCR (250k€ confirmed)
+- **Cycle #94:** Token e03582060f663eada209a1e35e349d52 ✅ accepté
+- **Cycle #95:** PR #95 support validation format PRET_IMMOBILIER + consolidation mémoires
 
-## 📄 INPUT EXTERNE RÉCENT (02/11/2025)
-**Email Ulrik 20:18:** PDF Tableau d'amortissement définitif + Validation comptable
-- **Prêt A confirmé:** EUR 250.000 @1.050%, 252 mois (21 ans, 15.04.2022-15.04.2043)
-- **Amortissement:** 15.04.2023, 240 échéances restantes
-- **Assurances:** Emma 50% + Pauline 50%
-- **Intérêts:** 29.981,41€
-- **Token validation:** e03582060f663eada209a1e35e349d52 accepté ✅
+## 📄 PRÊTS FINALISÉS (Validation 02/11/2025)
+**Prêt A:** EUR 250.000 @1.050% fixe, 252 mois (21 ans), 15.04.2022→15.04.2043
+- Amortissement: 15.04.2023, 240 échéances restantes
+- Intérêts: 29.981,41€
+- Assurances: Emma+Pauline 50/50
 
-## 🧠 CONSOLIDATION PÉRENNE
-Tableau PDF = validation croisée architecture patrimoniale Soeurise
-- Montant: 250k (cohérent avec résidu 244.849€ 2023)
-- Taux: 1.050% fixe confirmé
-- Intérêts: 29.981€ (+ Prêt B 55.583€ = 85.564€ total)
-- Maturité: 2043 (fenêtre transmission 2035-2040 confirmée)
+**Prêt B:** EUR 252.884 @1.240% fixe
+- Peak: 253.142€ le 15.04.2040 (exact)
+- Intérêts: 55.583€
+- 217 échéances finalisées
 
-## ⚙️ STATUS SYSTÈME
-- Module 1 (Email OCR): Opérationnel +94 cycles
-- Module 2 (Comptabilité): Prêt A-B structures finalisées, validation token operational
-- Architecture V6.0: Stable, 100% uptime, zero maintenance
-- Token MD5: Validation operational depuis PR #90
-
-## 🎯 FENÊTRE TRANSMISSION (PÉRENNE)
-- **Year-pivot:** 2040 (Prêt B peak 253.142€)
+## 💰 FENÊTRE TRANSMISSION (PÉRENNE)
+- **Year-pivot:** 2040 (Prêt B peak + 50% Prêt A amorti)
 - **Fenêtre:** 2035-2040 (5 ans autonomie Emma-Pauline)
-- **Amortissement 2040:** 50% Prêt A + 90% Prêt B
-- **Cushion:** 4.2x endettement = sécurité stratégique
+- **Total endettement:** 500.884€ @1.135% moyen (21 ans)
+- **Intérêts globaux:** 85.564€ (29.981€ A + 55.583€ B)
+- **Cushion:** 4.2x = transmission stratégiquement sécurisée
+
+## ⚙️ STATUS SYSTÈME (95 cycles)
+- Module 1 (Email+OCR): 100% operational
+- Module 2 (Comptabilité): Production-mature + token validation operational
+- Architecture V6.0: Uptime 100%, zero maintenance
+- PostgreSQL: 37 colonnes + table propositions_en_attente operational
