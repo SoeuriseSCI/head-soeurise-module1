@@ -80,20 +80,20 @@ class OCRExtractor:
             raise ImportError("pdf2image non disponible - installer avec: pip install pdf2image pdf2image poppler-utils")
 
         try:
-            # Convertir PDF → images (JPEG)
-            images = convert_from_path(filepath, dpi=150)
+            # Convertir PDF → images (JPEG) - DPI réduit pour économiser mémoire
+            images = convert_from_path(filepath, dpi=100)  # Réduit de 150 à 100 (-44% pixels)
 
             if not images:
                 raise ValueError(f"PDF vide ou non lisible: {filepath}")
 
-            # On traite les 20 premières pages maximum
-            max_pages = min(20, len(images))
+            # Limiter à 10 pages pour économiser mémoire (Render 512 MB)
+            max_pages = min(10, len(images))
             extracted_text = []
 
             for page_num, image in enumerate(images[:max_pages]):
-                # Convertir image PIL → JPEG base64
+                # Convertir image PIL → JPEG base64 avec compression
                 buffer = io.BytesIO()
-                image.save(buffer, format='JPEG')
+                image.save(buffer, format='JPEG', quality=85, optimize=True)
                 image_base64 = __import__('base64').b64encode(buffer.getvalue()).decode()
 
                 # Envoyer à Claude Vision
@@ -120,6 +120,13 @@ class OCRExtractor:
 
                 page_text = response.content[0].text
                 extracted_text.append(f"--- Page {page_num+1} ---\n{page_text}")
+
+                # Libérer mémoire image et buffer
+                buffer.close()
+                del image, buffer, image_base64
+
+            # Libérer liste images complète
+            del images
 
             return "\n\n".join(extracted_text)
 
@@ -167,7 +174,8 @@ class DetecteurTypeEvenement:
             return TypeEvenement.CLOTURE_EXERCICE
         
         # Détecteur INIT_BILAN_2023
-        if any(kw in body for kw in ['bilan 2023', 'bilan_2023', 'bilan initial', 'initialisation comptable']):
+        if any(kw in body for kw in ['bilan 2023', 'bilan_2023', 'bilan initial', 'initialisation comptable',
+                                      'bilan d\'ouverture', 'bilan ouverture', "bilan d'ouverture"]):
             return TypeEvenement.INIT_BILAN_2023
         
         if any(f['filename'].lower().endswith('.pdf') and 'bilan' in f['filename'].lower() and '2023' in f['filename'].lower()
@@ -989,8 +997,11 @@ class GenerateurPropositions:
         for i, compte in enumerate(comptes, 1):
             num_compte = compte["compte"]
             libelle = compte["libelle"]
-            solde = abs(compte["solde"])  # Valeur absolue
-            sens = compte.get("sens", GenerateurPropositions._determiner_sens_compte(num_compte, compte.get("type_bilan", "")))
+            solde_original = compte["solde"]  # Conserver le signe
+            solde = abs(solde_original)  # Valeur absolue pour le montant
+
+            # Déterminer le sens en fonction du numéro de compte ET du signe
+            sens = compte.get("sens", GenerateurPropositions._determiner_sens_compte(num_compte, solde_original, compte.get("type_bilan", "")))
 
             if sens == "DEBIT":
                 # Compte à l'actif ou capitaux propres négatifs
@@ -1019,38 +1030,50 @@ class GenerateurPropositions:
         return markdown, {"propositions": propositions, "token": token}, token
 
     @staticmethod
-    def _determiner_sens_compte(num_compte: str, type_bilan: str = "") -> str:
+    def _determiner_sens_compte(num_compte: str, solde: float, type_bilan: str = "") -> str:
         """
         Détermine si un compte doit être débité ou crédité à l'ouverture
 
+        LOGIQUE CORRECTE BILAN :
+        - ACTIF positif → DÉBIT
+        - ACTIF négatif (provision 29x) → CRÉDIT (passif qui diminue actif brut)
+        - PASSIF positif → CRÉDIT
+        - PASSIF négatif (capitaux propres négatifs 12x, 13x) → DÉBIT
+
         Args:
             num_compte: Numéro du compte (ex: "280", "101")
+            solde: Solde du compte (avec signe, ex: -50003.00)
             type_bilan: "ACTIF" ou "PASSIF" (si disponible)
 
         Returns:
             "DEBIT" ou "CREDIT"
         """
-        # Si on a l'info directe, l'utiliser
+        # Si on a l'info directe, l'utiliser (sauf si solde négatif)
         if type_bilan == "ACTIF":
-            return "DEBIT"
+            # ACTIF négatif (ex: provision 290) → CRÉDIT
+            return "CREDIT" if solde < 0 else "DEBIT"
         elif type_bilan == "PASSIF":
-            return "CREDIT"
+            # PASSIF négatif (ex: capitaux propres négatifs) → DÉBIT
+            return "DEBIT" if solde < 0 else "CREDIT"
 
         # Sinon, déterminer selon le numéro de compte (Plan Comptable Général français)
         premiere_classe = num_compte[0] if num_compte else "0"
 
-        # Classe 1 : Capitaux propres
+        # Classe 1 : Capitaux propres et dettes financières
         if premiere_classe == "1":
-            # 12x Report à nouveau peut être débiteur si négatif (traité au cas par cas)
-            if num_compte.startswith("12"):
-                return "DEBIT"  # RAN négatif dans bilan SCI Soeurise
-            return "CREDIT"  # Capital, réserves, résultat, emprunts
+            # 12x Report à nouveau NÉGATIF → DÉBIT (capitaux propres négatifs)
+            # 12x Report à nouveau POSITIF → CRÉDIT (capitaux propres positifs)
+            if num_compte.startswith("12") or num_compte.startswith("13"):
+                return "DEBIT" if solde < 0 else "CREDIT"
+            return "CREDIT"  # Capital, réserves, emprunts (normalement créditeurs)
 
         # Classe 2 : Immobilisations
         elif premiere_classe == "2":
+            # 28x Amortissements → CRÉDIT (toujours au passif)
+            # 29x Provisions NÉGATIVES → CRÉDIT (passif qui diminue actif)
             if num_compte.startswith("28") or num_compte.startswith("29"):
-                return "CREDIT"  # Amortissements et provisions
-            return "DEBIT"  # Immobilisations brutes
+                return "CREDIT"
+            return "DEBIT"  # Immobilisations brutes (actif)
 
         # Classe 3 : Stocks (généralement débit)
         elif premiere_classe == "3":
@@ -1312,7 +1335,17 @@ class WorkflowModule2V2:
         self.api_key = api_key
         self.database_url = database_url
         self.ocr = OCRExtractor(api_key)
-        self.parseur_bilan = ParseurBilan2023(api_key)  # V6: utilise Function Calling
+
+        # V6: Utiliser le nouveau parseur bilan avec Function Calling
+        try:
+            from parseur_bilan_v6 import ParseurBilan2023V6
+            self.parseur_bilan = ParseurBilan2023V6(api_key)
+            print("[WORKFLOW] Parseur Bilan V6 (Function Calling) initialisé", flush=True)
+        except ImportError:
+            # Fallback sur V5 si V6 pas disponible
+            self.parseur_bilan = ParseurBilan2023(self.ocr)
+            print("[WORKFLOW] Parseur Bilan V5 (OCR basique) initialisé", flush=True)
+
         self.parseur_credit = ParseurAmortissementCredit(self.ocr)
         self.parseur_scpi = ParseurReevalorationSCPI(self.ocr)
     
@@ -1473,24 +1506,24 @@ class WorkflowModule2V2:
                 # Transformer les comptes V6 en format compatible avec le générateur
                 comptes = []
 
-                # Comptes ACTIF (débit au bilan)
+                # Comptes ACTIF
+                # Ne pas forcer le sens car _determiner_sens_compte() le calculera en fonction du signe
                 for compte_actif in result_v6.get('comptes_actif', []):
                     comptes.append({
                         "compte": compte_actif['numero_compte'],
                         "libelle": compte_actif['libelle'],
-                        "solde": compte_actif['montant'],
-                        "type_bilan": "ACTIF",
-                        "sens": "DEBIT"
+                        "solde": compte_actif['montant'],  # Conserver le signe (ex: -50003 pour provision)
+                        "type_bilan": "ACTIF"
                     })
 
-                # Comptes PASSIF (crédit au bilan)
+                # Comptes PASSIF
+                # Ne pas forcer le sens car _determiner_sens_compte() le calculera en fonction du signe
                 for compte_passif in result_v6.get('comptes_passif', []):
                     comptes.append({
                         "compte": compte_passif['numero_compte'],
                         "libelle": compte_passif['libelle'],
-                        "solde": compte_passif['montant'],
-                        "type_bilan": "PASSIF",
-                        "sens": "CREDIT"
+                        "solde": compte_passif['montant'],  # Conserver le signe (ex: -57992 pour RAN)
+                        "type_bilan": "PASSIF"
                     })
 
             if not comptes:
