@@ -426,6 +426,7 @@ class ProcesseurInsertion:
                     if len(parts) == 5:
                         try:
                             echeance = {
+                                'numero_echeance': len(echeances_data) + 1,  # Numéro séquentiel (1, 2, 3...)
                                 'date_echeance': parts[0],
                                 'montant_total': float(parts[1]),
                                 'montant_capital': float(parts[2]),
