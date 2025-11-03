@@ -27,8 +27,8 @@
 | **Plan comptable** | 12 | Comptes actifs |
 | **Écritures comptables** | 11 | Bilan 2023 (2023-INIT-0001 à 0011) |
 | **Prêts immobiliers** | 2 | LCL + INVESTIMUR |
-| **Échéances de prêts** | 467 | 251 (Prêt A) + 216 (Prêt B) |
-| **Total enregistrements** | **478** | Production-ready |
+| **Échéances de prêts** | 468 | 252 (Prêt A) + 216 (Prêt B) |
+| **Total enregistrements** | **479** | Production-ready |
 
 ### Écritures Comptables (Bilan 2023)
 
@@ -54,24 +54,24 @@
 - **Taux annuel** : 1,0500% (1,05%)
 - **Durée** : 252 mois (21 ans)
 - **Date début** : 2023-04-15
-- **Date fin** : 2042-04-15 (calculée automatiquement)
+- **Date fin** : 2043-04-15 (calculée automatiquement)
 - **Type** : AMORTISSEMENT_CONSTANT
 - **Échéance mensuelle** : 1 166,59€
-- **Nombre échéances** : 251
+- **Nombre échéances** : 252
 - **Total intérêts** : ~29 981€
 - **Coût du crédit** : ~12%
 
 #### Prêt B (INVESTIMUR) - 5009736BRLZE11AQ
-- **Montant initial** : 252 884,00€
+- **Montant initial** : 250 000,00€
 - **Taux annuel** : 1,2400% (1,24%)
-- **Durée** : 252 mois (21 ans)
+- **Durée** : 216 mois (18 ans)
 - **Date début** : 2023-05-15
-- **Date fin** : 2042-05-15 (calculée automatiquement)
+- **Date fin** : 2040-04-15 (calculée automatiquement)
 - **Type** : FRANCHISE_PARTIELLE
 - **Mois franchise** : 180 mois (15 ans)
 - **Intérêt franchise** : 258,33€/mois
 - **Nombre échéances** : 216
-- **Total intérêts** : ~55 583€
+- **Total intérêts** : ~55 848€
 - **Coût du crédit** : ~22%
 
 ---
