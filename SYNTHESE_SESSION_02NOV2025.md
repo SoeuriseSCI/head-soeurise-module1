@@ -32,20 +32,30 @@
 
 ### Écritures Comptables (Bilan 2023)
 
+**ACTIF** (débits, contrepartie crédit compte 89)
+
 | Numéro | Compte Débit | Compte Crédit | Montant | Libellé |
 |--------|--------------|---------------|---------|---------|
-| 2023-INIT-0001 | 280 | 101 | 400 000,00€ | Titres immobilisés |
-| 2023-INIT-0002 | 290 | 101 | -36 382,00€ | Provisions épargne |
-| 2023-INIT-0003 | 412 | 101 | 1 000,00€ | Autres créances |
-| 2023-INIT-0004 | 502 | 101 | 2 250,00€ | Actions, titres |
-| 2023-INIT-0005 | 512 | 101 | 96 750,00€ | Banque LCL |
-| 2023-INIT-0006 | 101 | 101 | 300 000,00€ | Capital social |
-| 2023-INIT-0007 | 101 | 120 | -98 370,00€ | Report à nouveau |
-| 2023-INIT-0008 | 101 | 130 | -62 000,00€ | Résultat exercice |
-| 2023-INIT-0009 | 101 | 161 | 500 000,00€ | Emprunts |
-| 2023-INIT-0010 | 101 | 401 | 128,00€ | Fournisseurs |
-| 2023-INIT-0011 | 101 | 444 | 120,00€ | Compte courant |
-| **TOTAL** | | | **463 618,00€** | **ÉQUILIBRÉ ✅** |
+| 2023-INIT-0001 | 280 | 89 | 500 032,00€ | Titres immobilisés/activité de portefeuille |
+| 2023-INIT-0003 | 412 | 89 | 7 356,00€ | Autres créances |
+| 2023-INIT-0004 | 502 | 89 | 4 140,00€ | Actions, autres titres |
+| 2023-INIT-0005 | 512 | 89 | 2 093,00€ | Banque LCL |
+| 2023-INIT-0007 | 120 | 89 | 57 992,00€ | Report à nouveau (négatif au passif) |
+| **Sous-total ACTIF** | | | **571 613,00€** | |
+
+**PASSIF** (crédits, contrepartie débit compte 89)
+
+| Numéro | Compte Débit | Compte Crédit | Montant | Libellé |
+|--------|--------------|---------------|---------|---------|
+| 2023-INIT-0002 | 89 | 290 | 50 003,00€ | Provisions épargne pierre (négatif à l'actif) |
+| 2023-INIT-0006 | 89 | 101 | 1 000,00€ | Capital |
+| 2023-INIT-0008 | 89 | 130 | 21 844,00€ | Résultat de l'exercice |
+| 2023-INIT-0009 | 89 | 161 | 497 993,00€ | Emprunts auprès établissements de crédit |
+| 2023-INIT-0010 | 89 | 401 | 653,00€ | Fournisseurs |
+| 2023-INIT-0011 | 89 | 444 | 120,00€ | Compte courant associés |
+| **Sous-total PASSIF** | | | **571 613,00€** | |
+
+**ÉQUILIBRE** : Compte 89 solde = 0€ ✅ (571 613€ débits = 571 613€ crédits)
 
 ### Prêts Immobiliers
 
