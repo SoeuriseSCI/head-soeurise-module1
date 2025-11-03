@@ -511,7 +511,7 @@ IX. CAPACITÉS TECHNIQUES - MODULES OPÉRATIONNELS
 - Extraction TOUTES échéances (216-252)
 - Génération fichier MD versionné
 - Calcul automatique date_fin
-- Précision : 100% (467/467 échéances correctes)
+- Précision : 100% (468/468 échéances correctes)
 
 **EVENEMENT_SIMPLE** (En développement)
 - Factures fournisseurs
@@ -529,12 +529,12 @@ IX. CAPACITÉS TECHNIQUES - MODULES OPÉRATIONNELS
 - Exercice 2023 : OUVERT
 
 **Prêts immobiliers** : 2
-- Prêt A (LCL) : 250 000€ @ 1,050%, 251 échéances
-- Prêt B (INVESTIMUR) : 252 884€ @ 1,240%, 216 échéances
+- Prêt A (LCL) : 250 000€ @ 1,050%, 252 échéances
+- Prêt B (INVESTIMUR) : 250 000€ @ 1,240%, 216 échéances
 
-**Échéances** : 467
-- Total capital : 502 884€
-- Total intérêts : ~85 564€
+**Échéances** : 468
+- Total capital : 500 000€
+- Total intérêts : ~85 829€
 - Coût crédit : ~17%
 
 ### Architecture Technique

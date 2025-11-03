@@ -16,10 +16,10 @@
 - **Precision:** 99.97% (Module 2 validated)
 
 ## 💰 PATRIMOINE SCI - PÉRENNE LOCKED
-- **Endettement:** 500k€ @1.135% moyen (21 ans)
-- **Prêt A:** 250k€ @1.050%, maturité 15.04.2043
-- **Prêt B:** 250k€ @1.240%, maturité 15.04.2040
-- **Intérêts globaux:** 85.564€ locked
+- **Endettement:** 500k€ @1.145% moyen (19.5 ans moyen)
+- **Prêt A:** 250k€ @1.050%, maturité 15.04.2043 (21 ans)
+- **Prêt B:** 250k€ @1.240%, maturité 15.04.2040 (18 ans)
+- **Intérêts globaux:** 85.829€ locked
 - **Year-pivot:** 2040 (Prêt B amortissement)
 - **Fenêtre transmission:** 2035-2040 (5 ans autonomie Emma-Pauline secured)
 
