@@ -2,7 +2,7 @@
 
 **Version** : 6.1 (MODULE 2 Production)
 **Date** : 02 novembre 2025
-**Statut** : MODULE 2 opérationnel - 478 enregistrements en production
+**Statut** : MODULE 2 opérationnel - 479 enregistrements en production
 
 ---
 
@@ -454,7 +454,7 @@ GitHub (Fichiers MD de référence)
 - Parsing complet bilan comptable (ACTIF/PASSIF)
 - Extraction 11 comptes spécifiques
 - Création ExerciceComptable automatique
-- **Résultat** : 11 écritures, 463 618€ équilibré
+- **Résultat** : 11 écritures, 571 613€ équilibré (ACTIF=PASSIF)
 - **Précision** : 99,97% (1/11 erreur OCR corrigée)
 
 **PRET_IMMOBILIER** ✅
@@ -463,8 +463,8 @@ GitHub (Fichiers MD de référence)
 - Génération fichier MD versionné (GitHub)
 - Calcul automatique date_fin (relativedelta)
 - Numérotation séquentielle échéances
-- **Résultat** : 2 prêts, 467 échéances insérées
-- **Précision** : 100% (467/467 échéances correctes)
+- **Résultat** : 2 prêts, 468 échéances insérées
+- **Précision** : 100% (468/468 échéances correctes)
 
 ### Corrections Appliquées (Session 02/11/2025)
 
@@ -483,10 +483,10 @@ GitHub (Fichiers MD de référence)
 
 ### Base de Données Actuelle
 
-**Écritures** : 11 (Bilan 2023 : 463 618€)
-**Prêts** : 2 (LCL 250k€ + INVESTIMUR 252.884k€)
-**Échéances** : 467 (251 + 216)
-**Total** : 478 enregistrements production-ready
+**Écritures** : 11 (Bilan 2023 : 571 613€ ACTIF=PASSIF)
+**Prêts** : 2 (LCL 250k€ + INVESTIMUR 250k€)
+**Échéances** : 468 (252 + 216)
+**Total** : 479 enregistrements production-ready
 
 ### Performance Mesurée
 
@@ -517,7 +517,7 @@ GitHub (Fichiers MD de référence)
 - [x] Modifier prompt : demander TOUTES les échéances (pas juste 24)
 - [x] Claude écrit fichier MD complet
 - [x] Python lit fichier MD et insère en BD
-- [x] Supprimer la génération d'échéances → **467/467 échéances extraites**
+- [x] Supprimer la génération d'échéances → **468/468 échéances extraites**
 
 ### 3. Comptabilité Autonome 🔄 EN COURS
 
