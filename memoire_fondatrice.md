@@ -525,7 +525,7 @@ IX. CAPACITÉS TECHNIQUES - MODULES OPÉRATIONNELS
 ### État Base de Données (02/11/2025)
 
 **Écritures comptables** : 11
-- Bilan 2023 : 463 618€ (ÉQUILIBRÉ ✅)
+- Bilan 2023 : 571 613€ (ACTIF=PASSIF ✅)
 - Exercice 2023 : OUVERT
 
 **Prêts immobiliers** : 2
