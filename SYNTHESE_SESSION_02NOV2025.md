@@ -62,10 +62,12 @@
 #### Prêt A (LCL) - 5009736BRM0911AH
 - **Montant initial** : 250 000,00€
 - **Taux annuel** : 1,0500% (1,05%)
-- **Durée** : 252 mois (21 ans)
-- **Date début** : 2023-04-15
-- **Date fin** : 2043-04-15 (calculée automatiquement)
+- **Durée totale** : 252 mois (21 ans)
+- **Date départ prêt** : 2022-04-15
+- **Date début amortissement** : 2023-04-15 (après 12 mois franchise totale)
+- **Date fin** : 2043-04-15
 - **Type** : AMORTISSEMENT_CONSTANT
+- **Franchise** : 12 mois (intérêts = 0, capital = 0)
 - **Échéance mensuelle** : 1 166,59€
 - **Nombre échéances** : 252
 - **Total intérêts** : ~29 981€
@@ -74,12 +76,15 @@
 #### Prêt B (INVESTIMUR) - 5009736BRLZE11AQ
 - **Montant initial** : 250 000,00€
 - **Taux annuel** : 1,2400% (1,24%)
-- **Durée** : 216 mois (18 ans)
-- **Date début** : 2023-05-15
-- **Date fin** : 2040-04-15 (calculée automatiquement)
-- **Type** : FRANCHISE_PARTIELLE
-- **Mois franchise** : 180 mois (15 ans)
-- **Intérêt franchise** : 258,33€/mois
+- **Durée totale** : 216 mois (18 ans)
+- **Date départ prêt** : 2022-05-15
+- **Date début amortissement** : 2023-05-15 (après 12 mois franchise totale)
+- **Date fin** : 2040-04-15
+- **Type** : IN FINE (franchise partielle)
+- **Structure** :
+  - 12 mois franchise totale (intérêts = 0, capital = 0)
+  - 203 mois intérêts seuls (258,33€/mois, capital = 0)
+  - 1 paiement final capital (250 000€ + intérêts)
 - **Nombre échéances** : 216
 - **Total intérêts** : ~55 848€
 - **Coût du crédit** : ~22%
