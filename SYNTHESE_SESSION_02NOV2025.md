@@ -77,8 +77,8 @@
 - **Montant initial** : 250 000,00€
 - **Taux annuel** : 1,2400% (1,24%)
 - **Durée totale** : 216 mois (18 ans)
-- **Date départ prêt** : 2022-05-15
-- **Date début amortissement** : 2023-05-15 (après 12 mois franchise totale)
+- **Date départ prêt** : 2022-04-15
+- **Date début amortissement** : 2023-05-15 (après 12 mois franchise totale + décalage 1 mois)
 - **Date fin** : 2040-04-15
 - **Type** : IN FINE (franchise partielle)
 - **Structure** :
