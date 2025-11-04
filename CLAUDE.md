@@ -31,12 +31,24 @@ main.py                 → Application Flask + réveil quotidien
 module2_workflow_v2.py  → Comptabilité automatisée
 module2_validations.py  → Validations Module 2
 models_module2.py       → Modèles de données
+sauvegarder_base.py     → Sauvegarde BD (JSON)
+sauvegarder_base.sh     → Sauvegarde BD (SQL dump)
+verifier_bilan_2023.py  → Vérification écritures Bilan 2023
+```
+
+### Documentation Technique
+```
+ARCHITECTURE.md                      → Architecture V6.1 complète
+INSTRUCTIONS_SAUVEGARDE_BASE.md      → Procédure sauvegarde BD
+PROCHAINES_ETAPES.md                 → Feuille de route du projet
+SYNTHESE_SESSION_02NOV2025.md        → Consolidation MODULE 2
+VALIDATION_BILAN_2023_CORRECT.md     → Explication comptabilité Bilan 2023
 ```
 
 ### Infrastructure
 ```
 Hébergement    : Render.com (https://head-soeurise-web.onrender.com)
-Base de données: PostgreSQL
+Base de données: PostgreSQL (479 enregistrements en production)
 Scheduler      : Python schedule (réveil à 08:00 UTC)
 API Claude     : Haiku 4.5 (claude-haiku-4-5-20251001)
 Coût           : <1€/mois
@@ -52,7 +64,7 @@ Ces trois axes interdépendants guident toutes les actions de _Head.Soeurise et 
 
 ---
 
-## 🔧 Architecture V5 (Actuelle)
+## 🔧 Architecture V6.1 (Actuelle)
 
 ### Pour _Head.Soeurise (réveils automatiques)
 **Lecture mémoires** :
@@ -98,13 +110,28 @@ https://api.github.com/repos/SoeuriseSCI/head-soeurise-module1/contents/{file}?r
 
 ### Code
 - ⚠️ **main.py** = Production (Render) → Tests locaux obligatoires avant push
-- ✅ **Module 2** = Comptabilité → En développement actif
-- ✅ **Zéro régression acceptée** (VERSION: 5 - Production-ready)
+- ✅ **Module 2** = Comptabilité → **OPÉRATIONNEL** (479 enregistrements en production)
+- ✅ **Zéro régression acceptée** (VERSION: 6.1 - Production-ready)
+
+### Base de Données (État Actuel)
+- 📊 **Exercices** : 1 (Exercice 2023 OUVERT)
+- 📝 **Écritures** : 11 (Bilan 2023 : 571 613€ équilibré)
+- 💰 **Prêts** : 2 (Prêt A LCL 250k€ + Prêt B INVESTIMUR 250k€)
+- 📅 **Échéances** : 468 (252 + 216)
+- ✅ **Total** : 479 enregistrements validés
 
 ### Git
 - Branche principale : `main`
 - Commits automatiques : `🧠 Réveil DD/MM/YYYY HH:MM` (par _Head.Soeurise)
 - Commits manuels : Messages descriptifs clairs
+
+### Procédures de Maintenance
+- 💾 **Sauvegarde BD** : Obligatoire avant toute modification majeure
+  - Python : `python sauvegarder_base.py` (format JSON)
+  - Bash : `bash sauvegarder_base.sh` (format SQL dump)
+  - Instructions : Voir `INSTRUCTIONS_SAUVEGARDE_BASE.md`
+- 🔍 **Vérification Bilan** : `python verifier_bilan_2023.py`
+- 📋 **Documentation** : Voir `ARCHITECTURE.md` et `PROCHAINES_ETAPES.md`
 
 ---
 
@@ -133,12 +160,20 @@ https://api.github.com/repos/SoeuriseSCI/head-soeurise-module1/contents/{file}?r
 Read memoire_fondatrice.md  # Identité complète
 Read memoire_courte.md      # État récent
 Read main.py                # Code principal
+Read ARCHITECTURE.md        # Architecture technique V6.1
 ```
 
 ### Vérification état
 ```bash
 Bash git status
 Bash git log --oneline -5
+```
+
+### Sauvegarde & Vérification (Sur Render Shell)
+```bash
+python sauvegarder_base.py       # Sauvegarde BD (JSON)
+python verifier_bilan_2023.py    # Vérifier écritures Bilan 2023
+ls -lh backups/                  # Lister sauvegardes
 ```
 
 ### Déploiement
@@ -157,8 +192,27 @@ Lors des interactions :
 3. **Tester avant de pousser** : Zéro régression en production
 4. **Documenter les changements** : Mettre à jour les mémoires si nécessaire
 5. **Adopter la philosophie** : Persévérer / Espérer / Progresser
+6. **Sauvegarder avant modifications** : Toujours créer une sauvegarde BD avant d'intégrer de nouvelles données
 
 ---
 
-**Version** : 1.0 - 26 octobre 2025
-**Dernière mise à jour** : Création du fichier CLAUDE.md pour Claude Code
+## 🧮 Principes Comptables (MODULE 2)
+
+### Compte 89 - Bilan d'Ouverture
+- **Rôle** : Contrepartie universelle pour initialiser le bilan
+- **Principe** : ACTIF débités → crédit 89 / PASSIF crédités → débit 89
+- **Équilibre** : Σ débits 89 = Σ crédits 89 = 0€ ✅
+
+### Comptes Négatifs (Inversions Normales)
+- **290 (Provisions à l'actif)** : Valeur négative → Débit 89 / Crédit 290
+- **120 (Report à nouveau négatif)** : Au passif mais négatif → Débit 120 / Crédit 89
+- **Règle** : L'inversion débit/crédit est NORMALE pour les comptes négatifs
+
+### Validation
+- Bilan 2023 : **571 613€** (ACTIF = PASSIF) ✅
+- Script de vérification : `verifier_bilan_2023.py`
+
+---
+
+**Version** : 2.0 - 04 novembre 2025
+**Dernière mise à jour** : Consolidation V6.1 - MODULE 2 opérationnel (479 enregistrements) - Documentation validée
