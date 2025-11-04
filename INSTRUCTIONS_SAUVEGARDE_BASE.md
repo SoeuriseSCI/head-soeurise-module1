@@ -8,26 +8,30 @@ Créer une sauvegarde complète de la base de données PostgreSQL **avant d'int�
 
 ## 📋 Étape par Étape
 
-### 1. Accéder au Shell Render
+### 1. Configurer GITHUB_TOKEN sur Render (Une seule fois)
+
+**Obligatoire pour l'upload automatique vers GitHub** :
+
+1. Allez sur https://dashboard.render.com
+2. Sélectionnez le service **head-soeurise-web**
+3. Cliquez sur **Environment** (menu de gauche)
+4. Ajoutez une nouvelle variable :
+   - **Key** : `GITHUB_TOKEN`
+   - **Value** : Votre token GitHub (avec permissions `repo`)
+5. Cliquez sur **Save Changes**
+6. Attendez le redéploiement (~2 min)
+
+**Comment créer un token GitHub** :
+- GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+- Generate new token → Cochez `repo` → Generate token
+- Copiez le token (il ne sera affiché qu'une fois !)
+
+### 2. Accéder au Shell Render
 
 1. Allez sur https://dashboard.render.com
 2. Sélectionnez le service **head-soeurise-web**
 3. Cliquez sur l'onglet **Shell** (dans le menu de gauche)
 4. Un terminal s'ouvrira dans le conteneur
-
-### 2. Vérifier les Fichiers de Sauvegarde
-
-Dans le shell Render, vérifiez que les scripts sont présents :
-
-```bash
-ls -l sauvegarder_base.*
-```
-
-**Attendu** :
-```
--rwxr-xr-x sauvegarder_base.sh
--rw-r--r-- sauvegarder_base.py
-```
 
 ### 3. Exécuter la Sauvegarde (Python)
 
@@ -50,52 +54,78 @@ python sauvegarder_base.py
 📄 Fichier de sauvegarde    : backups/soeurise_bd_20251104_HHMMSS.json
 
 📊 Sauvegarde exercices comptables...
-   ✅ 1 exercices sauvegardés
+   ✅ 2 exercices sauvegardés
 📊 Sauvegarde plan comptable...
-   ✅ XX comptes sauvegardés
+   ✅ 12 comptes sauvegardés
 📊 Sauvegarde écritures comptables...
    ✅ 11 écritures sauvegardées
 📊 Sauvegarde prêts immobiliers...
    ✅ 2 prêts sauvegardés
 📊 Sauvegarde échéances...
-   ✅ 468 échéances sauvegardées
+   ✅ 467 échéances sauvegardées
 
 💾 Écriture du fichier JSON...
-   ✅ Fichier écrit : XX.XX KB
+   ✅ Fichier écrit : 155.77 KB
 
 ================================================================================
-✅ SAUVEGARDE TERMINÉE
+✅ SAUVEGARDE LOCALE TERMINÉE
 ================================================================================
 
 📊 Résumé :
-   - 1 exercices
-   - XX comptes
+   - 2 exercices
+   - 12 comptes
    - 11 écritures
    - 2 prêts
-   - 468 échéances
+   - 467 échéances
 
-💾 Fichier : backups/soeurise_bd_20251104_HHMMSS.json
+💾 Fichier local : backups/soeurise_bd_20251104_HHMMSS.json
+
+================================================================================
+📤 UPLOAD VERS GITHUB
+================================================================================
+
+📍 Repository : SoeuriseSCI/head-soeurise-module1
+📍 Branche    : main
+📍 Chemin     : backups/soeurise_bd_20251104_HHMMSS.json
+
+📖 Lecture du fichier pour upload...
+   ✅ XXXXX caractères encodés
+
+🔍 Vérification si le fichier existe déjà sur GitHub...
+   ℹ️  Fichier n'existe pas - Création
+
+📤 Upload vers GitHub...
+   ✅ Upload réussi !
+
+================================================================================
+✅ SAUVEGARDE UPLOADÉE SUR GITHUB
+================================================================================
+
+📊 Détails :
+   Commit  : a1b2c3d
+   URL     : https://github.com/SoeuriseSCI/head-soeurise-module1/blob/main/backups/soeurise_bd_20251104_HHMMSS.json
+   Message : 💾 Sauvegarde BD automatique - 04/11/2025 16:05
 ```
 
-### 4. Vérifier la Sauvegarde
+### 4. Télécharger la Sauvegarde depuis GitHub
 
-Vérifiez que le fichier a été créé :
+Le fichier a été automatiquement uploadé sur GitHub. Pour le récupérer :
 
+**Option 1 : Via le navigateur**
+1. Allez sur : https://github.com/SoeuriseSCI/head-soeurise-module1/tree/main/backups
+2. Cliquez sur le fichier `soeurise_bd_YYYYMMDD_HHMMSS.json`
+3. Cliquez sur **Download** (bouton en haut à droite)
+
+**Option 2 : Via Git en local**
 ```bash
-ls -lh backups/
+git pull origin main
+# Le fichier sera dans backups/
 ```
 
-Vous devriez voir un fichier JSON avec le timestamp actuel.
-
-### 5. Télécharger la Sauvegarde (Optionnel)
-
-Pour récupérer la sauvegarde en local :
-
+**Option 3 : Via wget/curl**
 ```bash
-cat backups/soeurise_bd_*.json
+wget https://raw.githubusercontent.com/SoeuriseSCI/head-soeurise-module1/main/backups/soeurise_bd_YYYYMMDD_HHMMSS.json
 ```
-
-Copiez le contenu et sauvegardez-le localement sur votre machine.
 
 ---
 
@@ -197,31 +227,25 @@ Vérifier les logs pour voir quelle table a échoué. Possible problème de conn
 
 ## 📤 Archivage de la Sauvegarde
 
-### Sur Render (Éphémère)
+### ✅ Sur GitHub (Automatique)
 
-⚠️ Les fichiers dans `backups/` sur Render sont **temporaires** et seront perdus au prochain redémarrage du conteneur.
+Le script `sauvegarder_base.py` upload **automatiquement** le fichier vers GitHub (branche `main`).
 
-**Solution** : Télécharger la sauvegarde localement ou sur GitHub.
+**Avantages** :
+- ✅ Permanent (pas perdu au redémarrage Render)
+- ✅ Versionné (historique des sauvegardes)
+- ✅ Accessible de partout
+- ✅ Pas de manipulation manuelle
 
-### Sur GitHub (Recommandé)
+**URL** : https://github.com/SoeuriseSCI/head-soeurise-module1/tree/main/backups
 
-Pour sauvegarder définitivement :
+### ⚠️ Sur Render (Éphémère)
 
-```bash
-# Télécharger le fichier JSON
-cat backups/soeurise_bd_*.json > backup_local.json
+Les fichiers dans `backups/` sur Render sont **temporaires** et seront perdus au prochain redémarrage du conteneur. Ils ne servent que pour l'upload vers GitHub.
 
-# Puis sur votre machine locale :
-git add backups/
-git commit -m "💾 Sauvegarde BD avant intégration événements comptables"
-git push
-```
+### 💾 Sur Disque Dur Local (Optionnel)
 
-**Note** : Attention à ne pas commiter de données sensibles si le repo est public.
-
-### Sur Drive/Cloud (Alternative)
-
-Télécharger le fichier JSON et le sauvegarder sur Google Drive, Dropbox, etc.
+Téléchargez depuis GitHub (voir section précédente) et sauvegardez sur votre disque dur ou Drive/Cloud.
 
 ---
 

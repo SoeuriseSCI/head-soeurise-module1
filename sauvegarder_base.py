@@ -162,7 +162,7 @@ print(f"   ✅ Fichier écrit : {file_size:.2f} KB")
 
 print()
 print("=" * 80)
-print("✅ SAUVEGARDE TERMINÉE")
+print("✅ SAUVEGARDE LOCALE TERMINÉE")
 print("=" * 80)
 print()
 print("📊 Résumé :")
@@ -172,7 +172,98 @@ print(f"   - {len(backup_data['ecritures'])} écritures")
 print(f"   - {len(backup_data['prets'])} prêts")
 print(f"   - {len(backup_data['echeances'])} échéances")
 print()
-print(f"💾 Fichier : {backup_file}")
+print(f"💾 Fichier local : {backup_file}")
 print()
 
 session.close()
+
+# ═══════════════════════════════════════════════════════════════════
+# UPLOAD AUTOMATIQUE VERS GITHUB
+# ═══════════════════════════════════════════════════════════════════
+
+print("=" * 80)
+print("📤 UPLOAD VERS GITHUB")
+print("=" * 80)
+print()
+
+# Vérifier que GITHUB_TOKEN est défini
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+if not GITHUB_TOKEN:
+    print("⚠️  GITHUB_TOKEN non définie - Skip upload GitHub")
+    print("💡 Pour activer l'upload automatique, définir GITHUB_TOKEN sur Render")
+    print()
+    sys.exit(0)
+
+# Configuration GitHub
+REPO_OWNER = "SoeuriseSCI"
+REPO_NAME = "head-soeurise-module1"
+BRANCH = "main"
+github_path = f"backups/{backup_file.name}"
+
+print(f"📍 Repository : {REPO_OWNER}/{REPO_NAME}")
+print(f"📍 Branche    : {BRANCH}")
+print(f"📍 Chemin     : {github_path}")
+print()
+
+# Lire le fichier et encoder en base64
+print("📖 Lecture du fichier pour upload...")
+with open(backup_file, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+import base64
+content_encoded = base64.b64encode(content.encode('utf-8')).decode('utf-8')
+print(f"   ✅ {len(content)} caractères encodés")
+
+# Vérifier si le fichier existe déjà sur GitHub
+print()
+print("🔍 Vérification si le fichier existe déjà sur GitHub...")
+url_check = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{github_path}"
+headers = {
+    "Authorization": f"token {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github.v3+json"
+}
+
+import requests
+response = requests.get(url_check, headers=headers)
+sha = None
+if response.status_code == 200:
+    sha = response.json().get('sha')
+    print(f"   ℹ️  Fichier existe (SHA: {sha[:7]}...) - Mise à jour")
+else:
+    print(f"   ℹ️  Fichier n'existe pas - Création")
+
+# Upload vers GitHub
+print()
+print("📤 Upload vers GitHub...")
+commit_message = f"💾 Sauvegarde BD automatique - {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+
+payload = {
+    "message": commit_message,
+    "content": content_encoded,
+    "branch": BRANCH
+}
+
+if sha:
+    payload["sha"] = sha
+
+response = requests.put(url_check, headers=headers, json=payload)
+
+if response.status_code in [200, 201]:
+    result = response.json()
+    print("   ✅ Upload réussi !")
+    print()
+    print("=" * 80)
+    print("✅ SAUVEGARDE UPLOADÉE SUR GITHUB")
+    print("=" * 80)
+    print()
+    print("📊 Détails :")
+    print(f"   Commit  : {result['commit']['sha'][:7]}")
+    print(f"   URL     : {result['content']['html_url']}")
+    print(f"   Message : {commit_message}")
+    print()
+else:
+    print(f"   ❌ Erreur upload : {response.status_code}")
+    print(f"   {response.text[:200]}")
+    print()
+    print("⚠️  Sauvegarde locale OK mais pas sur GitHub")
+    sys.exit(1)
