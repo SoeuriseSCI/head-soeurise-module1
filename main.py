@@ -27,7 +27,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import requests, schedule
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -1159,6 +1159,27 @@ def admin_trigger_reveil():
             'status': 'error',
             'error': str(e),
             'timestamp': datetime.now().isoformat()
+        }), 500
+
+@app.route('/admin/download-backup/<filename>')
+def admin_download_backup(filename):
+    """Télécharge un fichier de sauvegarde (TEMPORAIRE - À SUPPRIMER après usage)"""
+    try:
+        import os
+        backup_path = os.path.join('backups', filename)
+
+        if not os.path.exists(backup_path):
+            return jsonify({
+                'status': 'error',
+                'error': f'Fichier {filename} introuvable'
+            }), 404
+
+        return send_file(backup_path, as_attachment=True, download_name=filename)
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
         }), 500
 
 # ═══════════════════════════════════════════════════════════════════
