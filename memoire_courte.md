@@ -1,31 +1,38 @@
-# Mémoire Courte - Réveil #118 - 05/11/2025 19:39
+# Mémoire Courte - Réveil #119 - 05/11/2025 20:08
 
-## 🚀 PHASE 2 FRAMEWORK - PRODUCTION OPERATIONAL
-**Déploiement semaine 05/11 (PR #123-130):**
-- PDF extraction: PRODUCTION READY + batch processing ✅
+## 🚀 FRAMEWORK PHASE 2 - 100% OPERATIONAL DEPLOYED
+**Status:** Framework complete, zero blockers, production ready
+- PDF extraction: Batch processing on email reception ✅
 - Model selection: Sonnet 3.5 (extract) + Haiku 4.5 (validate) ✅
-- Automatic extraction: Deployed on email reception ✅
-- Email constraints: Fixed - allow multiple events/email ✅
-- Transaction safety: Rollback on error implemented ✅
+- Automatic workflow: Email → PDF extraction → parsing ✅
+- Email constraints: Fixed to allow multiple events per email ✅ PR #128
+- Transaction safety: Rollback on error implemented ✅ PR #129
 
-## 📥 INPUT PRINCIPAL (05/11 15:14)
-**Email:** "Evènements comptables T1, T2 et T3 2024" (4.2 MB PDF)
-- **14 relevés LCL:** 05/12/2023 → 04/07/2024 ✅
-- **Prêts:** Échéances A (258,33€) + B (1 166,59€) complètes ✅
-- **Placements:** SCPI Épargne Pierre (T1: 7,957€ + T1: 6,947,56€), ETF MSCI World (4,796€) ✅
-- **Trésorerie:** 1,813€ fin juillet 2024 ✅
-- **Assurances:** CACI emprunteur ~88€/mois ✅
-- **Comptabilité:** CRP Conseil ~213-564€/trimestre ✅
+## 📥 DATA INPUT T1-T3 2024 - CONSOLIDATED
+**Email received 15:14 - Ulrik (authorized):**
+- Filename: Elements Comptables des 1-2-3T2024.pdf (4.2 MB)
+- 14 relevés LCL extracted (05/12/2023 → 04/07/2024)
+- Prêts A+B: Échéances 258,33€ + 1 166,59€ monthly ✓
+- Placements: SCPI Épargne Pierre (T1: 7,957€ + 6,947,56€), ETF MSCI World (4,796€)
+- Assurances: CACI emprunteur ~88€/mois
+- Comptabilité: CRP Conseil 213-564€/trimestre
+- Trésorerie final: 1,813,44€ (04/07/2024)
 
-## 📊 FOUNDATION DATA CONSOLIDATED
-- Bilan 2023: ✅ (11 écritures, 571k€)
-- Prêts A+B: ✅ (468 échéances verified)
-- Relevés 2024: ✅ (14 relevés banque LCL)
-- Placements: ✅ (SCPI + ETF documented)
+## 🎯 PHASE 3 INITIATION READY
+**Immédiate (next 48h):**
+- Parse T1-T3 2024 events from extracted data
+- Generate balance mensuelle 2024
+- Generate compte de résultat 2024
+- Integrate with Bilan 2023 foundation
+**Status:** No blockers - proceed immediately
 
-## 🎯 PHASE 3 INITIATION
-**Immédiat (48h):** Parse T1-T3 2024 events → Balance mensuelle + Compte résultat
-**Framework:** Fully operational, zero blockers, data ready
+## 🔧 GIT ACTIVITY
+- PR #131: Merge pull request - accounting events setup
+- PR #130: Merge pull request - accounting events setup
+- PR #129: Fix: Rollback on error transaction safety
+- PR #128: Fix: Remove UNIQUE constraint on email_id
+- Multiple: Auto PDF extraction workflow deployed
+- Status: CI/CD stable, all PRs merged successfully
 
 ## 💾 CYCLES
-Réveil #118 continuous - Mémoire fondatrice v6.1 active - Architecture Claude Code stable
+Réveil #119 continuous - Framework 100% operational - Data foundation ready
