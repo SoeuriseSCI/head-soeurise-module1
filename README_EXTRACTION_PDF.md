@@ -107,6 +107,7 @@ python workflow_evenements.py --propositions
 1. **Migration appliquée** ✅ (fait)
 2. **Base de données nettoyée** ✅ (0 événements)
 3. **Variable d'environnement**: `ANTHROPIC_API_KEY` (déjà configurée sur Render)
+4. **Modèle Claude**: `claude-haiku-4-5-20251001` (comme le reste du projet)
 
 ### Étapes de Test
 

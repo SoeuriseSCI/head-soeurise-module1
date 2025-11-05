@@ -36,9 +36,18 @@ WORKFLOW:
 import os
 import re
 import json
+import io
+import base64
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from anthropic import Anthropic
+
+# Imports pour conversion PDF
+try:
+    from pdf2image import convert_from_path
+    PDF2IMAGE_AVAILABLE = True
+except ImportError:
+    PDF2IMAGE_AVAILABLE = False
 
 # Configuration
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
@@ -75,39 +84,59 @@ class ExtracteurPDF:
         if not self.client:
             raise ValueError("ANTHROPIC_API_KEY non définie - impossible d'extraire les PDF")
 
+        if not PDF2IMAGE_AVAILABLE:
+            raise ImportError("pdf2image non disponible - installer avec: pip install pdf2image")
+
         if not os.path.exists(self.pdf_path):
             raise FileNotFoundError(f"PDF non trouvé: {self.pdf_path}")
 
         print(f"📄 Extraction du PDF: {os.path.basename(self.pdf_path)}")
 
-        # Lire le PDF en base64
-        with open(self.pdf_path, 'rb') as f:
-            pdf_data = f.read()
-
-        import base64
-        pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
-
-        # Analyser le PDF avec Claude Vision
-        print("🔍 Analyse du PDF avec Claude Vision...")
-
         try:
+            # Convertir PDF en images (toutes les pages)
+            print("🔄 Conversion du PDF en images...")
+            all_images = convert_from_path(self.pdf_path, dpi=100)
+
+            print(f"📄 {len(all_images)} pages à analyser")
+
+            # Préparer les images pour Claude (optimisé mémoire)
+            image_contents = []
+
+            for page_num, image in enumerate(all_images, start=1):
+                buffer = io.BytesIO()
+                # Compression JPEG qualité 85 (optimisé Render 512 MB)
+                image.save(buffer, format='JPEG', quality=85, optimize=True)
+                image_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+                image_contents.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/jpeg",
+                        "data": image_base64
+                    }
+                })
+
+                # Libérer mémoire
+                buffer.close()
+                del image, buffer
+
+            # Libérer toutes les images
+            del all_images
+
+            print(f"✅ {len(image_contents)} pages préparées")
+
+            # Analyser le PDF avec Claude Vision (Haiku 4.5)
+            print("🔍 Analyse avec Claude Haiku 4.5...")
+
             response = self.client.messages.create(
-                model="claude-3-5-sonnet-20240620",
+                model="claude-haiku-4-5-20251001",
                 max_tokens=8000,
                 messages=[{
                     "role": "user",
-                    "content": [
-                        {
-                            "type": "document",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "application/pdf",
-                                "data": pdf_base64
-                            }
-                        },
-                        {
-                            "type": "text",
-                            "text": """Analyse ce PDF de relevés bancaires et extrais TOUTES les opérations bancaires individuelles.
+                    "content": image_contents + [{
+                        "type": "text",
+                        "text": """Analyse ces pages de relevés bancaires et extrais TOUTES les opérations bancaires individuelles.
 
 Pour CHAQUE opération, extrais:
 - date_operation (format YYYY-MM-DD)
