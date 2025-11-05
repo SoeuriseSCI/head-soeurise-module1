@@ -199,6 +199,11 @@ class WorkflowEvenements:
                 'type_evenement': row[6]
             }
 
+            # EXCLURE les soldes d'ouverture (non comptabilisables)
+            if evenement['type_evenement'] == 'SOLDE_OUVERTURE':
+                print(f"⏭️  Événement #{evt_id} ignoré (SOLDE_OUVERTURE - non comptabilisable)")
+                continue
+
             # Générer la proposition
             proposition = FactoryDetecteurs.detecter_et_proposer(
                 self.session,

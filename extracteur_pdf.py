@@ -154,11 +154,23 @@ class ExtracteurPDF:
 
                 # Enrichir avec métadonnées email
                 for op in operations:
+                    # Détecter les soldes d'ouverture (non comptabilisables)
+                    libelle_norm = op['libelle'].upper().strip()
+                    est_solde_ouverture = any(pattern in libelle_norm for pattern in [
+                        'ANCIEN SOLDE',
+                        'SOLDE REPORTE',
+                        'SOLDE REPORTÉ',
+                        'SOLDE PRECEDENT',
+                        'SOLDE PRÉCÉDENT',
+                        'REPORT SOLDE'
+                    ])
+
                     evenement = {
                         'date_operation': op['date_operation'],
                         'libelle': op['libelle'],
                         'montant': float(op['montant']),
                         'type_operation': op['type_operation'],
+                        'est_solde_ouverture': est_solde_ouverture,  # Flag pour exclusion
                         'email_id': self.email_metadata.get('email_id'),
                         'email_from': self.email_metadata.get('email_from', 'pdf_manuel'),
                         'email_date': self.email_metadata.get('email_date', datetime.now()),

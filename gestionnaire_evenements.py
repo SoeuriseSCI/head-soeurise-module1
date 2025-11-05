@@ -212,8 +212,14 @@ class GestionnaireEvenements:
         # Détection simple par patterns (sera remplacé par détecteurs spécialisés)
         type_evt = None
 
+        # Solde d'ouverture (non comptabilisable)
+        if any(pattern in libelle_norm for pattern in [
+            'ancien solde', 'solde reporte', 'solde precedent', 'report solde'
+        ]):
+            type_evt = 'SOLDE_OUVERTURE'
+
         # Assurance emprunteur
-        if 'covea' in libelle_norm or 'assurance pret' in libelle_norm:
+        elif 'covea' in libelle_norm or 'assurance pret' in libelle_norm:
             type_evt = 'ASSURANCE_PRET'
 
         # Frais bancaires
