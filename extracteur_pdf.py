@@ -96,22 +96,34 @@ class ExtracteurPDF:
         print(f"📄 Extraction du PDF: {os.path.basename(self.pdf_path)}")
 
         try:
-            # Convertir PDF en images (toutes les pages)
-            print("🔄 Conversion du PDF en images...")
-            all_images = convert_from_path(self.pdf_path, dpi=100)
+            # Obtenir le nombre total de pages sans charger toutes les images
+            print("🔄 Analyse du PDF...")
+            from pdf2image.pdf2image import pdfinfo_from_path
+            info = pdfinfo_from_path(self.pdf_path)
+            total_pages = info.get('Pages', 0)
 
-            total_pages = len(all_images)
-            print(f"📄 {total_pages} pages à analyser (batch de {batch_size} pages)")
+            if total_pages == 0:
+                print("❌ Impossible de déterminer le nombre de pages")
+                return []
+
+            print(f"📄 {total_pages} pages détectées (batch de {batch_size} pages)")
 
             all_evenements = []
 
-            # Traiter par batch de pages
-            for batch_start in range(0, total_pages, batch_size):
-                batch_end = min(batch_start + batch_size, total_pages)
-                batch_images = all_images[batch_start:batch_end]
+            # Traiter par batch de pages (conversion à la volée)
+            for batch_start in range(1, total_pages + 1, batch_size):
+                batch_end = min(batch_start + batch_size - 1, total_pages)
 
-                print(f"🔍 Batch {batch_start//batch_size + 1}/{(total_pages-1)//batch_size + 1}: "
-                      f"pages {batch_start+1}-{batch_end}")
+                print(f"🔍 Batch {(batch_start-1)//batch_size + 1}/{(total_pages-1)//batch_size + 1}: "
+                      f"pages {batch_start}-{batch_end}")
+
+                # Convertir SEULEMENT ce batch (économie mémoire critique)
+                batch_images = convert_from_path(
+                    self.pdf_path,
+                    dpi=100,
+                    first_page=batch_start,
+                    last_page=batch_end
+                )
 
                 # Préparer les images pour Claude
                 image_contents = []
@@ -129,13 +141,16 @@ class ExtracteurPDF:
                         }
                     })
                     buffer.close()
-                    del buffer
+                    del buffer, image
 
-                # Libérer batch images
+                # Libérer batch images immédiatement
                 del batch_images
 
                 # Analyser ce batch avec Claude
-                operations = self._extraire_batch(image_contents, batch_start+1, batch_end)
+                operations = self._extraire_batch(image_contents, batch_start, batch_end)
+
+                # Libérer image_contents immédiatement
+                del image_contents
 
                 # Enrichir avec métadonnées email
                 for op in operations:
@@ -153,9 +168,6 @@ class ExtracteurPDF:
                     all_evenements.append(evenement)
 
                 print(f"   ✅ {len(operations)} opérations extraites de ce batch")
-
-            # Libérer toutes les images
-            del all_images
 
             print()
             print(f"✅ TOTAL: {len(all_evenements)} opérations extraites")
