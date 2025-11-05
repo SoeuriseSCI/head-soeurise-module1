@@ -1,31 +1,30 @@
-# Mémoire Courte - Réveil #120 - 05/11/2025 20:30
+# Mémoire Courte - Réveil #121 - 05/11/2025 20:59
 
-## 📦 DONNÉES T1-T3 2024 CONSOLIDÉES
-**Email reçu de Ulrik:** Elements Comptables des 1-2-3T2024.pdf
-- 14 relevés bancaires LCL (05/12/2023 → 04/07/2024)
-- Trésorerie finale: 1 813,44€
+## 🎯 ÉTAT COMPTABILITÉ - PHASE 2 OPERATIONAL
+**Module 2 Framework:** 100% opérationnel depuis 05/11
+- Batch PDF processing: DPI 100, JPEG 85%, memory-efficient
+- Multi-event support: 1 email → multiple propositions possible
+- Transaction safety: Rollback on error cascade prevention
+- MD5 token validation: Intégrité écritures garantie
 
-**Flux stabilisés:**
-- Prêts A+B: 1 425€/mois régulier
-- CACI: 88€/mois (assurance crédit)
-- CRP Conseil: variable trimestriel (213-564€)
-- Revenus SCPI + ETF mensuels
+## 📊 DONNÉES T1-T3 2024 CONSOLIDÉES
+**Email:** Elements Comptables des 1-2-3T2024.pdf
+- 14 relevés LCL (05/12/2023 → 04/07/2024) archivés
+- Trésorerie finale: 1 813,44€ (04/07/2024)
+- Pattern extraction: Flux automatisé prêt
 
-## 🚀 PHASE 3 PRÊTE
-- Balance mensuelle T1-T3 2024: déploiement immédiat
-- Parser: Sonnet 3.5 (extraction) + Haiku 4.5 (validation)
-- Blockers: 0
+## 🔧 DÉVELOPPEMENTS RÉCENTS (05/11)
+**PR #134:** Filtre ANCIEN SOLDE dans parsing T1-T3
+**PR #131-132:** Memory optimization batch processing
+**PR #128-130:** Corrections constraints + variable naming
+**Status:** Zéro blockers, Phase 3 ready
 
-## 🔧 GIT RÉCENT
-- PR #133-131: Framework accounting complete
-- Optimisations: Memory-efficient PDF (DPI 100, batch processing)
-- Architecture V6.0 confirmée stable sur 120 cycles
+## 🚀 PHASE 3 READY
+- RELEVE_BANCAIRE parsing: Framework prêt
+- Balance mensuelle 2024: Target next
+- Sonnet 3.5 (extraction) + Haiku 4.5 (validation) optimisé
 
-## 📊 ÉTAT COMPTABILITÉ
-- Module 2 Framework: 100% opérationnel
-- Bilan 2023: 571k€ intégré ✅
-- Prêts: 468 échéances traitées ✅
-- Propositions: 100+ en audit trail
-
-## 🎯 PROCHAINE ACTION
-Transformer relevés T1-T3 en écritures comptables (RELEVE_BANCAIRE events)
+## 🔐 SÉCURITÉ
+**Cycles autonomes:** 121+ proven stable
+**Architecture V6.0:** Claude Code + CLAUDE.md + PostgreSQL confirmed
+**Authorization:** Ulrik is_authorized=true (permanent)
