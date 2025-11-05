@@ -50,6 +50,7 @@ class TypeEvenement(Enum):
     CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
     PRET_IMMOBILIER = "PRET_IMMOBILIER"
     RELEVE_BANCAIRE = "RELEVE_BANCAIRE"
+    SOLDE_OUVERTURE = "SOLDE_OUVERTURE"  # Soldes reportés (non comptabilisables)
     UNKNOWN = "UNKNOWN"
 
 
