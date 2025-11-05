@@ -139,7 +139,20 @@ python workflow_evenements.py 'Elements Comptables des 1-2-3T2024.pdf'
 **Résultat attendu**:
 ```
 📄 ÉTAPE 1/3: EXTRACTION DU PDF
-✅ 80 opérations extraites
+🔄 Conversion du PDF en images...
+📄 41 pages à analyser (batch de 10 pages)
+🔍 Batch 1/5: pages 1-10
+   ✅ 18 opérations extraites de ce batch
+🔍 Batch 2/5: pages 11-20
+   ✅ 19 opérations extraites de ce batch
+🔍 Batch 3/5: pages 21-30
+   ✅ 15 opérations extraites de ce batch
+🔍 Batch 4/5: pages 31-40
+   ✅ 22 opérations extraites de ce batch
+🔍 Batch 5/5: pages 41-41
+   ✅ 6 opérations extraites de ce batch
+
+✅ TOTAL: 80 opérations extraites
 
 💾 ÉTAPE 2/3: CRÉATION DES ÉVÉNEMENTS
 ✅ Événements créés: 75
