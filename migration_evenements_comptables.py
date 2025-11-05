@@ -19,13 +19,7 @@ MODIFICATIONS:
 
 import os
 import sys
-from sqlalchemy import (
-    Column, Integer, String, Numeric, Date, DateTime, Boolean,
-    Text, ForeignKey, UniqueConstraint, Index, text
-)
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine
-from datetime import datetime
+from sqlalchemy import text, create_engine
 
 # Configuration
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -36,157 +30,6 @@ if not DATABASE_URL:
 # Fix Render PostgreSQL URL
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-
-Base = declarative_base()
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# NOUVELLES TABLES
-# ═══════════════════════════════════════════════════════════════════════════════
-
-class PortefeuilleValeursMobilieres(Base):
-    """
-    Suivi du portefeuille de valeurs mobilières (ETF, Actions)
-    Enregistre les positions et leur valeur comptable (coût d'acquisition)
-    """
-    __tablename__ = 'portefeuille_valeurs_mobilieres'
-
-    id = Column(Integer, primary_key=True)
-
-    # Identification titre
-    code_isin = Column(String(20))  # Code ISIN international
-    code_ticker = Column(String(20))  # Ticker (ex: AMZN, IWDA.AS)
-    libelle = Column(String(255), nullable=False)  # Nom complet
-    type_valeur = Column(String(50), nullable=False)  # ETF, ACTION, OBLIGATION
-
-    # Position actuelle
-    quantite = Column(Numeric(15, 4), nullable=False, default=0)  # Nombre de titres
-    prix_moyen_acquisition = Column(Numeric(15, 4), nullable=False)  # PRU (Prix de Revient Unitaire)
-    valeur_comptable = Column(Numeric(15, 2), nullable=False)  # Quantité × PRU
-
-    # Compte comptable
-    compte_comptable = Column(String(10), nullable=False)  # Ex: 503 (Actions), 506 (ETF)
-
-    # Métadonnées
-    date_premiere_acquisition = Column(Date, nullable=False)
-    date_derniere_operation = Column(Date)
-    courtier = Column(String(100))  # Ex: Degiro, Interactive Brokers
-
-    actif = Column(Boolean, default=True)
-    notes = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    def __repr__(self):
-        return f"<PortefeuilleVM({self.libelle}: {self.quantite} × {self.prix_moyen_acquisition}€)>"
-
-
-class MouvementPortefeuille(Base):
-    """
-    Historique des mouvements sur valeurs mobilières (achats/ventes)
-    Permet de tracer toutes les opérations et de recalculer le PRU
-    """
-    __tablename__ = 'mouvements_portefeuille'
-
-    id = Column(Integer, primary_key=True)
-
-    # Lien avec le titre
-    portefeuille_id = Column(Integer, ForeignKey('portefeuille_valeurs_mobilieres.id'), nullable=False)
-
-    # Type d'opération
-    type_mouvement = Column(String(20), nullable=False)  # ACHAT, VENTE, SPLIT, FUSION
-    date_operation = Column(Date, nullable=False)
-
-    # Détails opération
-    quantite = Column(Numeric(15, 4), nullable=False)  # Positif pour achat, négatif pour vente
-    prix_unitaire = Column(Numeric(15, 4), nullable=False)  # Prix d'exécution
-    montant_total = Column(Numeric(15, 2), nullable=False)  # Quantité × Prix + Frais
-    frais = Column(Numeric(15, 2), default=0)  # Frais de courtage
-
-    # Impact comptable
-    nouveau_pru = Column(Numeric(15, 4))  # PRU après cette opération
-    nouvelle_quantite = Column(Numeric(15, 4))  # Quantité totale après opération
-    plus_ou_moins_value = Column(Numeric(15, 2))  # Si vente: réalisé
-
-    # Source
-    source_evenement_id = Column(Integer, ForeignKey('evenements_comptables.id'))
-    ecriture_comptable_id = Column(Integer, ForeignKey('ecritures_comptables.id'))
-
-    # Métadonnées
-    notes = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    __table_args__ = (
-        Index('idx_portefeuille_date', 'portefeuille_id', 'date_operation'),
-    )
-
-    def __repr__(self):
-        return f"<MouvementPortefeuille({self.type_mouvement} {self.quantite} @ {self.prix_unitaire}€)>"
-
-
-class ComptesCourantsAssocies(Base):
-    """
-    Suivi des comptes courants d'associés
-    Enregistre les apports et retraits des associés
-    """
-    __tablename__ = 'comptes_courants_associes'
-
-    id = Column(Integer, primary_key=True)
-
-    # Identification associé
-    nom_associe = Column(String(255), nullable=False, unique=True)  # Ex: "Ulrik Bergsten"
-    compte_comptable = Column(String(10), nullable=False)  # Ex: 455100 (CC Ulrik)
-
-    # Solde actuel
-    solde_actuel = Column(Numeric(15, 2), nullable=False, default=0)
-
-    # Historique
-    date_ouverture = Column(Date, nullable=False)
-    date_derniere_operation = Column(Date)
-
-    # Métadonnées
-    actif = Column(Boolean, default=True)
-    notes = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    def __repr__(self):
-        return f"<ComptesCourantsAssocies({self.nom_associe}: {self.solde_actuel}€)>"
-
-
-class MouvementCompteCourant(Base):
-    """
-    Historique des mouvements sur comptes courants d'associés
-    """
-    __tablename__ = 'mouvements_comptes_courants'
-
-    id = Column(Integer, primary_key=True)
-
-    # Lien avec le compte courant
-    compte_courant_id = Column(Integer, ForeignKey('comptes_courants_associes.id'), nullable=False)
-
-    # Type d'opération
-    type_mouvement = Column(String(20), nullable=False)  # APPORT, RETRAIT, REMUNERATION, REMBOURSEMENT
-    date_operation = Column(Date, nullable=False)
-
-    # Montant
-    montant = Column(Numeric(15, 2), nullable=False)
-    nouveau_solde = Column(Numeric(15, 2), nullable=False)  # Solde après opération
-
-    # Source
-    source_evenement_id = Column(Integer, ForeignKey('evenements_comptables.id'))
-    ecriture_comptable_id = Column(Integer, ForeignKey('ecritures_comptables.id'))
-
-    # Métadonnées
-    libelle = Column(String(255))
-    notes = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    __table_args__ = (
-        Index('idx_cc_date', 'compte_courant_id', 'date_operation'),
-    )
-
-    def __repr__(self):
-        return f"<MouvementCompteCourant({self.type_mouvement} {self.montant}€ → {self.nouveau_solde}€)>"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -262,13 +105,125 @@ def migrate_database():
         # ═══════════════════════════════════════════════════════════════
         print("📝 ÉTAPE 2: Création des nouvelles tables")
 
-        # Créer toutes les nouvelles tables
-        Base.metadata.create_all(engine)
-        print("  ✅ Tables créées/vérifiées:")
-        print("     - portefeuille_valeurs_mobilieres")
-        print("     - mouvements_portefeuille")
-        print("     - comptes_courants_associes")
-        print("     - mouvements_comptes_courants")
+        # Créer les tables manuellement avec SQL brut
+        # Table 1: portefeuille_valeurs_mobilieres
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS portefeuille_valeurs_mobilieres (
+                    id SERIAL PRIMARY KEY,
+                    code_isin VARCHAR(20),
+                    code_ticker VARCHAR(20),
+                    libelle VARCHAR(255) NOT NULL,
+                    type_valeur VARCHAR(50) NOT NULL,
+                    quantite NUMERIC(15, 4) NOT NULL DEFAULT 0,
+                    prix_moyen_acquisition NUMERIC(15, 4) NOT NULL,
+                    valeur_comptable NUMERIC(15, 2) NOT NULL,
+                    compte_comptable VARCHAR(10) NOT NULL,
+                    date_premiere_acquisition DATE NOT NULL,
+                    date_derniere_operation DATE,
+                    courtier VARCHAR(100),
+                    actif BOOLEAN DEFAULT TRUE,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()
+            print("  ✅ Table 'portefeuille_valeurs_mobilieres' créée")
+        except Exception as e:
+            print(f"  ℹ️  Table 'portefeuille_valeurs_mobilieres' existe déjà ou erreur: {e}")
+
+        # Table 2: mouvements_portefeuille
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS mouvements_portefeuille (
+                    id SERIAL PRIMARY KEY,
+                    portefeuille_id INTEGER NOT NULL REFERENCES portefeuille_valeurs_mobilieres(id),
+                    type_mouvement VARCHAR(20) NOT NULL,
+                    date_operation DATE NOT NULL,
+                    quantite NUMERIC(15, 4) NOT NULL,
+                    prix_unitaire NUMERIC(15, 4) NOT NULL,
+                    montant_total NUMERIC(15, 2) NOT NULL,
+                    frais NUMERIC(15, 2) DEFAULT 0,
+                    nouveau_pru NUMERIC(15, 4),
+                    nouvelle_quantite NUMERIC(15, 4),
+                    plus_ou_moins_value NUMERIC(15, 2),
+                    source_evenement_id INTEGER REFERENCES evenements_comptables(id),
+                    ecriture_comptable_id INTEGER REFERENCES ecritures_comptables(id),
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()
+            print("  ✅ Table 'mouvements_portefeuille' créée")
+        except Exception as e:
+            print(f"  ℹ️  Table 'mouvements_portefeuille' existe déjà ou erreur: {e}")
+
+        # Index pour mouvements_portefeuille
+        try:
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_portefeuille_date
+                ON mouvements_portefeuille(portefeuille_id, date_operation)
+            """))
+            conn.commit()
+            print("  ✅ Index 'idx_portefeuille_date' créé")
+        except Exception as e:
+            print(f"  ℹ️  Index 'idx_portefeuille_date' existe déjà: {e}")
+
+        # Table 3: comptes_courants_associes
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS comptes_courants_associes (
+                    id SERIAL PRIMARY KEY,
+                    nom_associe VARCHAR(255) NOT NULL UNIQUE,
+                    compte_comptable VARCHAR(10) NOT NULL,
+                    solde_actuel NUMERIC(15, 2) NOT NULL DEFAULT 0,
+                    date_ouverture DATE NOT NULL,
+                    date_derniere_operation DATE,
+                    actif BOOLEAN DEFAULT TRUE,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()
+            print("  ✅ Table 'comptes_courants_associes' créée")
+        except Exception as e:
+            print(f"  ℹ️  Table 'comptes_courants_associes' existe déjà ou erreur: {e}")
+
+        # Table 4: mouvements_comptes_courants
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS mouvements_comptes_courants (
+                    id SERIAL PRIMARY KEY,
+                    compte_courant_id INTEGER NOT NULL REFERENCES comptes_courants_associes(id),
+                    type_mouvement VARCHAR(20) NOT NULL,
+                    date_operation DATE NOT NULL,
+                    montant NUMERIC(15, 2) NOT NULL,
+                    nouveau_solde NUMERIC(15, 2) NOT NULL,
+                    source_evenement_id INTEGER REFERENCES evenements_comptables(id),
+                    ecriture_comptable_id INTEGER REFERENCES ecritures_comptables(id),
+                    libelle VARCHAR(255),
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()
+            print("  ✅ Table 'mouvements_comptes_courants' créée")
+        except Exception as e:
+            print(f"  ℹ️  Table 'mouvements_comptes_courants' existe déjà ou erreur: {e}")
+
+        # Index pour mouvements_comptes_courants
+        try:
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_cc_date
+                ON mouvements_comptes_courants(compte_courant_id, date_operation)
+            """))
+            conn.commit()
+            print("  ✅ Index 'idx_cc_date' créé")
+        except Exception as e:
+            print(f"  ℹ️  Index 'idx_cc_date' existe déjà: {e}")
+
         print()
 
     print("✅ MIGRATION TERMINÉE")
