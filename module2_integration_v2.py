@@ -264,11 +264,11 @@ class IntegratorModule2:
 
                             # Lancer le workflow d'extraction
                             workflow = WorkflowEvenements(self.database_url, phase=1)
-                            resultats = workflow.traiter_pdf(filepath, email_metadata, auto_detect=True)
+                            workflow_result = workflow.traiter_pdf(filepath, email_metadata, auto_detect=True)
 
-                            total_operations += resultats.get('total_operations', 0)
-                            total_evenements_crees += resultats.get('evenements_crees', 0)
-                            total_types_detectes += resultats.get('types_detectes', 0)
+                            total_operations += workflow_result.get('total_operations', 0)
+                            total_evenements_crees += workflow_result.get('evenements_crees', 0)
+                            total_types_detectes += workflow_result.get('types_detectes', 0)
 
                             self.emails_traites += 1
 
