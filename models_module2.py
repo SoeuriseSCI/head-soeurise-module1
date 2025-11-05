@@ -9,8 +9,8 @@ CORRECTION: Encodage UTF-8 + noms de tables vérifiés
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Numeric, Date, DateTime, Boolean, 
-    Text, ForeignKey, Enum, CheckConstraint, UniqueConstraint
+    Column, Integer, String, Numeric, Date, DateTime, Boolean,
+    Text, ForeignKey, Enum, CheckConstraint, UniqueConstraint, Index
 )
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.ext.declarative import declarative_base
