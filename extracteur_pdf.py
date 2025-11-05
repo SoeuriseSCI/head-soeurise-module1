@@ -74,9 +74,12 @@ class ExtracteurPDF:
         self.email_metadata = email_metadata or {}
         self.client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
-    def extraire_evenements(self) -> List[Dict]:
+    def extraire_evenements(self, batch_size: int = 10) -> List[Dict]:
         """
-        Extrait tous les événements du PDF
+        Extrait tous les événements du PDF par batch pour éviter les limites de tokens
+
+        Args:
+            batch_size: Nombre de pages à traiter par batch (défaut: 10)
 
         Returns:
             Liste de dictionnaires d'événements prêts pour GestionnaireEvenements
@@ -97,38 +100,87 @@ class ExtracteurPDF:
             print("🔄 Conversion du PDF en images...")
             all_images = convert_from_path(self.pdf_path, dpi=100)
 
-            print(f"📄 {len(all_images)} pages à analyser")
+            total_pages = len(all_images)
+            print(f"📄 {total_pages} pages à analyser (batch de {batch_size} pages)")
 
-            # Préparer les images pour Claude (optimisé mémoire)
-            image_contents = []
+            all_evenements = []
 
-            for page_num, image in enumerate(all_images, start=1):
-                buffer = io.BytesIO()
-                # Compression JPEG qualité 85 (optimisé Render 512 MB)
-                image.save(buffer, format='JPEG', quality=85, optimize=True)
-                image_base64 = base64.b64encode(buffer.getvalue()).decode()
+            # Traiter par batch de pages
+            for batch_start in range(0, total_pages, batch_size):
+                batch_end = min(batch_start + batch_size, total_pages)
+                batch_images = all_images[batch_start:batch_end]
 
-                image_contents.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/jpeg",
-                        "data": image_base64
+                print(f"🔍 Batch {batch_start//batch_size + 1}/{(total_pages-1)//batch_size + 1}: "
+                      f"pages {batch_start+1}-{batch_end}")
+
+                # Préparer les images pour Claude
+                image_contents = []
+                for image in batch_images:
+                    buffer = io.BytesIO()
+                    image.save(buffer, format='JPEG', quality=85, optimize=True)
+                    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+                    image_contents.append({
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": image_base64
+                        }
+                    })
+                    buffer.close()
+                    del buffer
+
+                # Libérer batch images
+                del batch_images
+
+                # Analyser ce batch avec Claude
+                operations = self._extraire_batch(image_contents, batch_start+1, batch_end)
+
+                # Enrichir avec métadonnées email
+                for op in operations:
+                    evenement = {
+                        'date_operation': op['date_operation'],
+                        'libelle': op['libelle'],
+                        'montant': float(op['montant']),
+                        'type_operation': op['type_operation'],
+                        'email_id': self.email_metadata.get('email_id'),
+                        'email_from': self.email_metadata.get('email_from', 'pdf_manuel'),
+                        'email_date': self.email_metadata.get('email_date', datetime.now()),
+                        'email_subject': self.email_metadata.get('email_subject'),
+                        'email_body': self.email_metadata.get('email_body', '')
                     }
-                })
+                    all_evenements.append(evenement)
 
-                # Libérer mémoire
-                buffer.close()
-                del image, buffer
+                print(f"   ✅ {len(operations)} opérations extraites de ce batch")
 
             # Libérer toutes les images
             del all_images
 
-            print(f"✅ {len(image_contents)} pages préparées")
+            print()
+            print(f"✅ TOTAL: {len(all_evenements)} opérations extraites")
 
-            # Analyser le PDF avec Claude Vision (Haiku 4.5)
-            print("🔍 Analyse avec Claude Haiku 4.5...")
+            return all_evenements
 
+        except Exception as e:
+            print(f"❌ Erreur extraction PDF: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    def _extraire_batch(self, image_contents: List[Dict], start_page: int, end_page: int) -> List[Dict]:
+        """
+        Extrait les opérations d'un batch de pages
+
+        Args:
+            image_contents: Liste d'images en base64
+            start_page: Numéro de page de début
+            end_page: Numéro de page de fin
+
+        Returns:
+            Liste d'opérations extraites
+        """
+        try:
             response = self.client.messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=8000,
@@ -140,16 +192,16 @@ class ExtracteurPDF:
 
 Pour CHAQUE opération, extrais:
 - date_operation (format YYYY-MM-DD)
-- libelle (texte complet de l'opération, sur une ou plusieurs lignes)
+- libelle (texte complet de l'opération, regroupé sur une ligne)
 - montant (nombre décimal positif)
 - type_operation (DEBIT ou CREDIT)
 
 IMPORTANT:
-- Certaines opérations s'étalent sur plusieurs lignes (ex: prêt immobilier avec numéro de dossier)
+- Certaines opérations s'étalent sur plusieurs lignes (ex: prêt avec numéro de dossier)
 - Regroupe les lignes qui forment une seule opération
 - Utilise la colonne DEBIT ou CREDIT pour déterminer le type
 - Ignore les en-têtes, totaux, et lignes de description
-- Convertis TOUTES les dates en format YYYY-MM-DD (ajoute l'année appropriée si manquante)
+- Convertis TOUTES les dates en format YYYY-MM-DD (ajoute l'année si manquante)
 
 Retourne un JSON valide avec cette structure:
 {
@@ -169,10 +221,9 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                 }]
             )
 
-            # Extraire le JSON de la réponse
             response_text = response.content[0].text
 
-            # Nettoyer la réponse (enlever les balises markdown si présentes)
+            # Nettoyer la réponse
             json_text = response_text.strip()
             if json_text.startswith('```json'):
                 json_text = json_text[7:]
@@ -186,32 +237,14 @@ NE retourne QUE le JSON, sans texte avant ou après."""
             data = json.loads(json_text)
             operations = data.get('operations', [])
 
-            print(f"✅ {len(operations)} opérations extraites")
-
-            # Enrichir avec les métadonnées de l'email
-            evenements = []
-            for op in operations:
-                evenement = {
-                    'date_operation': op['date_operation'],
-                    'libelle': op['libelle'],
-                    'montant': float(op['montant']),
-                    'type_operation': op['type_operation'],
-                    'email_id': self.email_metadata.get('email_id'),
-                    'email_from': self.email_metadata.get('email_from', 'pdf_manuel'),
-                    'email_date': self.email_metadata.get('email_date', datetime.now()),
-                    'email_subject': self.email_metadata.get('email_subject'),
-                    'email_body': self.email_metadata.get('email_body', '')
-                }
-                evenements.append(evenement)
-
-            return evenements
+            return operations
 
         except json.JSONDecodeError as e:
-            print(f"❌ Erreur parsing JSON: {e}")
-            print(f"Réponse brute: {response_text[:500]}")
+            print(f"   ⚠️  Erreur parsing JSON pour pages {start_page}-{end_page}: {e}")
+            print(f"   Réponse brute: {response_text[:300]}...")
             return []
         except Exception as e:
-            print(f"❌ Erreur extraction PDF: {e}")
+            print(f"   ⚠️  Erreur batch pages {start_page}-{end_page}: {e}")
             return []
 
 
