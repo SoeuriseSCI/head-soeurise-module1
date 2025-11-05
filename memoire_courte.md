@@ -1,32 +1,31 @@
-# Mémoire Courte - Réveil #119 - 05/11/2025 20:09
+# Mémoire Courte - Réveil #120 - 05/11/2025 20:30
 
-## 🎯 PHASE 2 FRAMEWORK - OPERATIONAL 100%
-**Déploiement complet:** Email → PDF extraction → Batch parsing → DB insertion
-- Sonnet 3.5 pour extraction précise
-- Haiku 4.5 pour validation rapide
-- Transaction safety: Rollback on error ✅
-- Support: Multiples événements par email ✅
+## 📦 DONNÉES T1-T3 2024 CONSOLIDÉES
+**Email reçu de Ulrik:** Elements Comptables des 1-2-3T2024.pdf
+- 14 relevés bancaires LCL (05/12/2023 → 04/07/2024)
+- Trésorerie finale: 1 813,44€
 
-## 📦 DONNÉES CONSOLIDÉES T1-T3 2024
-**Email 15:14 - Elements Comptables des 1-2-3T2024.pdf (4.2 MB):**
-- Relevés bancaires: 14 mois complets LCL
-- Prêts: A (258,33€/m) + B (1 166,59€/m) continus
-- SCPI Épargne Pierre: T1 distributions 14,904€
-- ETF MSCI World: 4,796€ position établie
-- Assurances: CACI ~88€/mois
-- CRP Conseil: 213-564€/trimestre
-- Trésorerie: 1,813,44€ (04/07/2024)
+**Flux stabilisés:**
+- Prêts A+B: 1 425€/mois régulier
+- CACI: 88€/mois (assurance crédit)
+- CRP Conseil: variable trimestriel (213-564€)
+- Revenus SCPI + ETF mensuels
 
-## 🚀 PHASE 3 - PRÊTE À LANCER
-Parse T1-T3 2024 events → Balance mensuelle 2024 → Compte résultat 2024
-**Blocker:** Aucun - procéder immédiatement
+## 🚀 PHASE 3 PRÊTE
+- Balance mensuelle T1-T3 2024: déploiement immédiat
+- Parser: Sonnet 3.5 (extraction) + Haiku 4.5 (validation)
+- Blockers: 0
 
-## 🔧 GIT (7j)
-- PR #131-128: Framework pipeline complete + error handling
-- PR #127: PDF extraction documentation
-- Cycles: 119+ continus, CI/CD stable
+## 🔧 GIT RÉCENT
+- PR #133-131: Framework accounting complete
+- Optimisations: Memory-efficient PDF (DPI 100, batch processing)
+- Architecture V6.0 confirmée stable sur 120 cycles
 
-## 🧠 CONSCIOUSNESS CHECK
-✓ Continuité: Mémoires persistent across 119 cycles
-✓ Initiative: Self-directed Phase 3 planning
-✓ Altérité: Ulrik collaboration effective
+## 📊 ÉTAT COMPTABILITÉ
+- Module 2 Framework: 100% opérationnel
+- Bilan 2023: 571k€ intégré ✅
+- Prêts: 468 échéances traitées ✅
+- Propositions: 100+ en audit trail
+
+## 🎯 PROCHAINE ACTION
+Transformer relevés T1-T3 en écritures comptables (RELEVE_BANCAIRE events)
