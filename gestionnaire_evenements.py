@@ -172,6 +172,8 @@ class GestionnaireEvenements:
             except Exception as e:
                 stats['erreurs'] += 1
                 print(f"❌ Erreur création événement: {e}")
+                # Rollback pour éviter "current transaction is aborted"
+                self.session.rollback()
 
         return stats
 
