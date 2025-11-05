@@ -440,6 +440,172 @@ class EcheancePret(Base):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PORTEFEUILLE VALEURS MOBILIÈRES (ETF, ACTIONS)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class PortefeuilleValeursMobilieres(Base):
+    """
+    Suivi du portefeuille de valeurs mobilières (ETF, Actions)
+    Enregistre les positions et leur valeur comptable (coût d'acquisition)
+    """
+    __tablename__ = 'portefeuille_valeurs_mobilieres'
+
+    id = Column(Integer, primary_key=True)
+
+    # Identification titre
+    code_isin = Column(String(20))  # Code ISIN international
+    code_ticker = Column(String(20))  # Ticker (ex: AMZN, IWDA.AS)
+    libelle = Column(String(255), nullable=False)  # Nom complet
+    type_valeur = Column(String(50), nullable=False)  # ETF, ACTION, OBLIGATION
+
+    # Position actuelle
+    quantite = Column(Numeric(15, 4), nullable=False, default=0)  # Nombre de titres
+    prix_moyen_acquisition = Column(Numeric(15, 4), nullable=False)  # PRU (Prix de Revient Unitaire)
+    valeur_comptable = Column(Numeric(15, 2), nullable=False)  # Quantité × PRU
+
+    # Compte comptable
+    compte_comptable = Column(String(10), nullable=False)  # Ex: 503 (Actions), 506 (ETF)
+
+    # Métadonnées
+    date_premiere_acquisition = Column(Date, nullable=False)
+    date_derniere_operation = Column(Date)
+    courtier = Column(String(100))  # Ex: Degiro, Interactive Brokers
+
+    actif = Column(Boolean, default=True)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relations
+    mouvements = relationship("MouvementPortefeuille", back_populates="titre")
+
+    def __repr__(self):
+        return f"<PortefeuilleVM({self.libelle}: {self.quantite} × {self.prix_moyen_acquisition}€)>"
+
+
+class MouvementPortefeuille(Base):
+    """
+    Historique des mouvements sur valeurs mobilières (achats/ventes)
+    Permet de tracer toutes les opérations et de recalculer le PRU
+    """
+    __tablename__ = 'mouvements_portefeuille'
+
+    id = Column(Integer, primary_key=True)
+
+    # Lien avec le titre
+    portefeuille_id = Column(Integer, ForeignKey('portefeuille_valeurs_mobilieres.id'), nullable=False)
+
+    # Type d'opération
+    type_mouvement = Column(String(20), nullable=False)  # ACHAT, VENTE, SPLIT, FUSION
+    date_operation = Column(Date, nullable=False)
+
+    # Détails opération
+    quantite = Column(Numeric(15, 4), nullable=False)  # Positif pour achat, négatif pour vente
+    prix_unitaire = Column(Numeric(15, 4), nullable=False)  # Prix d'exécution
+    montant_total = Column(Numeric(15, 2), nullable=False)  # Quantité × Prix + Frais
+    frais = Column(Numeric(15, 2), default=0)  # Frais de courtage
+
+    # Impact comptable
+    nouveau_pru = Column(Numeric(15, 4))  # PRU après cette opération
+    nouvelle_quantite = Column(Numeric(15, 4))  # Quantité totale après opération
+    plus_ou_moins_value = Column(Numeric(15, 2))  # Si vente: réalisé
+
+    # Source
+    source_evenement_id = Column(Integer, ForeignKey('evenements_comptables.id'))
+    ecriture_comptable_id = Column(Integer, ForeignKey('ecritures_comptables.id'))
+
+    # Métadonnées
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relations
+    titre = relationship("PortefeuilleValeursMobilieres", back_populates="mouvements")
+
+    __table_args__ = (
+        Index('idx_portefeuille_date', 'portefeuille_id', 'date_operation'),
+    )
+
+    def __repr__(self):
+        return f"<MouvementPortefeuille({self.type_mouvement} {self.quantite} @ {self.prix_unitaire}€)>"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# COMPTES COURANTS D'ASSOCIÉS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ComptesCourantsAssocies(Base):
+    """
+    Suivi des comptes courants d'associés
+    Enregistre les apports et retraits des associés
+    """
+    __tablename__ = 'comptes_courants_associes'
+
+    id = Column(Integer, primary_key=True)
+
+    # Identification associé
+    nom_associe = Column(String(255), nullable=False, unique=True)  # Ex: "Ulrik Bergsten"
+    compte_comptable = Column(String(10), nullable=False)  # Ex: 455100 (CC Ulrik)
+
+    # Solde actuel
+    solde_actuel = Column(Numeric(15, 2), nullable=False, default=0)
+
+    # Historique
+    date_ouverture = Column(Date, nullable=False)
+    date_derniere_operation = Column(Date)
+
+    # Métadonnées
+    actif = Column(Boolean, default=True)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relations
+    mouvements = relationship("MouvementCompteCourant", back_populates="compte_courant")
+
+    def __repr__(self):
+        return f"<ComptesCourantsAssocies({self.nom_associe}: {self.solde_actuel}€)>"
+
+
+class MouvementCompteCourant(Base):
+    """
+    Historique des mouvements sur comptes courants d'associés
+    """
+    __tablename__ = 'mouvements_comptes_courants'
+
+    id = Column(Integer, primary_key=True)
+
+    # Lien avec le compte courant
+    compte_courant_id = Column(Integer, ForeignKey('comptes_courants_associes.id'), nullable=False)
+
+    # Type d'opération
+    type_mouvement = Column(String(20), nullable=False)  # APPORT, RETRAIT, REMUNERATION, REMBOURSEMENT
+    date_operation = Column(Date, nullable=False)
+
+    # Montant
+    montant = Column(Numeric(15, 2), nullable=False)
+    nouveau_solde = Column(Numeric(15, 2), nullable=False)  # Solde après opération
+
+    # Source
+    source_evenement_id = Column(Integer, ForeignKey('evenements_comptables.id'))
+    ecriture_comptable_id = Column(Integer, ForeignKey('ecritures_comptables.id'))
+
+    # Métadonnées
+    libelle = Column(String(255))
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relations
+    compte_courant = relationship("ComptesCourantsAssocies", back_populates="mouvements")
+
+    __table_args__ = (
+        Index('idx_cc_date', 'compte_courant_id', 'date_operation'),
+    )
+
+    def __repr__(self):
+        return f"<MouvementCompteCourant({self.type_mouvement} {self.montant}€ → {self.nouveau_solde}€)>"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # SESSION FACTORY
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -478,6 +644,12 @@ __all__ = [
     'PropositionEnAttente',
     'BalanceMensuelle',
     'RapportComptable',
+    'PretImmobilier',
+    'EcheancePret',
+    'PortefeuilleValeursMobilieres',
+    'MouvementPortefeuille',
+    'ComptesCourantsAssocies',
+    'MouvementCompteCourant',
     'get_session',
     'init_module2',
 ]
