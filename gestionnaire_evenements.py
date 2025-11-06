@@ -87,14 +87,12 @@ class GestionnaireEvenements:
         # Calculer le fingerprint
         fingerprint = self.detecteur_doublons.calculer_fingerprint(data)
 
-        # Vérifier si doublon
+        # Vérifier si doublon (exact match par fingerprint)
+        # Note: Les doublons intelligents (libellés différents) sont déjà gérés
+        # par Claude dans extracteur_pdf._deduplicater_operations()
         doublon = self.detecteur_doublons.verifier_doublon(self.session, data)
         if doublon:
-            methode = doublon.get('methode', 'fingerprint')
-            if methode == 'date_montant':
-                print(f"⏭️  Doublon souple (date+montant): événement #{doublon['evenement_id']} ignoré")
-            else:
-                print(f"⏭️  Doublon strict (fingerprint): événement #{doublon['evenement_id']} ignoré")
+            print(f"⏭️  Doublon détecté (fingerprint): événement #{doublon['evenement_id']} ignoré")
             return None
 
         # Normaliser le libellé
