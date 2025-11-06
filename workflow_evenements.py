@@ -126,14 +126,24 @@ class WorkflowEvenements:
                     'periode_document': 'Indéterminée', 'exercice_valide': False,
                     'message_erreur': 'Période indéterminée'}
 
-        if doc_debut < exercice_debut or doc_fin > exercice_fin:
-            print(f"❌ DOCUMENT HORS EXERCICE - Refusé")
+        # Vérifier s'il y a un CHEVAUCHEMENT entre document et exercice
+        # Chevauchement existe si: doc_debut <= exercice_fin ET doc_fin >= exercice_debut
+        # Pas de chevauchement si: doc_fin < exercice_debut OU doc_debut > exercice_fin
+        if doc_fin < exercice_debut or doc_debut > exercice_fin:
+            print(f"❌ DOCUMENT HORS EXERCICE - Aucun chevauchement")
+            print(f"   Document: {doc_debut} → {doc_fin}")
+            print(f"   Exercice: {exercice_debut} → {exercice_fin}")
             return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
                     'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
                     'periode_document': f"{doc_debut} → {doc_fin}", 'exercice_valide': False,
-                    'message_erreur': 'Document hors exercice'}
+                    'message_erreur': 'Document hors exercice - aucun chevauchement'}
 
-        print(f"✅ Document valide")
+        # Document chevauche l'exercice (au moins partiellement) → OK
+        if doc_debut < exercice_debut or doc_fin > exercice_fin:
+            print(f"⚠️  Document chevauche l'exercice partiellement")
+            print(f"   Les opérations hors exercice seront filtrées automatiquement")
+        else:
+            print(f"✅ Document entièrement dans l'exercice")
         print()
 
         # ÉTAPE 1: EXTRACTION
