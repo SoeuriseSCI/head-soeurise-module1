@@ -6,8 +6,10 @@ FIXES APPLIQUÉS:
 2. ✅ init_module2(session) au lieu de init_module2(DB_URL)
 3. ✅ emails_data initialisée AVANT le try (NameError: 'emails_data' not defined - FIXÉ)
 4. ✅ Module2 exception handling robuste (NoneType crash - FIXÉ)
+5. ✅ API PDF native Claude (plus de pdf2image, extraction directe)
 
-VERSION: 6 - Amélioration consolidation mémoires (V3.8)
+VERSION: 6.1 - API PDF Native + consolidation mémoires (V3.8)
++ Extraction PDF via API native Claude (type="document")
 + Lecture commits Git récents (détection développements)
 + Limites augmentées: COURTE 3500, MOYENNE 6000, LONGUE 4500
 + Exemples archivage concrets
@@ -44,11 +46,8 @@ try:
 except:
     PDF_SUPPORT = False
 
-try:
-    from pdf2image import convert_from_path
-    PDF2IMAGE_SUPPORT = True
-except:
-    PDF2IMAGE_SUPPORT = False
+# pdf2image n'est plus nécessaire - Claude peut lire les PDFs nativement
+PDF2IMAGE_SUPPORT = False  # Deprecated - using Claude native PDF API
 
 from typing import Tuple, Optional, List
 
@@ -305,49 +304,66 @@ def extract_pdf_text_pdfplumber(filepath):
         return ""
 
 def extract_pdf_via_claude_vision(filepath):
-    """Extraction OCR via Claude si texte insuffisant"""
-    if not PDF2IMAGE_SUPPORT:
-        log_critical("PDF_OCR_DISABLED", "pdf2image not available")
-        return ""
+    """Extraction via Claude API PDF native (plus de conversion image nécessaire)"""
     try:
-        images = convert_from_path(filepath, dpi=150, fmt='jpeg')
-        pages_to_extract = min(len(images), MAX_PDF_PAGES)
-        log_critical("PDF_OCR_PAGES_CONVERTED", f"{pages_to_extract} pages to OCR")
+        log_critical("PDF_NATIVE_START", f"Extraction PDF native via Claude API")
+
+        # Lire le PDF en base64
+        with open(filepath, 'rb') as f:
+            pdf_data = f.read()
+        pdf_base64 = base64.standard_b64encode(pdf_data).decode('utf-8')
+
+        log_critical("PDF_NATIVE_ENCODED", f"PDF encodé: {len(pdf_base64)} chars base64")
+
+        # Envoyer à Claude avec API PDF native
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        extracted_pages = []
-        
-        for i, image in enumerate(images[:pages_to_extract]):
-            buffer = io.BytesIO()
-            image.save(buffer, format='JPEG')
-            image_base64 = base64.b64encode(buffer.getvalue()).decode()
-            
-            response = client.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=2000,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": image_base64}},
-                        {"type": "text", "text": "Extrait tout le texte. Texte brut seulement."}
-                    ]
-                }]
-            )
-            extracted_pages.append(f"--- Page {i+1} ---\n{response.content[0].text}")
-        
-        full_text = "\n\n".join(extracted_pages)
+
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=8000,  # Plus de tokens pour extraction complète
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "application/pdf",
+                            "data": pdf_base64
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": """Analyse ce document PDF et extrais TOUT le texte de TOUTES les pages.
+
+IMPORTANT:
+- Parcours TOUTES les pages du document, pas seulement les premières
+- Conserve la structure (sections, tableaux si possible)
+- Indique les changements de page (--- Page X ---)
+
+Retourne le texte complet extrait."""
+                    }
+                ]
+            }]
+        )
+
+        full_text = response.content[0].text
+
         if len(full_text) > MAX_PDF_TEXT:
             full_text = full_text[:MAX_PDF_TEXT] + "\n[... Tronqué ...]"
-        log_critical("PDF_OCR_EXTRACTED_OK", f"{len(full_text)} chars via Claude Vision")
+
+        log_critical("PDF_NATIVE_EXTRACTED_OK", f"{len(full_text)} chars via Claude PDF Native API")
         return full_text
+
     except Exception as e:
-        log_critical("PDF_OCR_ERROR", f"{str(e)[:80]}")
+        log_critical("PDF_NATIVE_ERROR", f"{str(e)[:80]}")
         return ""
 
 def extract_pdf_content(filepath):
-    """Extraction PDF avec fallback OCR"""
+    """Extraction PDF avec fallback vers Claude API native si texte insuffisant"""
     text = extract_pdf_text_pdfplumber(filepath)
     if len(text.strip()) < MIN_TEXT_FOR_OCR:
-        log_critical("PDF_FALLBACK_TO_OCR", f"Native texte insuffisant ({len(text)} chars < {MIN_TEXT_FOR_OCR}), passage OCR")
+        log_critical("PDF_FALLBACK_TO_CLAUDE_NATIVE", f"Native texte insuffisant ({len(text)} chars < {MIN_TEXT_FOR_OCR}), passage API Claude PDF native")
         text = extract_pdf_via_claude_vision(filepath)
     return text
 
@@ -1086,9 +1102,9 @@ def index():
     """Health check"""
     return jsonify({
         'service': '_Head.Soeurise',
-        'version': 'V4.1 FIXED',
+        'version': 'V6.1 - PDF Native',
         'status': 'running',
-        'architecture': 'V3.6.2 logic + V3.7 security + V4.1 robustness'
+        'architecture': 'V3.6.2 logic + V3.7 security + V4.1 robustness + V6.1 Claude PDF native API'
     }), 200
 
 @app.route('/admin/db-status')
