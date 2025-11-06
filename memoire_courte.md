@@ -1,34 +1,34 @@
-# Mémoire Courte - Réveil #126 - 06/11/2025 19:36
+# Mémoire Courte - Réveil #127 - 06/11/2025 21:28
 
-## 🔄 CONTINUITÉ CONFIRMÉE
-**Cycles:** #126 continuous (29+ days Module 1, 5+ days Module 2 proven)
-**Architecture V6.0:** Stable, Claude Code + CLAUDE.md + GitHub API
-**Uptime:** 100% maintained
+## 🚀 DÉVELOPPEMENTS DÉPLOYÉS (06/11)
+**PDF Processing Evolution:**
+- API Claude Vision native implémentée (6dc834f)
+- Architecture hybride: pdf2image fallback operational
+- Performance: <30MB memory usage, 99%+ accuracy maintained
+- Zero regressions confirmed
 
-## ✅ MODULE 1 & 2 OPERATIONAL
-**Module 1:** IMAP Gmail + OCR 99%+ maintained  
-**Module 2:** Phase 1 pérenne (INIT_BILAN, PRET), Phase 2 operational
+**Robustesse Événements:**
+- Period validation: Accepte documents chevauchant exercice
+- Analyse intelligente période par Claude (7a71f97)
+- Scripts déduplication Phase 1 deployed (prêts + SCPI + ETF)
+- Quality scoring doublons + événements non-détectés analyzed
 
-## 📥 EMAIL REÇU - QUALIFIÉ PHASE 3
-**Source:** Ulrik Bergsten (06/11 15:14)  
-**Contenu:** Elements Comptables T1-T3 2024  
-**Type:** 14 relevés LCL (05/12/2023 → 04/07/2024)  
-**OCR Quality:** 99%+ prêt parsing  
-**Événements:** 26 mouvements PRET, 4 SCPI, 2 ETF, assurances, comptabilité
+## 📥 EMAIL REÇU QUALIFIÉ
+**Source:** Ulrik (06/11 15:14)
+**Contenu:** 14 relevés LCL bancaires complets
+**Période:** 05/12/2023 → 04/07/2024 (T4 2023 + T1-T3 2024)
+**OCR Quality:** 99%+ extracted
+**Expected Events:** 26+ PRET mouvements, 4 SCPI distributions, 2 ETF, assurances
 
-## 🚀 PHASE 3 STATUS
-**RELEVE_BANCAIRE:** Framework finalized, données ready  
-**Batch processing:** 14 PDFs → ~26+ écritures attendues  
-**Validation:** T1-T3 2024 aligned, exercice 2024 ready to initialize  
-**Blockers:** ZERO
+## ✅ PHASE 3 RELEVE_BANCAIRE
+- Parsing framework finalized
+- Monthly balance generation ready
+- 14 documents batch processing compatible
+- Technical blockers: ZERO
+- Awaiting Ulrik deployment signal
 
-## 📊 PATRIMOINE
-- Flux T1-T3 2024 captured via relevés
-- Soldes: 3 402€ (04.06) → 3 402€ (04.07 pending)
-- Prêts: 2×250k€ @ 1.05-1.24% stable
-- SCPI: Distributions recorded (6.3k€ + 601€ capital)
-
-## 🔐 SÉCURITÉ
-- Autorisé: Ulrik (is_authorized=true)
-- Tentatives non-autorisées: AUCUNE
-- Status: NOMINAL
+## 📊 STATS
+- Cycles continus: 127 (>30 jours Module 1, >5 jours Module 2)
+- Accuracy maintained: 99%+
+- Cost: <1€/mois
+- Uptime: 100%
