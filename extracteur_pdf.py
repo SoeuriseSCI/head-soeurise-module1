@@ -76,6 +76,112 @@ class ExtracteurPDF:
             pdf_data = f.read()
         return base64.standard_b64encode(pdf_data).decode('utf-8')
 
+    def _deduplicater_operations(self, operations: List[Dict]) -> List[Dict]:
+        """
+        Utilise Claude pour déduplicater intelligemment les opérations
+
+        PRINCIPE:
+        Certaines opérations apparaissent en double dans les relevés avec des libellés
+        légèrement différents. Claude identifie ces doublons (même date + même montant)
+        et garde LA VERSION LA PLUS DÉTAILLÉE.
+
+        Exemple:
+        - "VIR SEPA SCPI EPARGNE PIERRE LIBELLE:SCPI..." (détaillé ✓)
+        - "SCPI EPARGNE PIERRE DISTRIBUTION 4EME..." (moins détaillé ✗)
+        → Claude garde le premier
+
+        Args:
+            operations: Liste des opérations extraites
+
+        Returns:
+            Liste dédupliquée (opérations uniques avec les versions les plus détaillées)
+        """
+        if not self.client or len(operations) == 0:
+            return operations
+
+        try:
+            # Préparer les opérations pour Claude
+            operations_json = json.dumps(operations, indent=2, ensure_ascii=False)
+
+            response = self.client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=16000,
+                messages=[{
+                    "role": "user",
+                    "content": f"""Voici {len(operations)} opérations bancaires extraites d'un relevé.
+
+PROBLÈME: Certaines opérations apparaissent EN DOUBLE avec des libellés différents.
+
+EXEMPLES DE DOUBLONS À DÉTECTER:
+1. Même date + même montant + types similaires (SCPI, virements, etc.)
+2. Une version détaillée vs une version courte
+3. Même opération décrite différemment selon la page du relevé
+
+TÂCHE:
+1. Analyse TOUTES les opérations
+2. Identifie les doublons (même date + même montant ± 0.01€)
+3. Pour chaque groupe de doublons, garde LA VERSION LA PLUS DÉTAILLÉE (libellé le plus long et informatif)
+4. Retourne la liste dédupliquée
+
+OPÉRATIONS:
+```json
+{operations_json}
+```
+
+Retourne un JSON avec cette structure exacte:
+{{
+  "operations_uniques": [
+    {{
+      "date_operation": "2024-01-29",
+      "libelle": "VIR SEPA SCPI EPARGNE PIERRE LIBELLE:SCPI...",
+      "montant": 7356.24,
+      "type_operation": "CREDIT"
+    }}
+  ],
+  "nb_doublons_supprimes": 4,
+  "details_doublons": [
+    {{
+      "date": "2024-01-29",
+      "montant": 7356.24,
+      "garde": "VIR SEPA SCPI EPARGNE PIERRE...",
+      "supprime": "SCPI EPARGNE PIERRE DISTRIBUTION..."
+    }}
+  ]
+}}
+
+NE retourne QUE le JSON, sans texte avant ou après."""
+                }]
+            )
+
+            response_text = response.content[0].text.strip()
+
+            # Nettoyer la réponse
+            json_text = response_text
+            if json_text.startswith('```json'):
+                json_text = json_text[7:]
+            if json_text.startswith('```'):
+                json_text = json_text[3:]
+            if json_text.endswith('```'):
+                json_text = json_text[:-3]
+            json_text = json_text.strip()
+
+            # Parser le JSON
+            result = json.loads(json_text)
+            operations_dedupliquees = result.get('operations_uniques', operations)
+            nb_doublons = result.get('nb_doublons_supprimes', 0)
+
+            if nb_doublons > 0:
+                print(f"🔍 Doublons détectés par Claude: {nb_doublons} opérations éliminées")
+                details = result.get('details_doublons', [])
+                for detail in details[:3]:  # Afficher max 3 exemples
+                    print(f"   - {detail.get('date')} {detail.get('montant')}€: gardé version détaillée")
+
+            return operations_dedupliquees
+
+        except Exception as e:
+            print(f"⚠️  Erreur déduplication (on garde toutes les opérations): {e}")
+            return operations
+
     def analyser_document(self) -> Dict:
         """
         Analyse le document pour extraire le type et la période couverte
@@ -293,6 +399,11 @@ NE retourne QUE le JSON, sans texte avant ou après."""
             operations = data.get('operations', [])
 
             print(f"✅ {len(operations)} opérations extraites du PDF")
+
+            # DÉDUPLICATION PAR CLAUDE (nouvelle étape)
+            if len(operations) > 0:
+                operations = self._deduplicater_operations(operations)
+                print(f"✅ {len(operations)} opérations après déduplication intelligente")
 
             # Enrichir et filtrer les opérations
             all_evenements = []

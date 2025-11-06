@@ -193,6 +193,10 @@ class DetecteurDoublons:
         """
         Vérifie si un événement est un doublon d'un événement déjà traité
 
+        STRATÉGIE:
+        1. Vérification stricte par fingerprint (date+libellé+montant+type)
+        2. Si pas trouvé: vérification souple par date+montant (pour SCPI, virements, etc.)
+
         Args:
             session: Session SQLAlchemy
             evenement: Dictionnaire de l'événement à vérifier
@@ -206,13 +210,13 @@ class DetecteurDoublons:
                 'evenement_id': 42,
                 'fingerprint': 'a3f5e9c2...',
                 'phase_traitement': 1,
-                'date_traitement': datetime(2024, 11, 5, 10, 30)
+                'date_traitement': datetime(2024, 11, 5, 10, 30),
+                'methode': 'fingerprint' ou 'date_montant'
             }
         """
-        # Calculer le fingerprint
+        # 1. Vérification stricte par fingerprint
         fingerprint = DetecteurDoublons.calculer_fingerprint(evenement)
 
-        # Chercher un événement avec ce fingerprint
         result = session.execute(
             text("""
                 SELECT id, fingerprint, phase_traitement, traite_at
@@ -231,7 +235,47 @@ class DetecteurDoublons:
                 'evenement_id': row[0],
                 'fingerprint': row[1],
                 'phase_traitement': row[2],
-                'date_traitement': row[3]
+                'date_traitement': row[3],
+                'methode': 'fingerprint'
+            }
+
+        # 2. Vérification souple par date+montant (pour doublons avec libellés différents)
+        date_op = evenement.get('date_operation', '')
+        if isinstance(date_op, datetime):
+            date_op = date_op.strftime('%Y-%m-%d')
+        elif hasattr(date_op, 'isoformat'):
+            date_op = date_op.isoformat()
+
+        montant = float(evenement.get('montant', 0))
+        type_op = evenement.get('type_operation', '')
+
+        result = session.execute(
+            text("""
+                SELECT id, fingerprint, phase_traitement, traite_at
+                FROM evenements_comptables
+                WHERE date_operation = :date_op::date
+                  AND ABS(montant - :montant) < 0.01
+                  AND type_operation = :type_op
+                ORDER BY created_at ASC
+                LIMIT 1
+            """),
+            {
+                'date_op': date_op,
+                'montant': montant,
+                'type_op': type_op
+            }
+        )
+
+        row = result.fetchone()
+
+        if row:
+            return {
+                'est_doublon': True,
+                'evenement_id': row[0],
+                'fingerprint': row[1],
+                'phase_traitement': row[2],
+                'date_traitement': row[3],
+                'methode': 'date_montant'
             }
 
         return None
