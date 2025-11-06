@@ -58,8 +58,7 @@ class ExtracteurPDF:
     Extracteur d'événements comptables depuis PDF de relevés bancaires
     """
 
-    def __init__(self, pdf_path: str, email_metadata: Optional[Dict] = None,
-                 date_debut: str = None, date_fin: str = None):
+    def __init__(self, pdf_path: str, email_metadata: Optional[Dict] = None):
         """
         Initialise l'extracteur
 
@@ -70,21 +69,145 @@ class ExtracteurPDF:
                 - email_from: Expéditeur
                 - email_date: Date de l'email
                 - email_subject: Sujet de l'email
-            date_debut: Date de début de période (format YYYY-MM-DD, optionnel)
-            date_fin: Date de fin de période (format YYYY-MM-DD, optionnel)
         """
         self.pdf_path = pdf_path
         self.email_metadata = email_metadata or {}
         self.client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
-        self.date_debut = date_debut
-        self.date_fin = date_fin
 
-    def extraire_evenements(self, batch_size: int = 10) -> List[Dict]:
+    def analyser_document(self) -> Dict:
+        """
+        Analyse le document pour extraire le type et la période couverte
+        Utilise Claude Vision sur les 2 premières pages
+
+        Returns:
+            Dictionnaire avec:
+                - type_document: str (ex: "releve_bancaire", "facture_scpi", etc.)
+                - date_debut: str (format YYYY-MM-DD)
+                - date_fin: str (format YYYY-MM-DD)
+                - description: str (résumé)
+        """
+        if not self.client:
+            raise ValueError("ANTHROPIC_API_KEY non définie")
+
+        if not PDF2IMAGE_AVAILABLE:
+            raise ImportError("pdf2image non disponible")
+
+        if not os.path.exists(self.pdf_path):
+            raise FileNotFoundError(f"PDF non trouvé: {self.pdf_path}")
+
+        print(f"🔍 Analyse du document: {os.path.basename(self.pdf_path)}")
+
+        try:
+            # Convertir les 2 premières pages pour analyse
+            images = convert_from_path(self.pdf_path, dpi=100, first_page=1, last_page=2)
+
+            # Préparer les images pour Claude
+            image_contents = []
+            for image in images:
+                buffer = io.BytesIO()
+                image.save(buffer, format='JPEG', quality=85, optimize=True)
+                image_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+                image_contents.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/jpeg",
+                        "data": image_base64
+                    }
+                })
+                buffer.close()
+
+            # Analyser avec Claude
+            response = self.client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1000,
+                messages=[{
+                    "role": "user",
+                    "content": image_contents + [{
+                        "type": "text",
+                        "text": """Analyse ce document comptable et extrais les informations suivantes:
+
+1. TYPE DE DOCUMENT:
+   - releve_bancaire
+   - facture_scpi
+   - tableau_amortissement
+   - facture_comptable
+   - autre
+
+2. PÉRIODE COUVERTE:
+   - Date de début (première opération ou date de début mentionnée)
+   - Date de fin (dernière opération ou date de fin mentionnée)
+   - Si le document couvre plusieurs mois, donne la période complète
+
+3. DESCRIPTION:
+   - Courte description du contenu (1 phrase)
+
+Retourne un JSON avec cette structure exacte:
+{
+  "type_document": "releve_bancaire",
+  "date_debut": "2024-01-01",
+  "date_fin": "2024-03-31",
+  "description": "Relevé bancaire LCL du 1er trimestre 2024"
+}
+
+IMPORTANT:
+- Les dates doivent être au format YYYY-MM-DD
+- Si impossible de déterminer une date, utilise null
+- Sois précis sur les dates réelles du document
+
+NE retourne QUE le JSON, sans texte avant ou après."""
+                    }]
+                }]
+            )
+
+            response_text = response.content[0].text
+
+            # Nettoyer la réponse
+            json_text = response_text.strip()
+            if json_text.startswith('```json'):
+                json_text = json_text[7:]
+            if json_text.startswith('```'):
+                json_text = json_text[3:]
+            if json_text.endswith('```'):
+                json_text = json_text[:-3]
+            json_text = json_text.strip()
+
+            # Parser le JSON
+            data = json.loads(json_text)
+
+            print(f"   Type: {data.get('type_document', 'inconnu')}")
+            print(f"   Période: {data.get('date_debut', '?')} → {data.get('date_fin', '?')}")
+            print(f"   Description: {data.get('description', '')}")
+
+            return data
+
+        except json.JSONDecodeError as e:
+            print(f"⚠️  Erreur parsing JSON: {e}")
+            print(f"   Réponse: {response_text[:200]}...")
+            return {
+                'type_document': 'inconnu',
+                'date_debut': None,
+                'date_fin': None,
+                'description': 'Analyse échouée'
+            }
+        except Exception as e:
+            print(f"⚠️  Erreur analyse document: {e}")
+            return {
+                'type_document': 'inconnu',
+                'date_debut': None,
+                'date_fin': None,
+                'description': f'Erreur: {str(e)}'
+            }
+
+    def extraire_evenements(self, batch_size: int = 10, date_debut: str = None, date_fin: str = None) -> List[Dict]:
         """
         Extrait tous les événements du PDF par batch pour éviter les limites de tokens
 
         Args:
             batch_size: Nombre de pages à traiter par batch (défaut: 10)
+            date_debut: Date de début de période (format YYYY-MM-DD, optionnel)
+            date_fin: Date de fin de période (format YYYY-MM-DD, optionnel)
 
         Returns:
             Liste de dictionnaires d'événements prêts pour GestionnaireEvenements
@@ -161,9 +284,9 @@ class ExtracteurPDF:
                 for op in operations:
                     # FILTRE 1: Vérifier la période
                     date_op = op['date_operation']
-                    if self.date_debut and date_op < self.date_debut:
+                    if date_debut and date_op < date_debut:
                         continue  # Ignorer les opérations avant la période
-                    if self.date_fin and date_op > self.date_fin:
+                    if date_fin and date_op > date_fin:
                         continue  # Ignorer les opérations après la période
 
                     # FILTRE 2: Détecter les soldes d'ouverture (non comptabilisables)
@@ -197,8 +320,8 @@ class ExtracteurPDF:
             print(f"✅ TOTAL: {len(all_evenements)} opérations extraites")
 
             # Afficher info sur le filtrage de période
-            if self.date_debut or self.date_fin:
-                periode = f"{self.date_debut or '...'} → {self.date_fin or '...'}"
+            if date_debut or date_fin:
+                periode = f"{date_debut or '...'} → {date_fin or '...'}"
                 print(f"📅 Période appliquée: {periode}")
 
             return all_evenements

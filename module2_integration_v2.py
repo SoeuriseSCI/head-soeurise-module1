@@ -263,13 +263,13 @@ class IntegratorModule2:
                             }
 
                             # Lancer le workflow d'extraction
+                            # Note: La période est détectée automatiquement par analyse du PDF
+                            #       et validée contre l'exercice comptable en cours
                             workflow = WorkflowEvenements(self.database_url, phase=1)
                             workflow_result = workflow.traiter_pdf(
                                 filepath,
                                 email_metadata,
-                                auto_detect=True,
-                                date_debut='2024-01-01',  # Début exercice 2024
-                                date_fin='2024-09-30'     # Fin Q3 2024
+                                auto_detect=True
                             )
 
                             total_operations += workflow_result.get('total_operations', 0)
