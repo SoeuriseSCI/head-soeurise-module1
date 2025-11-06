@@ -49,6 +49,8 @@ class TypeEvenement(Enum):
     INIT_BILAN_2023 = "INIT_BILAN_2023"
     CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
     PRET_IMMOBILIER = "PRET_IMMOBILIER"
+    RELEVE_BANCAIRE = "RELEVE_BANCAIRE"
+    SOLDE_OUVERTURE = "SOLDE_OUVERTURE"  # Soldes reportés (non comptabilisables)
     UNKNOWN = "UNKNOWN"
 
 
@@ -171,6 +173,17 @@ class DetecteurTypeEvenement:
 
         if any(kw in body for kw in ['tableau amortissement', 'tableau d\'amortissement', 'prêt immobilier', 'pret immobilier']):
             return TypeEvenement.PRET_IMMOBILIER
+
+        # Détecteur RELEVE_BANCAIRE
+        # Détecte: "relevé bancaire" | "elements comptables" | "releve de compte" dans subject/body/filename
+        if any(kw in body for kw in ['relevé bancaire', 'releve bancaire', 'relevé de compte', 'releve de compte',
+                                      'elements comptables', 'éléments comptables']):
+            return TypeEvenement.RELEVE_BANCAIRE
+
+        if any(f['filename'].lower().endswith('.pdf') and
+               any(kw in f['filename'].lower() for kw in ['releve', 'relevé', 'compte', 'elements', 'éléments', 'comptable'])
+               for f in attachments if 'filename' in f):
+            return TypeEvenement.RELEVE_BANCAIRE
 
         # Détecteur CLOTURE_EXERCICE
         if any(kw in body for kw in ['cloture', 'clôture', 'amortissement_credit', 'reevaluation', 'réévaluation']):

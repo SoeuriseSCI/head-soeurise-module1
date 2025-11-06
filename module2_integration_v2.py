@@ -232,6 +232,80 @@ class IntegratorModule2:
                         })
                         continue
 
+                # ═══════════════════════════════════════════════════════════════
+                # TRAITEMENT RELEVE_BANCAIRE - PHASE 1
+                # ═══════════════════════════════════════════════════════════════
+                if type_evt == TypeEvenement.RELEVE_BANCAIRE:
+                    try:
+                        from workflow_evenements import WorkflowEvenements
+
+                        # Traiter chaque PDF d'attachments
+                        attachments = email.get('attachments', [])
+                        total_operations = 0
+                        total_evenements_crees = 0
+                        total_types_detectes = 0
+
+                        for attachment in attachments:
+                            if not attachment.get('filename', '').lower().endswith('.pdf'):
+                                continue
+
+                            filepath = attachment.get('filepath')
+                            if not filepath:
+                                continue
+
+                            # Métadonnées email
+                            email_metadata = {
+                                'email_id': email.get('email_id'),
+                                'email_from': email.get('from'),
+                                'email_date': email.get('date'),
+                                'email_subject': email.get('subject'),
+                                'email_body': email.get('body', '')
+                            }
+
+                            # Lancer le workflow d'extraction
+                            workflow = WorkflowEvenements(self.database_url, phase=1)
+                            workflow_result = workflow.traiter_pdf(filepath, email_metadata, auto_detect=True)
+
+                            total_operations += workflow_result.get('total_operations', 0)
+                            total_evenements_crees += workflow_result.get('evenements_crees', 0)
+                            total_types_detectes += workflow_result.get('types_detectes', 0)
+
+                            self.emails_traites += 1
+
+                        # Ajouter résultats
+                        if total_evenements_crees > 0:
+                            resultats['details'].append({
+                                'type': type_evt.value,
+                                'propositions': 0,  # Phase 1 : pas de propositions automatiques
+                                'status': 'extraction_reussie',
+                                'message': f'{total_operations} opérations extraites, {total_evenements_crees} événements créés, {total_types_detectes} types détectés (Phase 1)',
+                                'operations_extraites': total_operations,
+                                'evenements_crees': total_evenements_crees,
+                                'types_detectes': total_types_detectes
+                            })
+                        else:
+                            self.erreurs.append("Aucun événement créé depuis les relevés bancaires")
+                            resultats['details'].append({
+                                'type': type_evt.value,
+                                'propositions': 0,
+                                'status': 'extraction_echec',
+                                'message': 'Échec extraction relevés bancaires'
+                            })
+
+                        continue
+
+                    except Exception as e:
+                        self.erreurs.append(f"Erreur extraction relevés: {str(e)[:200]}")
+                        import traceback
+                        traceback.print_exc()
+                        resultats['details'].append({
+                            'type': type_evt.value,
+                            'propositions': 0,
+                            'status': 'erreur',
+                            'message': f'Erreur: {str(e)[:100]}'
+                        })
+                        continue
+
                 # Générer propositions via workflow
                 result = self.workflow_generation.traiter_email(email)
                 
