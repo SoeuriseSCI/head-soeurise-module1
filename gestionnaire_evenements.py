@@ -90,8 +90,11 @@ class GestionnaireEvenements:
         # Vérifier si doublon
         doublon = self.detecteur_doublons.verifier_doublon(self.session, data)
         if doublon:
-            print(f"⚠️  Doublon détecté: événement #{doublon['evenement_id']} "
-                  f"(phase {doublon['phase_traitement']})")
+            methode = doublon.get('methode', 'fingerprint')
+            if methode == 'date_montant':
+                print(f"⏭️  Doublon souple (date+montant): événement #{doublon['evenement_id']} ignoré")
+            else:
+                print(f"⏭️  Doublon strict (fingerprint): événement #{doublon['evenement_id']} ignoré")
             return None
 
         # Normaliser le libellé
