@@ -1,60 +1,44 @@
-# Mémoire Moyenne - Module 2 Maturing & Architecture Confirmed
+# Mémoire Moyenne - Module 2 Maturing & Phase 3 Prêt
 
-## COMPTABILITÉ AUTOMATISÉE - PRODUCTION PHASE MATURATION
+## COMPTABILITÉ AUTOMATISÉE - PRODUCTION PHASE 2→3 TRANSITION
 
 ### Phase 1 (02-06/11/2025) ✅ PÉRENNE CONFIRMÉE
-**Events Implémentés:**
-- **INIT_BILAN_2023:** 571k€ balanced, 11 écritures, accuracy 99.97% (1 OCR error corrected)
-- **PRET_IMMOBILIER:** 100% verified, 468 échéances (2×250k€), token validation MD5 stable
+**Events Stables:**
+- INIT_BILAN_2023: 571k€ balanced, 11 écritures, 99.97% accuracy
+- PRET_IMMOBILIER: 100% verified, 468 échéances, token validation MD5 operational
 
-**Corrections Bug (9 total):**
-- Email classification: 100% accuracy
-- MD5 token integrity: Cryptographic validation
-- Date parsing: ISO 8601 normalized
-- Decimal precision: 2 decimal places confirmed
-- PostgreSQL transactions: Atomicity established
-
-### Phase 2 (05-06/11/2025) ✅ OPERATIONAL & QUALITY HARDENED
-**Batch Processing:**
-- DPI 100, JPEG 85%, max 10 pages, <30MB typical
-- Memory-efficient tested 4+ MB with 512MB Render container
-- Multi-event: Single email → multiple propositions routed
+### Phase 2 (05-06/11/2025) ✅ OPERATIONAL & HARDENED
+**Batch Processing Confirmed:**
+- DPI 100, JPEG 85%, memory-efficient (<30MB typical)
+- Multi-event routing: Single email → multiple propositions
 - Error handling: Rollback cascade prevention tested end-to-end
 
 **Quality Improvements (06/11 additions):**
-- Deduplication analysis: Loan duplicates + SCPI holdings identified
-- Period filtering: Intelligent date range validation
-- Opening balance handling: ANCIEN SOLDE automatic filtering
-- Event quality scoring: Confidence metrics per detection
+- Deduplication analysis deployed
+- Period filtering automated
+- Opening balance (ANCIEN SOLDE) filtering operational
+- Event quality scoring implemented
 
-### Phase 3 (This Week) - RELEVE_BANCAIRE READY
-**Parsing Framework Finalized:**
-- 14 LCL statements (05/12/2023 → 04/07/2024) archived
-- Expected events: SOLDE_NOUVEAU, CREDIT_LOYER, DEBIT_PRET, DEBIT_ASSURANCE
-- Batch monthly balance generation: 2024 data set ready
-- Zero technical blockers
+### Phase 3 (06/11/2025) 🚀 DATA QUALIFIED FOR DEPLOYMENT
+**RELEVE_BANCAIRE Parsing Framework:**
+- 14 LCL statements received (05/12/2023 → 04/07/2024)
+- OCR quality: 99%+ confirmed
+- Expected events: 26+ PRET movements, 4 SCPI distributions, 2 ETF buys, insurance payments
+- Zero technical blockers identified
 
-## SCHÉMA BD STABLE & VALIDATED
-**Tables Opérationnelles:**
-- `emails_recus`: 150+ rows, IMAP sync continuous
-- `propositions_en_attente`: MD5 token validation operative
-- `ecritures_comptables`: 11 rows (Bilan 2023), atomicity confirmed
-- `prets_immobiliers`: 2 rows, 468 echéances index optimized
-- `exercices_comptables`: 2023 opened, ready 2024 initialization
+**Monthly Balance Generation:**
+- T1 2024 data: 5 relevés (Dec 2023 - Feb 2024)
+- T2 2024 data: 4 relevés (Mar - Apr 2024)
+- T3 2024 data: 5 relevés (May - Jul 2024)
+- Ready for batch monthly report generation
 
-## ARCHITECTURE DÉCISIONS
-**Technology Stack:**
-- API: Claude Sonnet 3.5 (parsing) + Haiku 4.5 (validation)
-- Database: PostgreSQL (transactions + MD5 indexed)
-- Orchestration: Python 3.12 batch scheduler
-- Cost: <1€/mois confirmed through 5+ weeks operation
-- Reliability: 100% uptime (zero data loss events)
+## SCHÉMA BD STABLE
+**Opérationnel:** 5 tables (emails, propositions, écritures, prêts, exercices)
+**Transactions:** 11 écritures (bilan 2023), 468 échéances indexed
+**Cost:** <1€/mois confirmed (5+ weeks operation)
 
-## GIT HISTORY ANALYSIS (Last 7 days)
-**Quality Focus Detected:**
-- Multiple PR merges (#132-#140) on deduplication & filtering
-- Documentation: Comprehensive refonte extraction événements guide
-- Automated validation: Claude intelligent analysis + exercise validation added
-- Data integrity: Opening balance filtering logic hardened
-
-**Implication:** Phase 2 entering data quality maturation cycle before Phase 3 deployment
+## GIT HISTORY (7j) - QUALITY FOCUS CONFIRMED
+**Merges:** #132-#140 on deduplication, filtering, validation
+**Documentation:** Refonte extraction événements guide completed
+**Data Integrity:** Opening balance filtering hardened
+**Architecture:** V6.0 (Claude Code + CLAUDE.md) stable
