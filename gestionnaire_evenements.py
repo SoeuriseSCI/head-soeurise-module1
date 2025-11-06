@@ -218,31 +218,41 @@ class GestionnaireEvenements:
         ]):
             type_evt = 'SOLDE_OUVERTURE'
 
-        # Assurance emprunteur
-        elif 'covea' in libelle_norm or 'assurance pret' in libelle_norm:
+        # Assurance emprunteur (DOIT être avant REMBOURSEMENT_PRET car contient "echeance")
+        elif ('covea' in libelle_norm or 'assurance pret' in libelle_norm or
+              'caci' in libelle_norm or 'garantie emprunteur' in libelle_norm):
             type_evt = 'ASSURANCE_PRET'
 
-        # Frais bancaires
-        elif 'frais' in libelle_norm and ('tenue' in libelle_norm or 'gestion' in libelle_norm):
+        # Frais bancaires (élargir patterns)
+        elif ('frais' in libelle_norm or 'cotisation' in libelle_norm or
+              'abon' in libelle_norm or 'abonnement' in libelle_norm):
             type_evt = 'FRAIS_BANCAIRES'
 
         # Honoraires comptable
-        elif 'comptable' in libelle_norm or 'expert comptable' in libelle_norm:
+        elif 'crp' in libelle_norm or 'comptabilit' in libelle_norm or 'expert comptable' in libelle_norm:
             type_evt = 'HONORAIRES_COMPTABLE'
 
-        # Remboursement prêt
-        elif 'ech' in libelle_norm or 'echeance' in libelle_norm or 'pret' in libelle_norm:
+        # Remboursement prêt (plus précis pour éviter confusion avec assurances)
+        elif ('pret immobilier' in libelle_norm and 'ech' in libelle_norm) or 'dossier no' in libelle_norm:
             type_evt = 'REMBOURSEMENT_PRET'
 
-        # Apport associé
-        elif 'vir sepa recu' in libelle_norm and 'bergsten' in libelle_norm:
+        # Apport associé (élargir pour capter tous les virements Ulrik)
+        elif ('vir sepa' in libelle_norm and 'bergsten' in libelle_norm) or 'apport' in libelle_norm:
             type_evt = 'APPORT_ASSOCIE'
 
         # Revenu SCPI
         elif 'scpi' in libelle_norm or 'epargne pierre' in libelle_norm:
             type_evt = 'REVENU_SCPI'
 
-        # Achat valeurs mobilières
+        # Achat ETF (nouveau)
+        elif 'am msci' in libelle_norm or 'etf' in libelle_norm:
+            type_evt = 'ACHAT_ETF'
+
+        # Achat Amazon (nouveau)
+        elif 'amazon' in libelle_norm and 'achat' in libelle_norm:
+            type_evt = 'ACHAT_AMAZON'
+
+        # Achat valeurs mobilières (autres)
         elif 'degiro' in libelle_norm or 'interactive brokers' in libelle_norm:
             type_evt = 'ACHAT_VALEURS_MOBILIERES'
 
