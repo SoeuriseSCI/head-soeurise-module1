@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EXTRACTEUR PDF - Relevés Bancaires
-==================================
-Parse bank statements and extract individual accounting events.
+EXTRACTEUR PDF - Relevés Bancaires (API PDF Native)
+====================================================
+Parse bank statements and extract individual accounting events using Claude's native PDF support.
 
-Date: 05/11/2025
+Date: 06/11/2025
 Auteur: Module Phase 1 - Accounting Events
 
 RESPONSABILITÉS:
 ----------------
 1. Lecture et parsing de PDF de relevés bancaires
-2. Extraction des opérations individuelles
+2. Extraction des opérations individuelles via Claude API PDF native
 3. Normalisation des données (dates, montants, libellés)
 4. Détection du type d'opération (DEBIT/CREDIT)
 5. Préparation des données pour création d'événements
@@ -24,30 +24,21 @@ FORMATS SUPPORTÉS:
 - Confirmations d'achat ETF/Actions
 - Apports d'associés
 
-WORKFLOW:
----------
-1. Lecture du PDF
-2. Identification du type de document par page
-3. Extraction selon le format approprié
-4. Normalisation des données
-5. Retour d'une liste d'événements prêts à être créés
+WORKFLOW SIMPLIFIÉ:
+------------------
+1. Lecture du PDF (binaire)
+2. Encode base64
+3. Envoi direct à Claude API (type="document")
+4. Analyse et extraction en une seule passe
+5. Retour des événements structurés
 """
 
 import os
-import re
 import json
-import io
 import base64
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from anthropic import Anthropic
-
-# Imports pour conversion PDF
-try:
-    from pdf2image import convert_from_path
-    PDF2IMAGE_AVAILABLE = True
-except ImportError:
-    PDF2IMAGE_AVAILABLE = False
 
 # Configuration
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
@@ -55,7 +46,7 @@ ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
 class ExtracteurPDF:
     """
-    Extracteur d'événements comptables depuis PDF de relevés bancaires
+    Extracteur d'événements comptables depuis PDF via Claude API native
     """
 
     def __init__(self, pdf_path: str, email_metadata: Optional[Dict] = None):
@@ -74,10 +65,21 @@ class ExtracteurPDF:
         self.email_metadata = email_metadata or {}
         self.client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
+    def _lire_pdf_base64(self) -> str:
+        """
+        Lit le PDF et retourne son contenu encodé en base64
+
+        Returns:
+            Contenu du PDF en base64
+        """
+        with open(self.pdf_path, 'rb') as f:
+            pdf_data = f.read()
+        return base64.standard_b64encode(pdf_data).decode('utf-8')
+
     def analyser_document(self) -> Dict:
         """
         Analyse le document pour extraire le type et la période couverte
-        Utilise Claude Vision sur les 2 premières pages
+        Utilise l'API PDF native de Claude
 
         Returns:
             Dictionnaire avec:
@@ -89,44 +91,33 @@ class ExtracteurPDF:
         if not self.client:
             raise ValueError("ANTHROPIC_API_KEY non définie")
 
-        if not PDF2IMAGE_AVAILABLE:
-            raise ImportError("pdf2image non disponible")
-
         if not os.path.exists(self.pdf_path):
             raise FileNotFoundError(f"PDF non trouvé: {self.pdf_path}")
 
         print(f"🔍 Analyse du document: {os.path.basename(self.pdf_path)}")
 
         try:
-            # Convertir les 2 premières pages pour analyse
-            images = convert_from_path(self.pdf_path, dpi=100, first_page=1, last_page=2)
+            # Lire le PDF en base64
+            pdf_base64 = self._lire_pdf_base64()
 
-            # Préparer les images pour Claude
-            image_contents = []
-            for image in images:
-                buffer = io.BytesIO()
-                image.save(buffer, format='JPEG', quality=85, optimize=True)
-                image_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-                image_contents.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/jpeg",
-                        "data": image_base64
-                    }
-                })
-                buffer.close()
-
-            # Analyser avec Claude
+            # Analyser avec Claude (API PDF native)
             response = self.client.messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=1000,
                 messages=[{
                     "role": "user",
-                    "content": image_contents + [{
-                        "type": "text",
-                        "text": """Analyse ce document comptable et extrais les informations suivantes:
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": pdf_base64
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": """Analyse ce document comptable PDF et extrais les informations suivantes:
 
 1. TYPE DE DOCUMENT:
    - releve_bancaire
@@ -136,28 +127,29 @@ class ExtracteurPDF:
    - autre
 
 2. PÉRIODE COUVERTE:
-   - Date de début (première opération ou date de début mentionnée)
-   - Date de fin (dernière opération ou date de fin mentionnée)
-   - Si le document couvre plusieurs mois, donne la période complète
+   - Date de PREMIÈRE opération (ou date de début si mentionnée)
+   - Date de DERNIÈRE opération (ou date de fin si mentionnée)
+   - Sois PRÉCIS : regarde TOUTES les pages, pas seulement les 2 premières
 
 3. DESCRIPTION:
    - Courte description du contenu (1 phrase)
+
+IMPORTANT:
+- Pour les relevés bancaires qui couvrent plusieurs mois, donne la période COMPLÈTE
+- Ne te limite PAS aux premières pages, analyse TOUT le document
+- Les trimestres sont: T1 (jan-fév-mars), T2 (avr-mai-juin), T3 (juil-août-sept), T4 (oct-nov-déc)
 
 Retourne un JSON avec cette structure exacte:
 {
   "type_document": "releve_bancaire",
   "date_debut": "2024-01-01",
-  "date_fin": "2024-03-31",
-  "description": "Relevé bancaire LCL du 1er trimestre 2024"
+  "date_fin": "2024-09-30",
+  "description": "Relevés bancaires LCL T1-T3 2024"
 }
 
-IMPORTANT:
-- Les dates doivent être au format YYYY-MM-DD
-- Si impossible de déterminer une date, utilise null
-- Sois précis sur les dates réelles du document
-
 NE retourne QUE le JSON, sans texte avant ou après."""
-                    }]
+                        }
+                    ]
                 }]
             )
 
@@ -193,6 +185,8 @@ NE retourne QUE le JSON, sans texte avant ou après."""
             }
         except Exception as e:
             print(f"⚠️  Erreur analyse document: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 'type_document': 'inconnu',
                 'date_debut': None,
@@ -200,12 +194,11 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                 'description': f'Erreur: {str(e)}'
             }
 
-    def extraire_evenements(self, batch_size: int = 10, date_debut: str = None, date_fin: str = None) -> List[Dict]:
+    def extraire_evenements(self, date_debut: str = None, date_fin: str = None) -> List[Dict]:
         """
-        Extrait tous les événements du PDF par batch pour éviter les limites de tokens
+        Extrait tous les événements du PDF via l'API PDF native de Claude
 
         Args:
-            batch_size: Nombre de pages à traiter par batch (défaut: 10)
             date_debut: Date de début de période (format YYYY-MM-DD, optionnel)
             date_fin: Date de fin de période (format YYYY-MM-DD, optionnel)
 
@@ -215,144 +208,35 @@ NE retourne QUE le JSON, sans texte avant ou après."""
         if not self.client:
             raise ValueError("ANTHROPIC_API_KEY non définie - impossible d'extraire les PDF")
 
-        if not PDF2IMAGE_AVAILABLE:
-            raise ImportError("pdf2image non disponible - installer avec: pip install pdf2image")
-
         if not os.path.exists(self.pdf_path):
             raise FileNotFoundError(f"PDF non trouvé: {self.pdf_path}")
 
         print(f"📄 Extraction du PDF: {os.path.basename(self.pdf_path)}")
 
         try:
-            # Obtenir le nombre total de pages sans charger toutes les images
-            print("🔄 Analyse du PDF...")
-            from pdf2image.pdf2image import pdfinfo_from_path
-            info = pdfinfo_from_path(self.pdf_path)
-            total_pages = info.get('Pages', 0)
+            # Lire le PDF en base64
+            pdf_base64 = self._lire_pdf_base64()
 
-            if total_pages == 0:
-                print("❌ Impossible de déterminer le nombre de pages")
-                return []
+            # Extraire avec Claude (API PDF native)
+            print("🔄 Envoi du PDF à Claude pour extraction...")
 
-            print(f"📄 {total_pages} pages détectées (batch de {batch_size} pages)")
-
-            all_evenements = []
-
-            # Traiter par batch de pages (conversion à la volée)
-            for batch_start in range(1, total_pages + 1, batch_size):
-                batch_end = min(batch_start + batch_size - 1, total_pages)
-
-                print(f"🔍 Batch {(batch_start-1)//batch_size + 1}/{(total_pages-1)//batch_size + 1}: "
-                      f"pages {batch_start}-{batch_end}")
-
-                # Convertir SEULEMENT ce batch (économie mémoire critique)
-                batch_images = convert_from_path(
-                    self.pdf_path,
-                    dpi=100,
-                    first_page=batch_start,
-                    last_page=batch_end
-                )
-
-                # Préparer les images pour Claude
-                image_contents = []
-                for image in batch_images:
-                    buffer = io.BytesIO()
-                    image.save(buffer, format='JPEG', quality=85, optimize=True)
-                    image_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-                    image_contents.append({
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/jpeg",
-                            "data": image_base64
-                        }
-                    })
-                    buffer.close()
-                    del buffer, image
-
-                # Libérer batch images immédiatement
-                del batch_images
-
-                # Analyser ce batch avec Claude
-                operations = self._extraire_batch(image_contents, batch_start, batch_end)
-
-                # Libérer image_contents immédiatement
-                del image_contents
-
-                # Enrichir avec métadonnées email
-                for op in operations:
-                    # FILTRE 1: Vérifier la période
-                    date_op = op['date_operation']
-                    if date_debut and date_op < date_debut:
-                        continue  # Ignorer les opérations avant la période
-                    if date_fin and date_op > date_fin:
-                        continue  # Ignorer les opérations après la période
-
-                    # FILTRE 2: Détecter les soldes d'ouverture (non comptabilisables)
-                    libelle_norm = op['libelle'].upper().strip()
-                    est_solde_ouverture = any(pattern in libelle_norm for pattern in [
-                        'ANCIEN SOLDE',
-                        'SOLDE REPORTE',
-                        'SOLDE REPORTÉ',
-                        'SOLDE PRECEDENT',
-                        'SOLDE PRÉCÉDENT',
-                        'REPORT SOLDE'
-                    ])
-
-                    evenement = {
-                        'date_operation': op['date_operation'],
-                        'libelle': op['libelle'],
-                        'montant': float(op['montant']),
-                        'type_operation': op['type_operation'],
-                        'est_solde_ouverture': est_solde_ouverture,  # Flag pour exclusion
-                        'email_id': self.email_metadata.get('email_id'),
-                        'email_from': self.email_metadata.get('email_from', 'pdf_manuel'),
-                        'email_date': self.email_metadata.get('email_date', datetime.now()),
-                        'email_subject': self.email_metadata.get('email_subject'),
-                        'email_body': self.email_metadata.get('email_body', '')
-                    }
-                    all_evenements.append(evenement)
-
-                print(f"   ✅ {len(operations)} opérations extraites de ce batch")
-
-            print()
-            print(f"✅ TOTAL: {len(all_evenements)} opérations extraites")
-
-            # Afficher info sur le filtrage de période
-            if date_debut or date_fin:
-                periode = f"{date_debut or '...'} → {date_fin or '...'}"
-                print(f"📅 Période appliquée: {periode}")
-
-            return all_evenements
-
-        except Exception as e:
-            print(f"❌ Erreur extraction PDF: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
-
-    def _extraire_batch(self, image_contents: List[Dict], start_page: int, end_page: int) -> List[Dict]:
-        """
-        Extrait les opérations d'un batch de pages
-
-        Args:
-            image_contents: Liste d'images en base64
-            start_page: Numéro de page de début
-            end_page: Numéro de page de fin
-
-        Returns:
-            Liste d'opérations extraites
-        """
-        try:
             response = self.client.messages.create(
                 model="claude-haiku-4-5-20251001",
-                max_tokens=8000,
+                max_tokens=16000,  # Plus de tokens pour les gros relevés
                 messages=[{
                     "role": "user",
-                    "content": image_contents + [{
-                        "type": "text",
-                        "text": """Analyse ces pages de relevés bancaires et extrais TOUTES les opérations bancaires individuelles.
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": pdf_base64
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": """Analyse ce PDF de relevés bancaires et extrais TOUTES les opérations bancaires individuelles de TOUTES les pages.
 
 Pour CHAQUE opération, extrais:
 - date_operation (format YYYY-MM-DD)
@@ -361,11 +245,12 @@ Pour CHAQUE opération, extrais:
 - type_operation (DEBIT ou CREDIT)
 
 IMPORTANT:
-- Certaines opérations s'étalent sur plusieurs lignes (ex: prêt avec numéro de dossier)
-- Regroupe les lignes qui forment une seule opération
+- Parcours TOUTES les pages du document, pas seulement les premières
+- Certaines opérations s'étalent sur plusieurs lignes (ex: prêt avec numéro de dossier) → Regroupe-les
 - Utilise la colonne DEBIT ou CREDIT pour déterminer le type
-- Ignore les en-têtes, totaux, et lignes de description
-- Convertis TOUTES les dates en format YYYY-MM-DD (ajoute l'année si manquante)
+- Ignore les en-têtes, totaux, soldes reportés, et lignes de description
+- Convertis TOUTES les dates en format YYYY-MM-DD
+- Si l'année n'est pas mentionnée, déduis-la du contexte du relevé
 
 Retourne un JSON valide avec cette structure:
 {
@@ -375,6 +260,12 @@ Retourne un JSON valide avec cette structure:
       "libelle": "PRLV SEPA COVEA RISKS",
       "montant": 87.57,
       "type_operation": "DEBIT"
+    },
+    {
+      "date_operation": "2024-01-20",
+      "libelle": "VIR SEPA RECU DE ULRIK BERGSTEN",
+      "montant": 1500.00,
+      "type_operation": "CREDIT"
     }
   ]
 }
@@ -401,14 +292,66 @@ NE retourne QUE le JSON, sans texte avant ou après."""
             data = json.loads(json_text)
             operations = data.get('operations', [])
 
-            return operations
+            print(f"✅ {len(operations)} opérations extraites du PDF")
+
+            # Enrichir et filtrer les opérations
+            all_evenements = []
+            nb_filtres_periode = 0
+
+            for op in operations:
+                # FILTRE 1: Vérifier la période
+                date_op = op['date_operation']
+                if date_debut and date_op < date_debut:
+                    nb_filtres_periode += 1
+                    continue  # Ignorer les opérations avant la période
+                if date_fin and date_op > date_fin:
+                    nb_filtres_periode += 1
+                    continue  # Ignorer les opérations après la période
+
+                # FILTRE 2: Détecter les soldes d'ouverture (non comptabilisables)
+                libelle_norm = op['libelle'].upper().strip()
+                est_solde_ouverture = any(pattern in libelle_norm for pattern in [
+                    'ANCIEN SOLDE',
+                    'SOLDE REPORTE',
+                    'SOLDE REPORTÉ',
+                    'SOLDE PRECEDENT',
+                    'SOLDE PRÉCÉDENT',
+                    'REPORT SOLDE'
+                ])
+
+                evenement = {
+                    'date_operation': op['date_operation'],
+                    'libelle': op['libelle'],
+                    'montant': float(op['montant']),
+                    'type_operation': op['type_operation'],
+                    'est_solde_ouverture': est_solde_ouverture,
+                    'email_id': self.email_metadata.get('email_id'),
+                    'email_from': self.email_metadata.get('email_from', 'pdf_manuel'),
+                    'email_date': self.email_metadata.get('email_date', datetime.now()),
+                    'email_subject': self.email_metadata.get('email_subject'),
+                    'email_body': self.email_metadata.get('email_body', '')
+                }
+                all_evenements.append(evenement)
+
+            print(f"✅ TOTAL: {len(all_evenements)} événements après filtrage")
+            if nb_filtres_periode > 0:
+                print(f"   ({nb_filtres_periode} opérations hors période exclues)")
+
+            # Afficher info sur le filtrage de période
+            if date_debut or date_fin:
+                periode = f"{date_debut or '...'} → {date_fin or '...'}"
+                print(f"📅 Période appliquée: {periode}")
+
+            return all_evenements
 
         except json.JSONDecodeError as e:
-            print(f"   ⚠️  Erreur parsing JSON pour pages {start_page}-{end_page}: {e}")
-            print(f"   Réponse brute: {response_text[:300]}...")
+            print(f"❌ Erreur parsing JSON: {e}")
+            print(f"   Réponse brute: {response_text[:500]}...")
             return []
         except Exception as e:
-            print(f"   ⚠️  Erreur batch pages {start_page}-{end_page}: {e}")
+            print(f"❌ Erreur extraction PDF: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
 
@@ -457,7 +400,7 @@ if __name__ == '__main__':
     import sys
 
     print("=" * 80)
-    print("EXTRACTEUR PDF - Test")
+    print("EXTRACTEUR PDF - Test (API PDF Native)")
     print("=" * 80)
     print()
 
