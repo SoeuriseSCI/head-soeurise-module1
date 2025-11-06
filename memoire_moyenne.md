@@ -1,41 +1,42 @@
-# Mémoire Moyenne - Module 2 Maturing & Phase 3 Deployment Ready
+# Mémoire Moyenne - Module 2 Phases 1-3 & Production Maturity
 
-## COMPTABILITÉ AUTOMATISÉE - PHASES 1-3 FRAMEWORK OPERATIONAL
+## COMPTABILITÉ AUTOMATISÉE - FRAMEWORK PÉRENNE
 
-### Phase 1 (02-06/11) ✅ PÉRENNE CONFIRMÉE
-**Événements Stables:**
-- INIT_BILAN_2023: 571k€ balanced, 11 écritures, 99.97% accuracy
-- PRET_IMMOBILIER: 100% verified, 468 échéances, token validation operational
+### Phase 1 (02-06/11) ✅ STABLE & VÉRIFIÉE
+**Événements confirmés:**
+- INIT_BILAN_2023: 571k€ balanced (ACTIF=PASSIF), 11 écritures, 99.97% accuracy
+- PRET_IMMOBILIER: 100% verified, 468 échéances, token MD5 validation
 
 ### Phase 2 (05-06/11) ✅ PRODUCTION STANDARD
-**Batch Processing Confirmed:**
-- PDF Processing: DPI 100, JPEG 85%, <30MB typical, Claude Vision native + hybrid fallback
-- Multi-event routing: Single email → multiple propositions
-- Error handling: Rollback cascade prevention tested
+**Batch Processing:**
+- Multi-event routing from single email
+- PDF processing: DPI 100, JPEG 85%, <30MB typical
+- Claude Vision native API + hybrid fallback architecture
+- Error handling: Rollback cascade prevention
+- Quality controls: Period validation + deduplication + scoring
 
-**Quality Improvements (06/11):**
-- PDF native Claude API deployed with 99%+ accuracy
-- Period validation hardened (accepts partial exercise overlap)
-- Deduplication scripts Phase 1 deployed
-- Quality scoring: event type validation + doublon detection
+**Commits Phase 2 (06/11):**
+- Native Claude PDF API deployment (6dc834f)
+- Period validation hardened (7a71f97)
+- Deduplication Phase 1 scripts (d73243d)
+- Claude-powered period analysis (5ad5884)
 
-### Phase 3 (06/11) 🚀 FRAMEWORK ESTABLISHED & DATA QUALIFIED
-**RELEVE_BANCAIRE Parsing:**
-- Framework: Finalized and tested
-- Data: 14 LCL statements (05/12/2023 - 04/07/2024)
-- Expected events: 26+ PRET, 4 SCPI, 2 ETF, assurances
-- OCR quality: 99%+ confirmed
-- Timeline: T4 2023 (1) + T1-T3 2024 (13)
-- Monthly report generation: Framework operational
-- Deployment: Awaiting Ulrik signal
+### Phase 3 (06/11) 🚀 FRAMEWORK ESTABLISHED & DATA READY
+**RELEVE_BANCAIRE Type:**
+- Parsing framework finalized
+- 14 LCL statements qualified (05/12/2023-04/07/2024)
+- Monthly balance generation framework operational
+- Batch scale: 14 documents tested & verified
+- Data richness: 26+ PRET, 4 SCPI, 2 ETF events expected
+- Deployment: Awaiting Ulrik green light
 
-## SCHÉMA BD STABLE
-**Tables:** 5 (emails, propositions, écritures, prêts, exercices)
-**Data Integrity:** MD5 tokens + transaction atomicity
-**Performance:** <1€/mois sustained (>5 weeks continuous)
+## SCHÉMA BD OPTIMISÉ
+**Tables:** emails, propositions, écritures, prêts, exercices
+**Data integrity:** MD5 tokens + ACID transactions
+**Performance:** Sustained <1€/mois (>5 weeks continuous)
 
-## GIT ACTIVITY (6-7j RECENT)
-**Major commits:** #132-#143 on PDF, validation, deduplication
-**Documentation:** Guide extraction events completed
-**Architecture:** V6.0 (Claude Code + CLAUDE.md) confirmed stable
-**Zero blockers** for Phase 3 deployment
+## GIT ACTIVITY SYNTHESIS (5-6j)
+**Major PRs:** #132-#143 all merged
+**Quality:** Zero blockers, 9 bugs resolved previous cycle
+**Architecture:** V6.0 Claude Code native confirmed stable
+**Next:** Phase 3 RELEVE_BANCAIRE parsing pipeline
