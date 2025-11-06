@@ -61,7 +61,7 @@ class WorkflowEvenements:
         auto_detect: bool = True
     ) -> Dict:
         """
-        Traite un PDF complet: extraction → création → détection
+        Traite un PDF complet: analyse → validation → extraction → création → détection
 
         Args:
             pdf_path: Chemin vers le PDF
@@ -76,6 +76,8 @@ class WorkflowEvenements:
                 - erreurs: Nombre d'erreurs
                 - types_detectes: Nombre de types détectés
                 - ids_crees: Liste des IDs créés
+                - periode_document: Période détectée
+                - exercice_valide: Boolean
         """
         print()
         print("=" * 80)
@@ -83,12 +85,75 @@ class WorkflowEvenements:
         print("=" * 80)
         print()
 
-        # ÉTAPE 1: EXTRACTION
-        print("📄 ÉTAPE 1/3: EXTRACTION DU PDF")
+        # ÉTAPE 0: ANALYSE DU DOCUMENT
+        print("🔍 ÉTAPE 0/4: ANALYSE DU DOCUMENT")
         print("-" * 80)
 
         extracteur = ExtracteurPDF(pdf_path, email_metadata)
-        operations = extracteur.extraire_evenements()
+        analyse = extracteur.analyser_document()
+
+        # Récupérer l'exercice comptable en cours
+        from sqlalchemy import text
+        result = self.session.execute(text("""
+            SELECT date_debut, date_fin, statut
+            FROM exercices_comptables
+            WHERE statut = 'OUVERT'
+            ORDER BY date_debut DESC
+            LIMIT 1
+        """))
+        exercice = result.fetchone()
+
+        if not exercice:
+            print("⚠️  Aucun exercice comptable ouvert")
+            return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
+                    'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
+                    'periode_document': f"{analyse.get('date_debut')} → {analyse.get('date_fin')}",
+                    'exercice_valide': False, 'message_erreur': 'Aucun exercice ouvert'}
+
+        exercice_debut = str(exercice[0])
+        exercice_fin = str(exercice[1])
+
+        print(f"   Exercice: {exercice_debut} → {exercice_fin}")
+        print(f"   Document: {analyse.get('date_debut', '?')} → {analyse.get('date_fin', '?')}")
+
+        doc_debut = analyse.get('date_debut')
+        doc_fin = analyse.get('date_fin')
+
+        if not doc_debut or not doc_fin:
+            print("⚠️  Période indéterminée - Traitement refusé")
+            return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
+                    'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
+                    'periode_document': 'Indéterminée', 'exercice_valide': False,
+                    'message_erreur': 'Période indéterminée'}
+
+        # Vérifier s'il y a un CHEVAUCHEMENT entre document et exercice
+        # Chevauchement existe si: doc_debut <= exercice_fin ET doc_fin >= exercice_debut
+        # Pas de chevauchement si: doc_fin < exercice_debut OU doc_debut > exercice_fin
+        if doc_fin < exercice_debut or doc_debut > exercice_fin:
+            print(f"❌ DOCUMENT HORS EXERCICE - Aucun chevauchement")
+            print(f"   Document: {doc_debut} → {doc_fin}")
+            print(f"   Exercice: {exercice_debut} → {exercice_fin}")
+            return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
+                    'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
+                    'periode_document': f"{doc_debut} → {doc_fin}", 'exercice_valide': False,
+                    'message_erreur': 'Document hors exercice - aucun chevauchement'}
+
+        # Document chevauche l'exercice (au moins partiellement) → OK
+        if doc_debut < exercice_debut or doc_fin > exercice_fin:
+            print(f"⚠️  Document chevauche l'exercice partiellement")
+            print(f"   Les opérations hors exercice seront filtrées automatiquement")
+        else:
+            print(f"✅ Document entièrement dans l'exercice")
+        print()
+
+        # ÉTAPE 1: EXTRACTION
+        print("📄 ÉTAPE 1/4: EXTRACTION DU PDF")
+        print("-" * 80)
+
+        operations = extracteur.extraire_evenements(
+            date_debut=exercice_debut,
+            date_fin=exercice_fin
+        )
 
         print(f"✅ {len(operations)} opérations extraites")
         print()

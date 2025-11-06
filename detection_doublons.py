@@ -82,6 +82,66 @@ class DetecteurDoublons:
         return normalized
 
     @staticmethod
+    def calculer_score_qualite(evenement: Dict) -> int:
+        """
+        Calcule un score de qualité pour un événement
+        Plus le score est élevé, plus l'événement contient de détails
+
+        Args:
+            evenement: Dictionnaire contenant au moins 'libelle'
+
+        Returns:
+            Score de qualité (0-100)
+
+        Critères:
+            - Longueur du libellé (max 40 points)
+            - Présence de codes ISIN (20 points)
+            - Présence de références numériques (10 points)
+            - Mots-clés de détail (30 points max):
+                * "au cours de" : 10 points
+                * "code" : 5 points
+                * "achat de" : 5 points
+                * "frais" : 5 points
+                * "reference" / "ref" : 5 points
+        """
+        libelle = evenement.get('libelle', '').lower()
+        score = 0
+
+        # 1. Longueur du libellé (max 40 points)
+        #    0-50 chars: 10 pts, 51-100: 20 pts, 101-150: 30 pts, 150+: 40 pts
+        longueur = len(libelle)
+        if longueur > 150:
+            score += 40
+        elif longueur > 100:
+            score += 30
+        elif longueur > 50:
+            score += 20
+        else:
+            score += 10
+
+        # 2. Présence de code ISIN (format: 2 lettres + 10 chiffres, ex: LU1781541179)
+        if re.search(r'\b[A-Z]{2}\d{10}\b', libelle.upper()):
+            score += 20
+
+        # 3. Présence de références numériques longues (8+ chiffres)
+        if re.search(r'\d{8,}', libelle):
+            score += 10
+
+        # 4. Mots-clés de détail
+        if 'au cours de' in libelle:
+            score += 10
+        if 'code' in libelle:
+            score += 5
+        if 'achat de' in libelle or 'vente de' in libelle:
+            score += 5
+        if 'frais' in libelle:
+            score += 5
+        if 'reference' in libelle or 'ref' in libelle:
+            score += 5
+
+        return min(score, 100)  # Limiter à 100
+
+    @staticmethod
     def calculer_fingerprint(evenement: Dict) -> str:
         """
         Calcule l'empreinte digitale (fingerprint) d'un événement
