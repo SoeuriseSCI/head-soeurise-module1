@@ -58,7 +58,8 @@ class ExtracteurPDF:
     Extracteur d'événements comptables depuis PDF de relevés bancaires
     """
 
-    def __init__(self, pdf_path: str, email_metadata: Optional[Dict] = None):
+    def __init__(self, pdf_path: str, email_metadata: Optional[Dict] = None,
+                 date_debut: str = None, date_fin: str = None):
         """
         Initialise l'extracteur
 
@@ -69,10 +70,14 @@ class ExtracteurPDF:
                 - email_from: Expéditeur
                 - email_date: Date de l'email
                 - email_subject: Sujet de l'email
+            date_debut: Date de début de période (format YYYY-MM-DD, optionnel)
+            date_fin: Date de fin de période (format YYYY-MM-DD, optionnel)
         """
         self.pdf_path = pdf_path
         self.email_metadata = email_metadata or {}
         self.client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+        self.date_debut = date_debut
+        self.date_fin = date_fin
 
     def extraire_evenements(self, batch_size: int = 10) -> List[Dict]:
         """
@@ -154,7 +159,14 @@ class ExtracteurPDF:
 
                 # Enrichir avec métadonnées email
                 for op in operations:
-                    # Détecter les soldes d'ouverture (non comptabilisables)
+                    # FILTRE 1: Vérifier la période
+                    date_op = op['date_operation']
+                    if self.date_debut and date_op < self.date_debut:
+                        continue  # Ignorer les opérations avant la période
+                    if self.date_fin and date_op > self.date_fin:
+                        continue  # Ignorer les opérations après la période
+
+                    # FILTRE 2: Détecter les soldes d'ouverture (non comptabilisables)
                     libelle_norm = op['libelle'].upper().strip()
                     est_solde_ouverture = any(pattern in libelle_norm for pattern in [
                         'ANCIEN SOLDE',
@@ -183,6 +195,11 @@ class ExtracteurPDF:
 
             print()
             print(f"✅ TOTAL: {len(all_evenements)} opérations extraites")
+
+            # Afficher info sur le filtrage de période
+            if self.date_debut or self.date_fin:
+                periode = f"{self.date_debut or '...'} → {self.date_fin or '...'}"
+                print(f"📅 Période appliquée: {periode}")
 
             return all_evenements
 

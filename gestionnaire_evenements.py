@@ -90,9 +90,41 @@ class GestionnaireEvenements:
         # Vérifier si doublon
         doublon = self.detecteur_doublons.verifier_doublon(self.session, data)
         if doublon:
-            print(f"⚠️  Doublon détecté: événement #{doublon['evenement_id']} "
-                  f"(phase {doublon['phase_traitement']})")
-            return None
+            # Doublon détecté - comparer les scores de qualité
+            score_nouveau = self.detecteur_doublons.calculer_score_qualite(data)
+
+            # Récupérer le libellé de l'événement existant
+            result_ancien = self.session.execute(
+                text("SELECT libelle FROM evenements_comptables WHERE id = :id"),
+                {'id': doublon['evenement_id']}
+            )
+            row_ancien = result_ancien.fetchone()
+            if row_ancien:
+                evenement_ancien = {'libelle': row_ancien[0]}
+                score_ancien = self.detecteur_doublons.calculer_score_qualite(evenement_ancien)
+
+                if score_nouveau > score_ancien:
+                    # Le nouveau est meilleur - remplacer l'ancien
+                    print(f"🔄 Doublon amélioré: #{doublon['evenement_id']} "
+                          f"(score {score_ancien}→{score_nouveau}) - Remplacement")
+
+                    # Supprimer l'ancien
+                    self.session.execute(
+                        text("DELETE FROM evenements_comptables WHERE id = :id"),
+                        {'id': doublon['evenement_id']}
+                    )
+                    self.session.commit()
+
+                    # Continuer pour créer le nouveau (pas de return)
+                else:
+                    # L'ancien est meilleur ou égal - garder l'ancien
+                    print(f"⏭️  Doublon ignoré: #{doublon['evenement_id']} "
+                          f"(score {score_nouveau}≤{score_ancien}) - Conservation ancien")
+                    return None
+            else:
+                # Événement ancien non trouvé (étrange) - ignorer le doublon
+                print(f"⚠️  Doublon détecté mais événement #{doublon['evenement_id']} introuvable")
+                return None
 
         # Normaliser le libellé
         libelle_normalise = self.detecteur_doublons.normaliser_libelle(data['libelle'])
