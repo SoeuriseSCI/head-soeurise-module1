@@ -58,19 +58,15 @@ class WorkflowEvenements:
         self,
         pdf_path: str,
         email_metadata: Optional[Dict] = None,
-        auto_detect: bool = True,
-        date_debut: str = None,
-        date_fin: str = None
+        auto_detect: bool = True
     ) -> Dict:
         """
-        Traite un PDF complet: extraction → création → détection
+        Traite un PDF complet: analyse → validation → extraction → création → détection
 
         Args:
             pdf_path: Chemin vers le PDF
             email_metadata: Métadonnées de l'email source
             auto_detect: Si True, lance la détection automatique des types
-            date_debut: Date de début de période (format YYYY-MM-DD, optionnel)
-            date_fin: Date de fin de période (format YYYY-MM-DD, optionnel)
 
         Returns:
             Dictionnaire avec résultats:
@@ -80,6 +76,8 @@ class WorkflowEvenements:
                 - erreurs: Nombre d'erreurs
                 - types_detectes: Nombre de types détectés
                 - ids_crees: Liste des IDs créés
+                - periode_document: Période détectée
+                - exercice_valide: Boolean
         """
         print()
         print("=" * 80)
@@ -87,12 +85,65 @@ class WorkflowEvenements:
         print("=" * 80)
         print()
 
-        # ÉTAPE 1: EXTRACTION
-        print("📄 ÉTAPE 1/3: EXTRACTION DU PDF")
+        # ÉTAPE 0: ANALYSE DU DOCUMENT
+        print("🔍 ÉTAPE 0/4: ANALYSE DU DOCUMENT")
         print("-" * 80)
 
-        extracteur = ExtracteurPDF(pdf_path, email_metadata, date_debut=date_debut, date_fin=date_fin)
-        operations = extracteur.extraire_evenements()
+        extracteur = ExtracteurPDF(pdf_path, email_metadata)
+        analyse = extracteur.analyser_document()
+
+        # Récupérer l'exercice comptable en cours
+        from sqlalchemy import text
+        result = self.session.execute(text("""
+            SELECT date_debut, date_fin, statut
+            FROM exercices_comptables
+            WHERE statut = 'OUVERT'
+            ORDER BY date_debut DESC
+            LIMIT 1
+        """))
+        exercice = result.fetchone()
+
+        if not exercice:
+            print("⚠️  Aucun exercice comptable ouvert")
+            return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
+                    'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
+                    'periode_document': f"{analyse.get('date_debut')} → {analyse.get('date_fin')}",
+                    'exercice_valide': False, 'message_erreur': 'Aucun exercice ouvert'}
+
+        exercice_debut = str(exercice[0])
+        exercice_fin = str(exercice[1])
+
+        print(f"   Exercice: {exercice_debut} → {exercice_fin}")
+        print(f"   Document: {analyse.get('date_debut', '?')} → {analyse.get('date_fin', '?')}")
+
+        doc_debut = analyse.get('date_debut')
+        doc_fin = analyse.get('date_fin')
+
+        if not doc_debut or not doc_fin:
+            print("⚠️  Période indéterminée - Traitement refusé")
+            return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
+                    'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
+                    'periode_document': 'Indéterminée', 'exercice_valide': False,
+                    'message_erreur': 'Période indéterminée'}
+
+        if doc_debut < exercice_debut or doc_fin > exercice_fin:
+            print(f"❌ DOCUMENT HORS EXERCICE - Refusé")
+            return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
+                    'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
+                    'periode_document': f"{doc_debut} → {doc_fin}", 'exercice_valide': False,
+                    'message_erreur': 'Document hors exercice'}
+
+        print(f"✅ Document valide")
+        print()
+
+        # ÉTAPE 1: EXTRACTION
+        print("📄 ÉTAPE 1/4: EXTRACTION DU PDF")
+        print("-" * 80)
+
+        operations = extracteur.extraire_evenements(
+            date_debut=exercice_debut,
+            date_fin=exercice_fin
+        )
 
         print(f"✅ {len(operations)} opérations extraites")
         print()
