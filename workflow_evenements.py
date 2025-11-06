@@ -58,7 +58,9 @@ class WorkflowEvenements:
         self,
         pdf_path: str,
         email_metadata: Optional[Dict] = None,
-        auto_detect: bool = True
+        auto_detect: bool = True,
+        date_debut: str = None,
+        date_fin: str = None
     ) -> Dict:
         """
         Traite un PDF complet: extraction → création → détection
@@ -67,6 +69,8 @@ class WorkflowEvenements:
             pdf_path: Chemin vers le PDF
             email_metadata: Métadonnées de l'email source
             auto_detect: Si True, lance la détection automatique des types
+            date_debut: Date de début de période (format YYYY-MM-DD, optionnel)
+            date_fin: Date de fin de période (format YYYY-MM-DD, optionnel)
 
         Returns:
             Dictionnaire avec résultats:
@@ -87,7 +91,7 @@ class WorkflowEvenements:
         print("📄 ÉTAPE 1/3: EXTRACTION DU PDF")
         print("-" * 80)
 
-        extracteur = ExtracteurPDF(pdf_path, email_metadata)
+        extracteur = ExtracteurPDF(pdf_path, email_metadata, date_debut=date_debut, date_fin=date_fin)
         operations = extracteur.extraire_evenements()
 
         print(f"✅ {len(operations)} opérations extraites")
