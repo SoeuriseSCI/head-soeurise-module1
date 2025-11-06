@@ -46,8 +46,11 @@ try:
 except:
     PDF_SUPPORT = False
 
-# pdf2image n'est plus nécessaire - Claude peut lire les PDFs nativement
-PDF2IMAGE_SUPPORT = False  # Deprecated - using Claude native PDF API
+try:
+    from pdf2image import convert_from_path
+    PDF2IMAGE_SUPPORT = True  # Utilisé par parseurs bilan/prêts (événements rares)
+except:
+    PDF2IMAGE_SUPPORT = False
 
 from typing import Tuple, Optional, List
 
