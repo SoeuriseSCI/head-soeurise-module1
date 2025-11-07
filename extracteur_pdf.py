@@ -334,41 +334,39 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                     },
                     {
                         "type": "text",
-                        "text": """Analyse ce PDF de relevés bancaires et extrais TOUTES les opérations bancaires individuelles de TOUTES les pages.
+                        "text": """Tu es un extracteur d'opérations bancaires. Ton objectif est d'extraire TOUTES les opérations bancaires de CHAQUE page de ce relevé bancaire.
 
-Pour CHAQUE opération, extrais:
-- date_operation (format YYYY-MM-DD)
-- libelle (texte complet de l'opération, regroupé sur une ligne)
+INSTRUCTIONS CRITIQUES:
+1. LIS ATTENTIVEMENT CHAQUE PAGE du début à la fin
+2. CHAQUE page contient généralement 10-25 opérations bancaires
+3. Ne t'arrête PAS tant que tu n'as pas lu la DERNIÈRE page
+4. Si tu vois moins de 10 opérations dans un relevé de plusieurs pages, tu as probablement manqué des pages
+
+Pour CHAQUE opération trouvée, extrais:
+- date_operation (format YYYY-MM-DD obligatoire)
+- libelle (texte complet sur une ligne)
 - montant (nombre décimal positif)
-- type_operation (DEBIT ou CREDIT)
+- type_operation (DEBIT ou CREDIT selon la colonne)
 
-IMPORTANT:
-- Parcours TOUTES les pages du document, pas seulement les premières
-- Certaines opérations s'étalent sur plusieurs lignes (ex: prêt avec numéro de dossier) → Regroupe-les
-- Utilise la colonne DEBIT ou CREDIT pour déterminer le type
-- Ignore les en-têtes, totaux, soldes reportés, et lignes de description
-- Convertis TOUTES les dates en format YYYY-MM-DD
-- Si l'année n'est pas mentionnée, déduis-la du contexte du relevé
+RÈGLES:
+- Regroupe les opérations multi-lignes (ex: "PRET IMMOBILIER ECH 15/01/24 DOSSIER NO 5009736")
+- Ignore: en-têtes, totaux, soldes d'ouverture/clôture, numéros de relevé
+- Convertis les dates au format YYYY-MM-DD (déduis l'année du contexte si absente)
+- Continue jusqu'à la dernière page, même si tu penses avoir fini
 
-Retourne un JSON valide avec cette structure:
+FORMAT DE SORTIE (JSON uniquement, sans texte avant/après):
 {
   "operations": [
     {
       "date_operation": "2024-01-15",
-      "libelle": "PRLV SEPA COVEA RISKS",
+      "libelle": "PRLV SEPA CACI NON LIFE LIMITED",
       "montant": 87.57,
       "type_operation": "DEBIT"
-    },
-    {
-      "date_operation": "2024-01-20",
-      "libelle": "VIR SEPA RECU DE ULRIK BERGSTEN",
-      "montant": 1500.00,
-      "type_operation": "CREDIT"
     }
   ]
 }
 
-NE retourne QUE le JSON, sans texte avant ou après."""
+ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de terminer."""
                     }
                 ]
             }]
@@ -412,7 +410,7 @@ NE retourne QUE le JSON, sans texte avant ou après."""
 
         return operations
 
-    def _diviser_pdf_en_chunks(self, max_pages_per_chunk: int = 10) -> List[str]:
+    def _diviser_pdf_en_chunks(self, max_pages_per_chunk: int = 5) -> List[str]:
         """
         Divise un PDF en plusieurs chunks de pages (fichiers temporaires)
 
@@ -473,7 +471,7 @@ NE retourne QUE le JSON, sans texte avant ou après."""
         Extrait tous les événements du PDF via l'API PDF native de Claude
 
         STRATÉGIE ANTI-TRONCATURE:
-        - Si PDF > 10 pages: Division en chunks de 10 pages
+        - Si PDF > 5 pages: Division en chunks de 5 pages
         - Extraction séparée de chaque chunk
         - Fusion des résultats + déduplication
 
@@ -493,8 +491,8 @@ NE retourne QUE le JSON, sans texte avant ou après."""
         print(f"📄 Extraction du PDF: {os.path.basename(self.pdf_path)}")
 
         try:
-            # Diviser le PDF en chunks si nécessaire (10 pages pour meilleure extraction)
-            chunk_paths = self._diviser_pdf_en_chunks(max_pages_per_chunk=10)
+            # Diviser le PDF en chunks si nécessaire (5 pages pour extraction complète garantie)
+            chunk_paths = self._diviser_pdf_en_chunks(max_pages_per_chunk=5)
             total_chunks = len(chunk_paths)
 
             # Extraire chaque chunk
