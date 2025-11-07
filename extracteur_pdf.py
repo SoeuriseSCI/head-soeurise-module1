@@ -319,7 +319,7 @@ NE retourne QUE le JSON, sans texte avant ou après."""
 
         response = self.client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=16000,  # Suffisant pour ~10 pages de relevés
+            max_tokens=64000,  # Augmenté pour éviter troncature (jusqu'à 30 opérations/chunk)
             messages=[{
                 "role": "user",
                 "content": [
@@ -389,12 +389,15 @@ NE retourne QUE le JSON, sans texte avant ou après."""
         data = json.loads(json_text)
         operations = data.get('operations', [])
 
+        # Afficher le nombre d'opérations extraites pour TOUS les chunks
         if chunk_num > 1:
+            print(f"   ✓ Chunk {chunk_num}/{total_chunks}: {len(operations)} opérations extraites")
+        else:
             print(f"   ✓ Chunk {chunk_num}/{total_chunks}: {len(operations)} opérations extraites")
 
         return operations
 
-    def _diviser_pdf_en_chunks(self, max_pages_per_chunk: int = 15) -> List[str]:
+    def _diviser_pdf_en_chunks(self, max_pages_per_chunk: int = 10) -> List[str]:
         """
         Divise un PDF en plusieurs chunks de pages (fichiers temporaires)
 
@@ -455,7 +458,7 @@ NE retourne QUE le JSON, sans texte avant ou après."""
         Extrait tous les événements du PDF via l'API PDF native de Claude
 
         STRATÉGIE ANTI-TRONCATURE:
-        - Si PDF > 15 pages: Division en chunks de 15 pages
+        - Si PDF > 10 pages: Division en chunks de 10 pages
         - Extraction séparée de chaque chunk
         - Fusion des résultats + déduplication
 
@@ -475,8 +478,8 @@ NE retourne QUE le JSON, sans texte avant ou après."""
         print(f"📄 Extraction du PDF: {os.path.basename(self.pdf_path)}")
 
         try:
-            # Diviser le PDF en chunks si nécessaire
-            chunk_paths = self._diviser_pdf_en_chunks(max_pages_per_chunk=15)
+            # Diviser le PDF en chunks si nécessaire (10 pages pour meilleure extraction)
+            chunk_paths = self._diviser_pdf_en_chunks(max_pages_per_chunk=10)
             total_chunks = len(chunk_paths)
 
             # Extraire chaque chunk
