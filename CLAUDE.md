@@ -185,23 +185,28 @@ Bash git add . && git commit -m "Description" && git push origin main
 
 ## 🚨 RÈGLES CRITIQUES - DÉPLOIEMENT RENDER
 
-### ⚠️ Render ne déploie QUE depuis `main`
+### ⚠️ Déploiement = MANUEL par Ulrik UNIQUEMENT
 
-**IMPORTANT** : Render.com ne déploie **PAS automatiquement** depuis les branches de développement.
+**IMPORTANT** : Le déploiement sur Render.com est **TOUJOURS MANUEL** et fait par **ULRIK UNIQUEMENT**.
 
 **Workflow correct :**
 1. ✅ Développer sur branche `claude/xxx`
 2. ✅ Commit et push vers la branche
-3. ✅ **CRÉER UNE PR** vers `main`
-4. ✅ **MERGER LA PR** vers `main` ← **OBLIGATOIRE**
-5. ✅ Render détecte le push sur `main` et déploie automatiquement (~2-3 min)
+3. ✅ **CRÉER UNE PR** vers `main` (Claude Code fait ça)
+4. ✅ **MERGER LA PR** vers `main` (Claude Code fait ça)
+5. ⏸️ **ATTENDRE qu'Ulrik déclenche le déploiement manuel** sur Render
+6. ✅ Code en production après déploiement manuel (~2-3 min)
 
-**Erreur fréquente :**
-❌ "Render déploiera automatiquement" après un push sur branche → **FAUX**
-❌ Dire que les changements sont en production sans merger → **FAUX**
+**Erreurs INTERDITES :**
+❌ "Render déploiera automatiquement" → **FAUX - déploiement MANUEL**
+❌ "Les changements sont en production" après merge → **FAUX - attendre déploiement manuel**
+❌ "Je vais déclencher le déploiement" → **FAUX - seul Ulrik peut le faire**
 
 **Règle d'or :**
-> **Pas de merge vers `main` = Pas de déploiement = Code pas en production**
+> **Merge vers `main` ≠ Production. Production = Merge + Déploiement manuel Ulrik.**
+
+**Dire à Ulrik :**
+> "Changements mergés vers `main`. **Prêt pour déploiement manuel sur Render.**"
 
 ---
 
