@@ -65,6 +65,7 @@ class ExtracteurPDF:
         self.pdf_path = pdf_path
         self.email_metadata = email_metadata or {}
         self.client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+        self._analyse_cache = None  # Cache pour éviter double analyse du document
 
     def _lire_pdf_base64(self) -> str:
         """
@@ -185,7 +186,7 @@ NE retourne QUE le JSON, sans texte avant ou après."""
 
     def analyser_document(self) -> Dict:
         """
-        Analyse le document pour extraire le type et la période couverte
+        Analyse le document pour extraire le type, la période ET les sections
         Utilise l'API PDF native de Claude
 
         Returns:
@@ -194,6 +195,7 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                 - date_debut: str (format YYYY-MM-DD)
                 - date_fin: str (format YYYY-MM-DD)
                 - description: str (résumé)
+                - sections: dict (ex: {"releves": [1, 20], "avis_vm": [21, 41]})
         """
         if not self.client:
             raise ValueError("ANTHROPIC_API_KEY non définie")
@@ -226,32 +228,46 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                             "type": "text",
                             "text": """Analyse ce document comptable PDF et extrais les informations suivantes:
 
-1. TYPE DE DOCUMENT:
+1. TYPE DE DOCUMENT PRINCIPAL:
    - releve_bancaire
    - facture_scpi
    - tableau_amortissement
    - facture_comptable
    - autre
 
-2. PÉRIODE COUVERTE:
-   - Date de PREMIÈRE opération (ou date de début si mentionnée)
-   - Date de DERNIÈRE opération (ou date de fin si mentionnée)
-   - Sois PRÉCIS : regarde TOUTES les pages, pas seulement les 2 premières
+2. PÉRIODE COUVERTE (pour les relevés bancaires):
+   - Date de PREMIÈRE opération
+   - Date de DERNIÈRE opération
+   - Analyse TOUTES les pages
 
-3. DESCRIPTION:
-   - Courte description du contenu (1 phrase)
+3. SECTIONS DU DOCUMENT:
+   CRITIQUE: Identifie les différentes sections du PDF par numéro de page.
 
-IMPORTANT:
-- Pour les relevés bancaires qui couvrent plusieurs mois, donne la période COMPLÈTE
-- Ne te limite PAS aux premières pages, analyse TOUT le document
-- Les trimestres sont: T1 (jan-fév-mars), T2 (avr-mai-juin), T3 (juil-août-sept), T4 (oct-nov-déc)
+   Pour chaque type de contenu, indique:
+   - page_debut: première page de cette section
+   - page_fin: dernière page de cette section
 
-Retourne un JSON avec cette structure exacte:
+   Types de sections à détecter:
+   - "releves_bancaires": Pages avec colonnes (Date | Libellé | Débit | Crédit)
+   - "avis_operations_vm": Avis d'achat/vente de titres (ETF, actions)
+   - "tableaux_amortissement": Tableaux de prêt avec échéances
+   - "factures": Factures diverses (comptable, LEI, etc.)
+   - "autres": Autre contenu
+
+4. DESCRIPTION:
+   - Courte description du contenu global (1 phrase)
+
+EXEMPLE DE RÉPONSE:
 {
   "type_document": "releve_bancaire",
-  "date_debut": "2024-01-01",
-  "date_fin": "2024-09-30",
-  "description": "Relevés bancaires LCL T1-T3 2024"
+  "date_debut": "2023-12-05",
+  "date_fin": "2024-10-04",
+  "description": "Relevés LCL + avis d'opération sur valeurs mobilières",
+  "sections": {
+    "releves_bancaires": {"page_debut": 1, "page_fin": 20},
+    "avis_operations_vm": {"page_debut": 21, "page_fin": 38},
+    "factures": {"page_debut": 39, "page_fin": 41}
+  }
 }
 
 NE retourne QUE le JSON, sans texte avant ou après."""
@@ -278,6 +294,17 @@ NE retourne QUE le JSON, sans texte avant ou après."""
             print(f"   Type: {data.get('type_document', 'inconnu')}")
             print(f"   Période: {data.get('date_debut', '?')} → {data.get('date_fin', '?')}")
             print(f"   Description: {data.get('description', '')}")
+
+            # Afficher les sections détectées
+            sections = data.get('sections', {})
+            if sections:
+                print(f"   📑 Sections détectées:")
+                for section_type, pages in sections.items():
+                    if isinstance(pages, dict):
+                        print(f"      • {section_type}: pages {pages.get('page_debut', '?')}-{pages.get('page_fin', '?')}")
+
+            # Mettre en cache pour éviter double analyse
+            self._analyse_cache = data
 
             return data
 
@@ -410,12 +437,14 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
 
         return operations
 
-    def _diviser_pdf_en_chunks(self, max_pages_per_chunk: int = 5) -> List[str]:
+    def _diviser_pdf_en_chunks(self, max_pages_per_chunk: int = 5, page_debut: int = None, page_fin: int = None) -> List[str]:
         """
         Divise un PDF en plusieurs chunks de pages (fichiers temporaires)
 
         Args:
             max_pages_per_chunk: Nombre maximum de pages par chunk
+            page_debut: Première page à inclure (1-based, optionnel)
+            page_fin: Dernière page à inclure (1-based, optionnel)
 
         Returns:
             Liste des chemins des PDFs temporaires créés
@@ -429,16 +458,38 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
                 pdf_reader = PyPDF2.PdfReader(f)
                 total_pages = len(pdf_reader.pages)
 
-                # Si petit PDF (≤15 pages), pas besoin de diviser
-                if total_pages <= max_pages_per_chunk:
-                    return [self.pdf_path]
+                # Déterminer la plage de pages à traiter
+                first_page = (page_debut - 1) if page_debut else 0  # Convert 1-based to 0-based
+                last_page = page_fin if page_fin else total_pages
+                pages_to_process = last_page - first_page
 
-                print(f"📄 PDF de {total_pages} pages → Division en chunks de {max_pages_per_chunk} pages")
+                if page_debut or page_fin:
+                    print(f"📄 PDF: extraction pages {page_debut or 1}-{page_fin or total_pages} (sur {total_pages} totales)")
 
-                # Créer les chunks
+                # Si petit PDF ou petite section, pas besoin de diviser
+                if pages_to_process <= max_pages_per_chunk:
+                    # Créer un PDF temporaire avec seulement les pages demandées
+                    if page_debut or page_fin:
+                        pdf_writer = PyPDF2.PdfWriter()
+                        for page_num in range(first_page, last_page):
+                            pdf_writer.add_page(pdf_reader.pages[page_num])
+
+                        temp_file = tempfile.NamedTemporaryFile(
+                            delete=False,
+                            suffix=f'_pages_{page_debut or 1}-{page_fin or total_pages}.pdf'
+                        )
+                        with open(temp_file.name, 'wb') as out_f:
+                            pdf_writer.write(out_f)
+                        return [temp_file.name]
+                    else:
+                        return [self.pdf_path]
+
+                print(f"📄 PDF pages {page_debut or 1}-{page_fin or total_pages} → Division en chunks de {max_pages_per_chunk} pages")
+
+                # Créer les chunks pour la plage spécifiée
                 chunk_paths = []
-                for start_page in range(0, total_pages, max_pages_per_chunk):
-                    end_page = min(start_page + max_pages_per_chunk, total_pages)
+                for start_page in range(first_page, last_page, max_pages_per_chunk):
+                    end_page = min(start_page + max_pages_per_chunk, last_page)
 
                     # Créer un nouveau PDF avec ce chunk
                     pdf_writer = PyPDF2.PdfWriter()
@@ -491,8 +542,32 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
         print(f"📄 Extraction du PDF: {os.path.basename(self.pdf_path)}")
 
         try:
+            # Utiliser l'analyse en cache ou analyser si pas déjà fait
+            if self._analyse_cache:
+                analyse = self._analyse_cache
+            else:
+                analyse = self.analyser_document()
+
+            sections = analyse.get('sections', {})
+
+            # Déterminer les pages à extraire (uniquement les relevés bancaires)
+            page_debut = None
+            page_fin = None
+
+            if 'releves_bancaires' in sections:
+                releves = sections['releves_bancaires']
+                page_debut = releves.get('page_debut')
+                page_fin = releves.get('page_fin')
+                print(f"📋 Extraction ciblée: pages {page_debut}-{page_fin} (relevés bancaires uniquement)")
+            else:
+                print(f"⚠️  Aucune section 'releves_bancaires' détectée - extraction complète du PDF")
+
             # Diviser le PDF en chunks si nécessaire (5 pages pour extraction complète garantie)
-            chunk_paths = self._diviser_pdf_en_chunks(max_pages_per_chunk=5)
+            chunk_paths = self._diviser_pdf_en_chunks(
+                max_pages_per_chunk=5,
+                page_debut=page_debut,
+                page_fin=page_fin
+            )
             total_chunks = len(chunk_paths)
 
             # Extraire chaque chunk
