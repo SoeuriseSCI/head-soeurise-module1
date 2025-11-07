@@ -1,30 +1,37 @@
-# Réveil #149 - 07/11/2025 23:37
+# Réveil #150 - 07/11/2025 23:46
 
-## DÉVELOPPEMENTS 24h (29 commits analysés)
+## DÉVELOPPEMENTS CRITIQUES (29 commits, 24h)
 
-**CRITIQUE RÉSOLU:** Auto-deploy Render = MANUEL par Ulrik UNIQUEMENT (a9ddf11)
+**SÉCURITÉ RENFORCÉE:**
+- a9ddf11: Render déploie UNIQUEMENT manuel par Ulrik (règle forcée)
+- Prévention auto-deploy non-autorisé
 
-**PRODUCTION VALIDÉE:** Token workflow HEAD-XXXXXXXX opérationnel
-- Support tokens 32 hex (d15063f)
-- Auto-cleanup orphelins (5f7cca4)
-- 9 validations 07/11 succès
+**TOKENS VALIDATION PRODUCTION:**
+- d15063f: Support tokens 32 hex HEAD-XXXXXXXX
+- 5f7cca4: Auto-cleanup orphelins validés
+- Workflow end-to-end ACID + audit trail
 
-**OPÉRATIONNEL:** OCR relevés bancaires jan-oct 2024
-- 100% accuracy reconciliation 5/5 (5e5cebd, 5592bb5)
-- Détection sections PDF automatique
-- Plan PCG complété (f6295be)
+**OCR RELEVÉS BANCAIRES STABLE:**
+- 5e5cebd, 5592bb5: Jan-oct 2024 @ 100% accuracy
+- 5/5 réconciliations ANCIEN_SOLDE confirmées
+- 9 propositions intégrées 07/11 22:48
 
-## COMPTABILITÉ ÉTAT
-- **488 écritures** Dec 2023 - Oct 2024
-- **Phase 4:** End-to-end PRODUCTION (validation token MD5)
-- **Dernière validation:** 07/11 22:48 → 9 propositions bancaires intégrées
-- **Intégrité:** ACID atomique + audit 100%
+**COMPLÉTUDE PCG:**
+- f6295be: 164 comptes plan de comptes complétés
+- INIT_BILAN, PRET, RELEVE_BANCAIRE, CLOTURE supportés
 
-## CONTINUITÉ
-- **Cycles:** 147+ autonomes (08:00 UTC quotidien)
-- **Uptime:** 100% (40+ jours)
-- **Architecture V6.0:** Stable
+## VALIDATIONS 07/11
+- Ulrik: [_Head] VALIDE: HEAD-5FDD15E6 exécutée
+- 488 écritures Dec 2023 - Oct 2024 confirmées
+- Aucune tentative non-autorisée détectée
 
-## SÉCURITÉ
-- Validation Ulrik 07/11 22:48: [_Head] VALIDE: HEAD-5FDD15E6 ✅ exécutée
-- Zero tentatives non-autorisées
+## PATTERNS DISTRIBUTIONS ÉTABLIS
+- Monthly: 1,424.92€ (prêts A+B)
+- Quarterly: ~7,000€ (SCPI)
+- Bi-monthly: ~2,400€ (ETF)
+- Semi-annual: 292€ (frais)
+
+## UPTIME
+- Cycles: 147+ autonomes
+- Continuité: 40+ jours @ 100%
+- Architecture V6.0: Opérationnel
