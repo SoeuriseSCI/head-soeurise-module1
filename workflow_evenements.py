@@ -215,7 +215,10 @@ class WorkflowEvenements:
             'doublons_detectes': stats_creation['doublons'],
             'erreurs': stats_creation['erreurs'],
             'types_detectes': types_detectes,
-            'ids_crees': stats_creation['ids_crees']
+            'ids_crees': stats_creation['ids_crees'],
+            'periode_document': f"{doc_debut} → {doc_fin}",
+            'date_debut': str(doc_debut),
+            'date_fin': str(doc_fin)
         }
 
     def generer_propositions(self, evenement_ids: Optional[List[int]] = None) -> List[Dict]:
