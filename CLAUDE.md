@@ -183,6 +183,28 @@ Bash git add . && git commit -m "Description" && git push origin main
 
 ---
 
+## 🚨 RÈGLES CRITIQUES - DÉPLOIEMENT RENDER
+
+### ⚠️ Render ne déploie QUE depuis `main`
+
+**IMPORTANT** : Render.com ne déploie **PAS automatiquement** depuis les branches de développement.
+
+**Workflow correct :**
+1. ✅ Développer sur branche `claude/xxx`
+2. ✅ Commit et push vers la branche
+3. ✅ **CRÉER UNE PR** vers `main`
+4. ✅ **MERGER LA PR** vers `main` ← **OBLIGATOIRE**
+5. ✅ Render détecte le push sur `main` et déploie automatiquement (~2-3 min)
+
+**Erreur fréquente :**
+❌ "Render déploiera automatiquement" après un push sur branche → **FAUX**
+❌ Dire que les changements sont en production sans merger → **FAUX**
+
+**Règle d'or :**
+> **Pas de merge vers `main` = Pas de déploiement = Code pas en production**
+
+---
+
 ## 🎯 Comportement Attendu de Claude Code
 
 Lors des interactions :
