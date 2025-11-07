@@ -278,17 +278,41 @@ class IntegratorModule2:
 
                             self.emails_traites += 1
 
+                        # NOUVEAU : Générer les propositions comptables automatiquement
+                        total_propositions = 0
+                        if total_evenements_crees > 0:
+                            try:
+                                print()
+                                print("📝 GÉNÉRATION AUTOMATIQUE DES PROPOSITIONS")
+                                print("-" * 80)
+
+                                # Créer une nouvelle instance du workflow pour générer propositions
+                                workflow = WorkflowEvenements(self.database_url, phase=1)
+                                propositions = workflow.generer_propositions()
+                                total_propositions = len(propositions)
+
+                                print(f"✅ {total_propositions} propositions générées")
+                                print()
+
+                                self.propositions_generees += total_propositions
+
+                            except Exception as e:
+                                self.erreurs.append(f"Erreur génération propositions: {str(e)[:200]}")
+                                print(f"❌ Erreur génération propositions: {e}")
+
                         # Ajouter résultats
                         if total_evenements_crees > 0:
                             resultats['details'].append({
                                 'type': type_evt.value,
-                                'propositions': 0,  # Phase 1 : pas de propositions automatiques
+                                'propositions': total_propositions,
                                 'status': 'extraction_reussie',
-                                'message': f'{total_operations} opérations extraites, {total_evenements_crees} événements créés, {total_types_detectes} types détectés (Phase 1)',
+                                'message': f'{total_operations} opérations extraites, {total_evenements_crees} événements créés, {total_types_detectes} types détectés, {total_propositions} propositions générées',
                                 'operations_extraites': total_operations,
                                 'evenements_crees': total_evenements_crees,
                                 'types_detectes': total_types_detectes
                             })
+
+                            resultats['propositions_generees'] += total_propositions
                         else:
                             self.erreurs.append("Aucun événement créé depuis les relevés bancaires")
                             resultats['details'].append({

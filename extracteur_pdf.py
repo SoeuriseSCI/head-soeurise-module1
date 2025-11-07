@@ -408,6 +408,7 @@ NE retourne QUE le JSON, sans texte avant ou après."""
             # Enrichir et filtrer les opérations
             all_evenements = []
             nb_filtres_periode = 0
+            nb_soldes_ouverture = 0
 
             for op in operations:
                 # FILTRE 1: Vérifier la période
@@ -419,7 +420,7 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                     nb_filtres_periode += 1
                     continue  # Ignorer les opérations après la période
 
-                # FILTRE 2: Détecter les soldes d'ouverture (non comptabilisables)
+                # FILTRE 2: Exclure les soldes d'ouverture (non comptabilisables)
                 libelle_norm = op['libelle'].upper().strip()
                 est_solde_ouverture = any(pattern in libelle_norm for pattern in [
                     'ANCIEN SOLDE',
@@ -430,12 +431,16 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                     'REPORT SOLDE'
                 ])
 
+                # SKIP les soldes d'ouverture - ne pas les créer en BD
+                if est_solde_ouverture:
+                    nb_soldes_ouverture += 1
+                    continue
+
                 evenement = {
                     'date_operation': op['date_operation'],
                     'libelle': op['libelle'],
                     'montant': float(op['montant']),
                     'type_operation': op['type_operation'],
-                    'est_solde_ouverture': est_solde_ouverture,
                     'email_id': self.email_metadata.get('email_id'),
                     'email_from': self.email_metadata.get('email_from', 'pdf_manuel'),
                     'email_date': self.email_metadata.get('email_date', datetime.now()),
@@ -445,8 +450,13 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                 all_evenements.append(evenement)
 
             print(f"✅ TOTAL: {len(all_evenements)} événements après filtrage")
-            if nb_filtres_periode > 0:
-                print(f"   ({nb_filtres_periode} opérations hors période exclues)")
+            if nb_filtres_periode > 0 or nb_soldes_ouverture > 0:
+                filtres = []
+                if nb_filtres_periode > 0:
+                    filtres.append(f"{nb_filtres_periode} opérations hors période")
+                if nb_soldes_ouverture > 0:
+                    filtres.append(f"{nb_soldes_ouverture} soldes d'ouverture")
+                print(f"   ({' + '.join(filtres)} exclus)")
 
             # Afficher info sur le filtrage de période
             if date_debut or date_fin:
