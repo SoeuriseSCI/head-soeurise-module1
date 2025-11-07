@@ -284,10 +284,13 @@ class IntegratorModule2:
                         total_propositions = 0
                         if total_evenements_crees > 0:
                             try:
+                                import sys
                                 print()
                                 print("📝 GÉNÉRATION AUTOMATIQUE DES PROPOSITIONS")
                                 print("-" * 80)
                                 print(f"🔍 IDs événements créés: {all_ids_crees}")
+                                print(f"🔍 Total événements: {total_evenements_crees}")
+                                sys.stdout.flush()
 
                                 # Créer une nouvelle instance du workflow pour générer propositions
                                 workflow = WorkflowEvenements(self.database_url, phase=1)
@@ -297,12 +300,17 @@ class IntegratorModule2:
 
                                 print(f"✅ {total_propositions} propositions générées")
                                 print()
+                                sys.stdout.flush()
 
                                 self.propositions_generees += total_propositions
 
                             except Exception as e:
+                                import sys
                                 self.erreurs.append(f"Erreur génération propositions: {str(e)[:200]}")
                                 print(f"❌ Erreur génération propositions: {e}")
+                                sys.stdout.flush()
+                                import traceback
+                                traceback.print_exc()
 
                         # Ajouter résultats
                         if total_evenements_crees > 0:

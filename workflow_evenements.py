@@ -173,20 +173,29 @@ class WorkflowEvenements:
         # ÉTAPE 3: DÉTECTION DES TYPES
         types_detectes = 0
         if auto_detect and stats_creation['crees'] > 0:
+            import sys
             print("🔍 ÉTAPE 3/3: DÉTECTION DES TYPES D'ÉVÉNEMENTS")
             print("-" * 80)
+            sys.stdout.flush()
 
             for evt_id in stats_creation['ids_crees']:
-                type_evt = self.gestionnaire.detecter_type_evenement(evt_id)
-                if type_evt:
-                    types_detectes += 1
-                    print(f"✅ Événement #{evt_id}: {type_evt}")
-                    # Marquer la phase de traitement
-                    self.gestionnaire.marquer_phase_traitement(evt_id, self.phase)
+                try:
+                    type_evt = self.gestionnaire.detecter_type_evenement(evt_id)
+                    if type_evt:
+                        types_detectes += 1
+                        print(f"✅ Événement #{evt_id}: {type_evt}")
+                        sys.stdout.flush()
+                        # Marquer la phase de traitement
+                        self.gestionnaire.marquer_phase_traitement(evt_id, self.phase)
+                except Exception as e:
+                    print(f"⚠️  Erreur détection événement #{evt_id}: {e}")
+                    sys.stdout.flush()
+                    continue
 
             print()
             print(f"✅ Types détectés: {types_detectes}/{stats_creation['crees']}")
             print()
+            sys.stdout.flush()
 
         # RÉSUMÉ
         print("=" * 80)
