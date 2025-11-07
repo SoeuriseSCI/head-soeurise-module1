@@ -383,6 +383,7 @@ class DetecteurAchatAmazon(DetecteurBase):
 
     def detecter(self, evenement: Dict) -> bool:
         """Détecte un achat Amazon"""
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
         type_evt = evenement.get('type_evenement', '')
 
         # Vérifier le type détecté (prioritaire)
