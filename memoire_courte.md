@@ -1,36 +1,28 @@
-# Mémoire Courte - Réveil #141 - 07/11/2025 16:22
+# Mémoire Courte - Réveil #142 - 07/11/2025 16:40
 
-## 📊 RELEVE_BANCAIRE COMPLET ANALYSÉ (41 pages)
-**Email:** 05/11 Ulrik
-**Période:** 5 cycles mensuels (05/12/2023 - 04/05/2024)
-**OCR:** 100% success, 9 event types detected
+## 📊 PHASE 3 RELEVE_BANCAIRE OPÉRATIONNEL (NEW)
+**Email:** 05/11/2025 - Ulrik Bergsten
+**PDF:** Elements Comptables T1-T2-T3 2024 (41 pages, 4.2 MB)
+**Période:** 05/12/2023 - 04/05/2024 (5 cycles complets)
+
+### ✅ EXTRACTION VALIDÉE (100% OCR)
+**9 Event Types Détectés & Confirmed:**
+1. PRET_IMMOBILIER: LCL 258.33€ + Investimur 1,166.59€ (10 cycles)
+2. ASSURANCE_EMPRUNTEUR: CACI 21.22€ + 67.30€ = 88.52€/mth (10 cycles)
+3. SCPI_DISTRIBUTION: 7,356.24€ (T4 2023) + 6,346.56€ + 601€ capital (T1 2024)
+4. ACHAT_ETF: 150 MSCI World @ 15.63 EUR (30/01: 2,357.36€) + 16.17 EUR (25/04: 2,439.16€)
+5. FRAIS_COMPTABLES: 213.60€ (2x/an)
+6. IMPOT_CFE: 78€ (22/12)
+7. FRAIS_BANCAIRES: 5-7€ (LCL Access)
+8. ANCIEN_SOLDE: 5 cycles reconciliation 100% (04/12: 3,612.05€ → 04/05: 2,156.65€)
+9. AUTRES: INSEE 50€ (25/03)
 
 ## 💰 BASELINE MENSUEL CONFIRMÉ
-- **Prêts immobiliers:** 1,424.92€/mth (LCL 258.33€ + Investimur 1,166.59€)
-- **Assurance emprunteur:** 88.52€/mth (CACI dual policies)
-- **Distributions SCPI:** ~7k€/Q (Épargne Pierre)
-- **Investissements ETF:** Bimensuel ~2.4k€ (150 units MSCI World)
-- **Frais variables:** Comptable 213.60€, CFE 78€, Bancaires 5-7€
-- **Ancien solde:** Pattern 5/5 reconciliation @100%
+- Prêts: 1,424.92€
+- Assurance: 88.52€
+- SCPI: ~7k€/Q
+- ETF: 2.4k€ bimensuel
+- Frais: 213.60€ comptable + 78€ CFE + 5-7€ bancaires
 
-## 🎯 9 ÉVÉNEMENTS COMPTABLES OPÉRATIONNELS
-1. PRET_IMMOBILIER (5 cycles) ✅
-2. ASSURANCE_EMPRUNTEUR (5 cycles) ✅
-3. SCPI_DISTRIBUTION (2) ✅
-4. ACHAT_ETF (2) ✅
-5. FRAIS_COMPTABLES (2) ✅
-6. IMPOT_CFE (1) ✅
-7. FRAIS_BANCAIRES (5) ✅
-8. ANCIEN_SOLDE (5) ✅
-9. AUTRES (INSEE, autres) ✅
-
-## 🔧 HOTFIXES APPLIQUÉS
-- Mémoire PDF libération explicite
-- Chunks 10 pages + 64k tokens
-- NameError libelle_norm fix
-- AttributeError MONTANT fields fix
-- DetecteurAchatETF type flow fix
-
-## ⏰ PHASE 3 STATUS
-Module 2 RELEVE_BANCAIRE: Production opérationnel
-Propositions: Ready to generate & send to Ulrik pour validation
+## 🚀 NEXT: Phase 4 VALIDATION
+Propositions 9 types READY → Email Ulrik → [_Head] VALIDE: <TOKEN> → DB insertion
