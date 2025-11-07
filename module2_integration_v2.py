@@ -245,6 +245,7 @@ class IntegratorModule2:
                         total_evenements_crees = 0
                         total_types_detectes = 0
                         all_ids_crees = []  # Accumuler les IDs créés
+                        periode_document = None  # Période détectée du document
 
                         for attachment in attachments:
                             if not attachment.get('filename', '').lower().endswith('.pdf'):
@@ -277,6 +278,10 @@ class IntegratorModule2:
                             total_evenements_crees += workflow_result.get('evenements_crees', 0)
                             total_types_detectes += workflow_result.get('types_detectes', 0)
                             all_ids_crees.extend(workflow_result.get('ids_crees', []))  # Accumuler IDs
+
+                            # Capturer la période du document
+                            if workflow_result.get('periode_document'):
+                                periode_document = workflow_result.get('periode_document')
 
                             self.emails_traites += 1
 
@@ -400,14 +405,19 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
 
                         # Ajouter résultats
                         if total_evenements_crees > 0:
+                            message = f'{total_operations} opérations extraites, {total_evenements_crees} événements créés, {total_types_detectes} types détectés, {total_propositions} propositions générées'
+                            if periode_document:
+                                message += f' | Période: {periode_document}'
+
                             resultats['details'].append({
                                 'type': type_evt.value,
                                 'propositions': total_propositions,
                                 'status': 'extraction_reussie',
-                                'message': f'{total_operations} opérations extraites, {total_evenements_crees} événements créés, {total_types_detectes} types détectés, {total_propositions} propositions générées',
+                                'message': message,
                                 'operations_extraites': total_operations,
                                 'evenements_crees': total_evenements_crees,
-                                'types_detectes': total_types_detectes
+                                'types_detectes': total_types_detectes,
+                                'periode_document': periode_document
                             })
 
                             resultats['propositions_generees'] += total_propositions
