@@ -642,7 +642,7 @@ class OrchestratorValidations:
         email_original_id = proposition_data.get('email_id') or 'UNKNOWN'
 
         # Choisir la fonction d'insertion selon le type
-        if type_evenement == 'EVENEMENT_SIMPLE':
+        if type_evenement == 'EVENEMENT_SIMPLE' or type_evenement == 'RELEVE_BANCAIRE':
             succes, msg, ids = self.processeur.inserer_propositions_simple(
                 propositions, email_original_id, email.get('email_id'), email.get('from')
             )
