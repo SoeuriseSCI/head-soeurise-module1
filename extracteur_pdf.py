@@ -36,6 +36,7 @@ WORKFLOW SIMPLIFIÉ:
 import os
 import json
 import base64
+import gc  # Garbage collector pour libération mémoire explicite
 from datetime import datetime
 from typing import Dict, List, Optional
 from anthropic import Anthropic
@@ -493,6 +494,12 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                 # Extraire les opérations du chunk
                 operations = self._extraire_operations_chunk(chunk_base64, i, total_chunks)
                 all_operations.extend(operations)
+
+                # LIBÉRATION MÉMOIRE EXPLICITE (crucial sur Render 512MB)
+                del pdf_data
+                del chunk_base64
+                del operations
+                gc.collect()  # Force garbage collection
 
                 # Nettoyer le fichier temporaire (sauf si c'est le PDF original)
                 if chunk_path != self.pdf_path:
