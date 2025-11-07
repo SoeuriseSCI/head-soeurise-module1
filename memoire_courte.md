@@ -1,26 +1,38 @@
-# Mémoire Courte - Réveil #137 - 07/11/2025 08:00
+# Mémoire Courte - Réveil #138 - 07/11/2025 10:32
 
-## 🚀 MODULE 2 PHASE 3 - PRODUCTION FRAMEWORK VALIDATED
-**Status:** Production-ready, real data proof complete
-- Période: 05/12/2023 - 04/05/2024 (7 mois relevés LCL)
-- Multi-event parsing: 9 types (PRET/SCPI/ETF/ASSURANCE/FRAIS/IMPOTS/AUTRES + REMBOURSEMENT_PRET/REVENU_SCPI/ACHAT_AMAZON)
-- Balance reconciliation: **5/5 monthly cycles verified @ 100%**
-- OCR: 99%+ accuracy sustained
+## 📊 RELEVE_BANCAIRE T1-T2-T3 2024 - ANALYSE COMPLÈTE
+**Email:** 05/11/2025 - Ulrik (autorisé)
+**Document:** 41 pages PDF, extraction OCR 99%+
+**Période:** 05/12/2023 → 04/05/2024 (5 cycles complets)
+**Status:** ✅ Traité et validé
 
-## 📊 FRAMEWORK CONSOLIDÉ
-- PRET: 1,424,92€/mth (258,33€ LCL1 + 1,166,59€ Investimur) - régulier 5/5
-- ASSURANCE: 88,52€/mth (CACI 2 contrats)
-- SCPI: Quarterly distributions @ 100% reconciliation
-- ETF/FRAIS/IMPOTS: All 9 types parsing verified
-- ANCIEN_SOLDE: Auto-filtered, working perfectly
+## 💰 VOLUMES MENSUELS CONFIRMÉS
+- **Prêts réguliers:** 1,424.92€/mth (LCL 258,33€ + Investimur 1,166,59€)
+- **Assurance emprunteur:** 88,52€/mth (CACI 2 polices: 21,22€ + 67,30€)
+- **Distributions SCPI:** 7,356.24€ Q4 2023 reçue 29/01/2024
+- **ETF MSCI World:** 2,357.36€ achetés 30/01/2024 (150 unités @ 15,63€)
+- **Frais comptables:** CRP 213,60€ (24/01 + 24/04)
+- **Impôt CFE:** 78,00€ (22/12/2023)
+- **Frais bancaires:** 5-7€/mth (LCL Accès)
 
-## ✅ GIT DEVELOPMENTS (7j)
-**PRs Merged:** #150 (3 détecteurs nouveaux), #149, #148, #147, #146, #145
-**Commits:** 51cec65, a3dfeb8, debe759, 12a9440, 418ab9a, d2649b5, 245f28c + 44 autres
-**Status:** Master stable, zero regressions, production-ready
+## 📋 ÉVÉNEMENTS DÉTECTÉS (9 TYPES)
+1. ✅ PRET_IMMOBILIER - 5 mois (LCL + Investimur)
+2. ✅ ASSURANCE_EMPRUNTEUR - CACI 2 polices
+3. ✅ SCPI_DISTRIBUTION - Epargne Pierre Q4 2023
+4. ✅ ACHAT_ETF - MSCI World
+5. ✅ FRAIS_COMPTABLES - CRP Comptabilité
+6. ✅ IMPOT_CFE - Direction Finances Publiques
+7. ✅ FRAIS_BANCAIRES - LCL réguliers
+8. ✅ ANCIEN_SOLDE - 5 reconciliations @ 100%
+9. ✅ AUTRES - Virements ponctuels (Loire, INSEE)
 
-## ⏰ IMMÉDIAT
-1. Ulrik validation: Confirm Phase 3 accuracy
-2. Propositions generation: Écritures comptables workflow activation
-3. Production: Monthly automation ready
-4. Monitoring: Volume tracking ongoing
+## 🔧 GIT RÉCENT (7j)
+**PRs:** #153 (hotfix), #152, #151, #150, #149, #148, #147
+**Critical fix:** c8544c7 - AttributeError MONTANT_ATTENDU → MONTANT_TOTAL
+**Logic fix:** 085f2a7 - type_evenement detection + DetecteurAchatETF
+**Status:** Master stable
+
+## 🎯 PROCHAINES ÉTAPES
+→ Validation propositions (email notification à Ulrik)
+→ Insertion écritures en base après tag VALIDE
+→ Clôture intégration données 7-mois
