@@ -88,35 +88,48 @@ class DetecteurAssurancePret(DetecteurBase):
     Détecte les prélèvements d'assurance emprunteur
 
     PATTERN:
-    - Libellé contient: COVEA RISKS, ASSURANCE PRET, COTISATION ASSURANCE
-    - Montant: 87.57€ (Emma 66.58€ + Pauline 20.99€)
+    - Libellé contient: COVEA RISKS, CACI, ASSURANCE PRET, COTISATION ASSURANCE
+    - Montant: 87.57€ total (Emma 66.58€ + Pauline 20.99€) OU paiements séparés
     - Type: DEBIT
     - Fréquence: Mensuel (vers le 15 du mois)
 
     COMPTABILISATION:
-    Débit 616 (Assurances emprunteur) : 87.57€
-    Crédit 512 (Banque LCL)             : 87.57€
+    Débit 616 (Assurances emprunteur) : XX.XX€
+    Crédit 512 (Banque LCL)             : XX.XX€
 
     NOTE IMPORTANTE:
     - Assurance UNIQUEMENT pour le prêt AMORTISSABLE (LCL - BRM0911AH)
     - PAS d'assurance pour le prêt IN FINE (INVESTIMUR - BRLZE11AQ)
+    - Les paiements peuvent être groupés (87.57€) OU séparés (Emma ~66€, Pauline ~21€)
     """
 
-    MONTANT_ATTENDU = 87.57
-    TOLERANCE = 0.10  # 10 centimes de tolérance
+    MONTANT_TOTAL = 87.57
+    MONTANT_EMMA_MIN = 60.0
+    MONTANT_EMMA_MAX = 75.0
+    MONTANT_PAULINE_MIN = 15.0
+    MONTANT_PAULINE_MAX = 25.0
 
     def detecter(self, evenement: Dict) -> bool:
-        """Détecte une assurance emprunteur"""
+        """Détecte une assurance emprunteur (groupée ou séparée)"""
         libelle_norm = evenement.get('libelle_normalise', '').lower()
         montant = float(evenement.get('montant', 0))
         type_op = evenement.get('type_operation', '')
+        type_evt = evenement.get('type_evenement', '')
 
-        # Vérifier le pattern
-        patterns = ['covea', 'assurance pret', 'cotisation assurance', 'prelevement assurance']
+        # Vérifier le type détecté (prioritaire car déjà validé par gestionnaire)
+        if type_evt == 'ASSURANCE_PRET':
+            return True
+
+        # Vérifier le pattern (fallback)
+        patterns = ['covea', 'caci', 'assurance pret', 'cotisation assurance', 'prelevement assurance', 'garantie emprunteur']
         match_libelle = any(pattern in libelle_norm for pattern in patterns)
 
-        # Vérifier le montant (avec tolérance)
-        match_montant = abs(montant - self.MONTANT_ATTENDU) <= self.TOLERANCE
+        # Vérifier le montant (accepter groupé OU séparé)
+        match_montant = (
+            abs(montant - self.MONTANT_TOTAL) <= 0.20 or  # Montant total ±20 centimes
+            (self.MONTANT_EMMA_MIN <= montant <= self.MONTANT_EMMA_MAX) or  # Emma seule
+            (self.MONTANT_PAULINE_MIN <= montant <= self.MONTANT_PAULINE_MAX)  # Pauline seule
+        )
 
         # Vérifier que c'est un débit
         match_type = type_op == 'DEBIT'
@@ -276,6 +289,78 @@ class DetecteurRevenuSCPI(DetecteurBase):
         }
 
 
+class DetecteurAchatETF(DetecteurBase):
+    """
+    Détecte les achats d'ETF (Exchange Traded Funds)
+
+    PATTERN:
+    - Libellé contient: AM MSCI, ETF, ACHAT
+    - Montant variable (achats d'ETF)
+    - Type: DEBIT
+    - Fréquence: Occasionnel
+
+    COMPTABILISATION:
+    Débit 273 (Titres immobilisés - ETF) : XX.XX€
+    Crédit 512 (Banque LCL)               : XX.XX€
+
+    EXEMPLE RÉEL:
+    - 24/07/2024: "100 AM.MSCI WLD V ETF ACHAT 2407 17,260000 EUR" - 1735.53€
+
+    NOTE:
+    - Les ETF sont des valeurs mobilières de placement
+    - Compte 273 (immobilisation) car stratégie buy & hold long terme
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Détecte un achat d'ETF"""
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
+        type_evt = evenement.get('type_evenement', '')
+
+        # Vérifier le type détecté (prioritaire car déjà validé par gestionnaire)
+        if type_evt == 'ACHAT_ETF':
+            return True
+
+        # Vérifier le pattern (fallback)
+        patterns = ['am msci', 'etf', 'msci world']
+        match_libelle = any(pattern in libelle_norm for pattern in patterns)
+
+        return match_libelle
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """Génère la proposition d'écriture"""
+        montant = float(evenement.get('montant', 0))
+        date_op = evenement.get('date_operation')
+        libelle = evenement.get('libelle', '')
+
+        # Extraire le nombre de parts si possible
+        import re
+        match = re.search(r'^(\d+)\s+(?:AM[.\s])?MSCI', libelle, re.IGNORECASE)
+        nb_parts = match.group(1) if match else '?'
+
+        # Extraire le nom de l'ETF
+        if 'msci' in libelle.lower():
+            nom_etf = 'MSCI World'
+        else:
+            nom_etf = 'ETF'
+
+        return {
+            'type_evenement': 'ACHAT_ETF',
+            'description': f'Achat {nb_parts} parts ETF {nom_etf}',
+            'confiance': 0.9,
+            'ecritures': [
+                {
+                    'date_ecriture': date_op,
+                    'libelle_ecriture': f'Acquisition {nb_parts} parts ETF {nom_etf}',
+                    'compte_debit': '273',
+                    'compte_credit': '512',
+                    'montant': montant,
+                    'type_ecriture': 'ACHAT_ETF',
+                    'notes': f'Titres immobilisés - {nb_parts} parts ETF {nom_etf}'
+                }
+            ]
+        }
+
+
 class DetecteurAchatAmazon(DetecteurBase):
     """
     Détecte les achats d'actions Amazon
@@ -301,14 +386,15 @@ class DetecteurAchatAmazon(DetecteurBase):
         libelle_norm = evenement.get('libelle_normalise', '').lower()
         type_evt = evenement.get('type_evenement', '')
 
-        # Vérifier le pattern
+        # Vérifier le type détecté (prioritaire)
+        if type_evt == 'ACHAT_AMAZON':
+            return True
+
+        # Vérifier le pattern (fallback)
         patterns = ['amazon com achat', 'amazon achat']
         match_libelle = any(pattern in libelle_norm for pattern in patterns)
 
-        # Vérifier le type détecté
-        match_type = type_evt == 'ACHAT_AMAZON'
-
-        return match_libelle or match_type
+        return match_libelle
 
     def generer_proposition(self, evenement: Dict) -> Dict:
         """Génère la proposition d'écriture"""
@@ -412,8 +498,8 @@ class DetecteurHonorairesComptable(DetecteurBase):
     Détecte les paiements d'honoraires d'expert-comptable
 
     PATTERN:
-    - Libellé contient: COMPTABLE, EXPERT COMPTABLE, CABINET, HONORAIRES
-    - Montant variable (généralement 100-500€)
+    - Libellé contient: CRP, COMPTABLE, COMPTABILIT, EXPERT COMPTABLE, CABINET, HONORAIRES
+    - Montant variable (généralement 100-600€)
     - Type: DEBIT
     - Fréquence: Trimestriel ou annuel
 
@@ -429,6 +515,7 @@ class DetecteurHonorairesComptable(DetecteurBase):
     - 26/03/2024: 213,60€ (Comptabilité 2023)
     - 28/06/2024: 273,60€ (Liasse fiscale 2023)
     - 29/08/2024: 273,60€ (Liasse fiscale 2024)
+    - Libellé typique: "PRLV SEPA CRP Comptabilit Conseil LIBELLE:20240XXX"
     """
 
     def detecter(self, evenement: Dict) -> bool:
@@ -436,10 +523,17 @@ class DetecteurHonorairesComptable(DetecteurBase):
         libelle_norm = evenement.get('libelle_normalise', '').lower()
         montant = float(evenement.get('montant', 0))
         type_op = evenement.get('type_operation', '')
+        type_evt = evenement.get('type_evenement', '')
 
-        # Vérifier le pattern
+        # Vérifier le type détecté (prioritaire car déjà validé par gestionnaire)
+        if type_evt == 'HONORAIRES_COMPTABLE':
+            return True
+
+        # Vérifier le pattern (fallback)
         patterns = [
-            'comptable', 'expert comptable', 'cabinet comptable',
+            'crp',  # CRP Comptabilit Conseil
+            'comptable', 'comptabilit',  # Formes complète et tronquée
+            'expert comptable', 'cabinet comptable',
             'honoraires', 'comptabilite', 'liasse fiscale'
         ]
         match_libelle = any(pattern in libelle_norm for pattern in patterns)
@@ -512,6 +606,7 @@ class FactoryDetecteurs:
             DetecteurAssurancePret(session),
             DetecteurRemboursementPret(session),
             DetecteurRevenuSCPI(session),
+            DetecteurAchatETF(session),  # NOUVEAU: Détecteur ETF (MSCI World, etc.)
             DetecteurAchatAmazon(session),
             DetecteurFraisBancaires(session),
             DetecteurHonorairesComptable(session)
