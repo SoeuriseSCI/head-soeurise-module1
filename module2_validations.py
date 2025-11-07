@@ -490,24 +490,37 @@ class OrchestratorValidations:
         Returns:
             Nombre d'événements supprimés
         """
-        # Récupérer les numéros d'événements depuis la proposition
+        # Récupérer les propositions JSON depuis la table
         result = self.session.execute(text("""
-            SELECT DISTINCT numero_ecriture
+            SELECT propositions_json
             FROM propositions_en_attente
             WHERE token = :token
         """), {'token': token})
 
-        numeros = [row[0] for row in result.fetchall()]
+        row = result.fetchone()
+        if not row or not row[0]:
+            return 0
 
-        # Extraire les IDs d'événements (format EVT-123)
+        propositions = row[0]  # C'est déjà un dict/list grâce à JSONB
+
+        # Extraire les IDs d'événements (format EVT-123) depuis le JSON
         ids_a_supprimer = []
-        for numero in numeros:
-            if numero and numero.startswith('EVT-'):
-                try:
-                    evt_id = int(numero.split('-')[1])
-                    ids_a_supprimer.append(evt_id)
-                except (IndexError, ValueError):
-                    pass
+
+        # Les propositions peuvent être une liste ou un dict avec une clé 'propositions'
+        if isinstance(propositions, dict):
+            propositions_list = propositions.get('propositions', [propositions])
+        else:
+            propositions_list = propositions
+
+        for prop in propositions_list:
+            if isinstance(prop, dict):
+                numero = prop.get('numero_ecriture', '')
+                if numero and numero.startswith('EVT-'):
+                    try:
+                        evt_id = int(numero.split('-')[1])
+                        ids_a_supprimer.append(evt_id)
+                    except (IndexError, ValueError):
+                        pass
 
         if not ids_a_supprimer:
             return 0
