@@ -143,8 +143,8 @@ class DetecteurAssurancePret(DetecteurBase):
 
         # Calculer niveau de confiance
         confiance = 1.0  # 100% si le pattern est reconnu
-        if abs(montant - self.MONTANT_ATTENDU) > 0.01:
-            confiance = 0.9  # Légère variation de montant
+        if abs(montant - self.MONTANT_TOTAL) > 0.01:
+            confiance = 0.9  # Légère variation de montant (paiement séparé ou variation mineure)
 
         return {
             'type_evenement': 'ASSURANCE_PRET',
