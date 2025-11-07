@@ -383,7 +383,6 @@ class DetecteurAchatAmazon(DetecteurBase):
 
     def detecter(self, evenement: Dict) -> bool:
         """Détecte un achat Amazon"""
-        libelle_norm = evenement.get('libelle_normalise', '').lower()
         type_evt = evenement.get('type_evenement', '')
 
         # Vérifier le type détecté (prioritaire)
@@ -448,12 +447,18 @@ class DetecteurFraisBancaires(DetecteurBase):
 
     def detecter(self, evenement: Dict) -> bool:
         """Détecte des frais bancaires"""
+        type_evt = evenement.get('type_evenement', '')
+
+        # Si le type est déjà détecté, on l'accepte directement
+        if type_evt == 'FRAIS_BANCAIRES':
+            return True
+
+        # Sinon, vérification par patterns (fallback)
         libelle_norm = evenement.get('libelle_normalise', '').lower()
         montant = float(evenement.get('montant', 0))
         type_op = evenement.get('type_operation', '')
 
-        # Vérifier le pattern
-        patterns = ['frais', 'tenue de compte', 'gestion compte', 'cotisation carte', 'commission']
+        patterns = ['frais', 'tenue de compte', 'gestion compte', 'cotisation carte', 'commission', 'abon', 'abonnement']
         match_libelle = any(pattern in libelle_norm for pattern in patterns)
 
         # Vérifier que le montant est raisonnable pour des frais
@@ -520,6 +525,13 @@ class DetecteurHonorairesComptable(DetecteurBase):
 
     def detecter(self, evenement: Dict) -> bool:
         """Détecte des honoraires comptables"""
+        type_evt = evenement.get('type_evenement', '')
+
+        # Si le type est déjà détecté, on l'accepte directement
+        if type_evt == 'HONORAIRES_COMPTABLE':
+            return True
+
+        # Sinon, vérification par patterns (fallback)
         libelle_norm = evenement.get('libelle_normalise', '').lower()
         montant = float(evenement.get('montant', 0))
         type_op = evenement.get('type_operation', '')

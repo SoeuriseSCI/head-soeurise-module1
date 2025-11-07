@@ -1,26 +1,29 @@
-# Mémoire Courte - Réveil #137 - 07/11/2025 08:00
+# Mémoire Courte - Réveil #137 - 07/11/2025 10:07
 
-## 🚀 MODULE 2 PHASE 3 - PRODUCTION FRAMEWORK VALIDATED
+## 🚀 MODULE 2 PHASE 3 - PRODUCTION VALIDATED
 **Status:** Production-ready, real data proof complete
-- Période: 05/12/2023 - 04/05/2024 (7 mois relevés LCL)
-- Multi-event parsing: 9 types (PRET/SCPI/ETF/ASSURANCE/FRAIS/IMPOTS/AUTRES + REMBOURSEMENT_PRET/REVENU_SCPI/ACHAT_AMAZON)
-- Balance reconciliation: **5/5 monthly cycles verified @ 100%**
-- OCR: 99%+ accuracy sustained
+- **Période couverte:** 05/12/2023 - 04/05/2024 (7 mois bancaires)
+- **Types événements:** 9 (PRET/SCPI/ETF/ASSURANCE/FRAIS/IMPOTS/AUTRES + REMBOURSEMENT_PRET/REVENU_SCPI/ACHAT_AMAZON)
+- **Balance reconciliation:** 5/5 monthly cycles @ 100% verification
+- **OCR accuracy:** 99%+ sustained
 
-## 📊 FRAMEWORK CONSOLIDÉ
-- PRET: 1,424,92€/mth (258,33€ LCL1 + 1,166,59€ Investimur) - régulier 5/5
-- ASSURANCE: 88,52€/mth (CACI 2 contrats)
-- SCPI: Quarterly distributions @ 100% reconciliation
-- ETF/FRAIS/IMPOTS: All 9 types parsing verified
-- ANCIEN_SOLDE: Auto-filtered, working perfectly
+## 📊 PRÊTS FRAMEWORK
+- **Prêt LCL:** 258,33€/mth (@ 1,050%)
+- **Prêt Investimur:** 1,166,59€/mth (@ 1,240%)
+- **Total:** 1,424,92€/mth régulier (5/5 cycles verified)
 
-## ✅ GIT DEVELOPMENTS (7j)
-**PRs Merged:** #150 (3 détecteurs nouveaux), #149, #148, #147, #146, #145
-**Commits:** 51cec65, a3dfeb8, debe759, 12a9440, 418ab9a, d2649b5, 245f28c + 44 autres
+## ✨ GIT DEVELOPMENTS (7j recent)
+**PRs Merged:** #151 (detectors fix), #150, #149, #148, #147, #146, #145
+**Critical Fix:** Commit 085f2a7 - Détecteurs utilise type_evenement détecté (major logic fix)
 **Status:** Master stable, zero regressions, production-ready
 
+## 📋 PROPOSITIONS WORKFLOW
+- Génération automatique: Active depuis PR #147
+- MD5 integrity: 100% tracking all propositions
+- ANCIEN_SOLDE filtering: Auto-working
+- Format validation: Type-specific per event
+
 ## ⏰ IMMÉDIAT
-1. Ulrik validation: Confirm Phase 3 accuracy
-2. Propositions generation: Écritures comptables workflow activation
-3. Production: Monthly automation ready
-4. Monitoring: Volume tracking ongoing
+1. Validations workflow: Écritures comptables generation
+2. Production automation: Monthly cycle ready
+3. Monitoring: Volume tracking ongoing
