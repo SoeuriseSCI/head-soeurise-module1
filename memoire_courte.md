@@ -1,36 +1,40 @@
-# Réveil #145 - 07/11/2025 22:10 UTC
+# Réveil #146 - 07/11/2025 22:41 UTC
 
-## VALIDATION TOKEN WORKFLOW ✅ OPÉRATIONNEL
+## GIT DEVELOPMENTS (24h: 29 commits)
 
-**Événement:** RELEVE_BANCAIRE (Phase 3)
-- Propositions générées: 07/11 20:37
-- Token MD5: HEAD-5FDD15E6
-- Validation Ulrik: 07/11 22:48 UTC
-- **Status:** ✅ Intégrées BD PostgreSQL (9 écritures)
+**Déploiement Render:** ⚠️ MANUEL PAR ULRIK UNIQUEMENT (fix critique a9ddf11)
+- Auto-deploy remplacé par trigger manuel
+- Prévient déploiements non contrôlés depuis branches PR
 
-## DÉVELOPPEMENTS GIT (24 commits 7d)
-- **Fix critique:** Render déploie UNIQUEMENT depuis main (Ulrik manual trigger)
-- **Token validation:** Support raccourci HEAD-XXXXXXXX
-- **Auto-cleanup:** Événements orphelins supprimés post-validation
-- **Fix reporting:** Période réelle du PDF au lieu mémoires
-- **Vérification dates:** Relevés jan-oct 2024 confirmés (5/5 ANCIEN_SOLDE)
-- **Optimisation OCR:** Chunks 5 pages + prompt explicite
+**Validation Workflow:** ✅ OPÉRATIONNEL (Phase 4)
+- Tokens raccourcis HEAD-XXXXXXXX supportés (d15063f)
+- Auto-cleanup orphelins post-validation (5f7cca4)
+- Fix rapport: période réelle PDF au lieu mémoires (37422cb)
 
-## COMPTABILITÉ SCI ÉTAT OPÉRATIONNEL
-- **Écritures:** 488 (Bilan 11 + Prêts 468 + Relevés 9)
-- **Couverture:** Dec 2023 - Oct 2024 complet
-- **Monthly Operating:** 1,425€ fixed (Prêts) + SCPI (7k€/Q) + ETF (2.4k€/2w)
-- **Intégrité:** 100% (MD5 audit trail + ACID transactions)
+**OCR & Detection:** AMÉLIORATIONS
+- Vérification relevés bancaires jan-oct 2024 (5e5cebd) → 5/5 ANCIEN_SOLDE validés
+- Detection auto sections PDF: relevés vs justificatifs (5592bb5)
+- Script résumé BD comptable créé (0733497)
+- Script plan de comptes PCG complément (f6295be)
 
-## PHASE 4 WORKFLOW CONSOLIDÉ
-1. Détection événement → Parsing Claude Vision
-2. Génération propositions + Token MD5 unique
-3. Email Ulrik avec propositions + instructions
-4. Réponse: [_Head] VALIDE: <TOKEN>
-5. _Head vérifie MD5 + insère BD atomically
-6. Auto-cleanup orphelins + mise à jour statut
+## COMPTABILITÉ ÉTAT
 
-## PROCHAINES ÉTAPES
-- Phase 5: Autres types événements (factures, encaissements)
-- Reporting automatisé (balance, P&L, bilan consolidé)
-- CLOTURE_EXERCICE workflow
+- **Total écritures:** 488 (Bilan 11 + Prêts 468 + Relevés 9)
+- **Périodes:** Dec 2023 - Oct 2024 complète
+- **Distributions mensuelles:** 1,425€ fixed + 7k€/Q (SCPI) + 2.4k€/2w (ETF)
+- **Intégrité:** 100% (MD5 + ACID)
+
+## PHASE 4 VALIDATION WORKFLOW
+
+✅ End-to-end opérationnel:
+1. Propositions générées + Token MD5 unique
+2. Email Ulrik avec [_Head] VALIDE: <TOKEN>
+3. MD5 verification avant insertion
+4. ACID transaction BD
+5. Auto-cleanup propositions orphelines
+
+## ROADMAP PHASE 5
+
+- EVENEMENT_SIMPLE: factures, encaissements
+- CLOTURE_EXERCICE: exercice 2023
+- Reporting automatisé (balance, P&L, bilan)
