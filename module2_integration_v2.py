@@ -244,6 +244,7 @@ class IntegratorModule2:
                         total_operations = 0
                         total_evenements_crees = 0
                         total_types_detectes = 0
+                        all_ids_crees = []  # Accumuler les IDs créés
 
                         for attachment in attachments:
                             if not attachment.get('filename', '').lower().endswith('.pdf'):
@@ -269,6 +270,7 @@ class IntegratorModule2:
                             total_operations += workflow_result.get('total_operations', 0)
                             total_evenements_crees += workflow_result.get('evenements_crees', 0)
                             total_types_detectes += workflow_result.get('types_detectes', 0)
+                            all_ids_crees.extend(workflow_result.get('ids_crees', []))  # Accumuler IDs
 
                             self.emails_traites += 1
 
@@ -279,10 +281,12 @@ class IntegratorModule2:
                                 print()
                                 print("📝 GÉNÉRATION AUTOMATIQUE DES PROPOSITIONS")
                                 print("-" * 80)
+                                print(f"🔍 IDs événements créés: {all_ids_crees}")
 
                                 # Créer une nouvelle instance du workflow pour générer propositions
                                 workflow = WorkflowEvenements(self.database_url, phase=1)
-                                propositions = workflow.generer_propositions()
+                                # CRITIQUE: Passer explicitement les IDs pour contourner le filtre phase
+                                propositions = workflow.generer_propositions(evenement_ids=all_ids_crees)
                                 total_propositions = len(propositions)
 
                                 print(f"✅ {total_propositions} propositions générées")
