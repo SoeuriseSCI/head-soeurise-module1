@@ -151,6 +151,194 @@ class DetecteurAssurancePret(DetecteurBase):
         }
 
 
+class DetecteurRemboursementPret(DetecteurBase):
+    """
+    Détecte les remboursements de prêt immobilier
+
+    PATTERN:
+    - Libellé contient: PRET IMMOBILIER, ECH, DOSSIER NO
+    - Montant: 1166.59€ (prêt LCL amortissable)
+    - Type: DEBIT
+    - Fréquence: Mensuel (15 du mois)
+
+    COMPTABILISATION:
+    Débit 164 (Emprunts LCL)        : CAPITAL€
+    Débit 661 (Charges d'intérêts)  : INTERETS€
+    Crédit 512 (Banque LCL)         : 1166.59€
+
+    NOTE IMPORTANTE:
+    - Cette version enregistre le montant total en attente de décomposition capital/intérêts
+    - Le tableau d'amortissement sera nécessaire pour la décomposition exacte
+    - Pour l'instant: 100% du montant → 164 (à corriger après)
+    """
+
+    MONTANT_ATTENDU = 1166.59
+    TOLERANCE = 0.10
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Détecte un remboursement de prêt"""
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
+        montant = float(evenement.get('montant', 0))
+        type_op = evenement.get('type_operation', '')
+        type_evt = evenement.get('type_evenement', '')
+
+        # Vérifier le pattern
+        patterns = ['pret immobilier', 'echeance pret', 'dossier no']
+        match_libelle = any(pattern in libelle_norm for pattern in patterns)
+
+        # Vérifier le type détecté
+        match_type = type_evt == 'REMBOURSEMENT_PRET'
+
+        # Vérifier que c'est un débit
+        match_debit = type_op == 'DEBIT'
+
+        return (match_libelle or match_type) and match_debit
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """Génère la proposition d'écriture"""
+        montant = float(evenement.get('montant', 0))
+        date_op = evenement.get('date_operation')
+
+        # Calculer niveau de confiance
+        confiance = 0.8  # Confiance moyenne car décomposition capital/intérêts à faire
+
+        return {
+            'type_evenement': 'REMBOURSEMENT_PRET',
+            'description': f'Remboursement prêt LCL (échéance mensuelle) - À DÉCOMPOSER',
+            'confiance': confiance,
+            'ecritures': [
+                {
+                    'date_ecriture': date_op,
+                    'libelle_ecriture': f'Échéance prêt LCL (TEMPORAIRE - à décomposer capital/intérêts)',
+                    'compte_debit': '164',
+                    'compte_credit': '512',
+                    'montant': montant,
+                    'type_ecriture': 'REMBOURSEMENT_PRET',
+                    'notes': 'ATTENTION: Enregistrement temporaire - Nécessite décomposition capital (164) / intérêts (661) via tableau amortissement'
+                }
+            ]
+        }
+
+
+class DetecteurRevenuSCPI(DetecteurBase):
+    """
+    Détecte les revenus SCPI (Société Civile de Placement Immobilier)
+
+    PATTERN:
+    - Libellé contient: SCPI, EPARGNE PIERRE
+    - Montant variable (revenus trimestriels)
+    - Type: DEBIT (virement sortant vers placement)
+    - Fréquence: Trimestriel
+
+    COMPTABILISATION:
+    Débit 273 (Titres immobilisés - SCPI) : XX.XX€
+    Crédit 512 (Banque LCL)                : XX.XX€
+
+    NOTE:
+    - Les achats de parts SCPI sont des immobilisations financières
+    - Les revenus futurs seront en 761 (Produits de participations)
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Détecte un achat/revenu SCPI"""
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
+        type_evt = evenement.get('type_evenement', '')
+
+        # Vérifier le pattern
+        patterns = ['scpi', 'epargne pierre']
+        match_libelle = any(pattern in libelle_norm for pattern in patterns)
+
+        # Vérifier le type détecté
+        match_type = type_evt == 'REVENU_SCPI'
+
+        return match_libelle or match_type
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """Génère la proposition d'écriture"""
+        montant = float(evenement.get('montant', 0))
+        date_op = evenement.get('date_operation')
+
+        return {
+            'type_evenement': 'REVENU_SCPI',
+            'description': f'Achat parts SCPI Épargne Pierre',
+            'confiance': 0.9,
+            'ecritures': [
+                {
+                    'date_ecriture': date_op,
+                    'libelle_ecriture': f'Acquisition parts SCPI Épargne Pierre',
+                    'compte_debit': '273',
+                    'compte_credit': '512',
+                    'montant': montant,
+                    'type_ecriture': 'ACHAT_SCPI',
+                    'notes': 'Immobilisation financière - Parts SCPI'
+                }
+            ]
+        }
+
+
+class DetecteurAchatAmazon(DetecteurBase):
+    """
+    Détecte les achats d'actions Amazon
+
+    PATTERN:
+    - Libellé contient: AMAZON COM ACHAT
+    - Montant variable (achats d'actions)
+    - Type: DEBIT
+    - Fréquence: Occasionnel
+
+    COMPTABILISATION:
+    Débit 273 (Titres immobilisés - Actions) : XX.XX€
+    Crédit 512 (Banque LCL)                   : XX.XX€
+
+    NOTE:
+    - Les actions Amazon sont des valeurs mobilières de placement
+    - Compte 273 ou 503 selon stratégie (immobilisation vs placement)
+    - Ici traité comme immobilisation (détention long terme)
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Détecte un achat Amazon"""
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
+        type_evt = evenement.get('type_evenement', '')
+
+        # Vérifier le pattern
+        patterns = ['amazon com achat', 'amazon achat']
+        match_libelle = any(pattern in libelle_norm for pattern in patterns)
+
+        # Vérifier le type détecté
+        match_type = type_evt == 'ACHAT_AMAZON'
+
+        return match_libelle or match_type
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """Génère la proposition d'écriture"""
+        montant = float(evenement.get('montant', 0))
+        date_op = evenement.get('date_operation')
+        libelle = evenement.get('libelle', '')
+
+        # Extraire le nombre d'actions si possible
+        import re
+        match = re.search(r'^(\d+)\s+AMAZON', libelle)
+        nb_actions = match.group(1) if match else '?'
+
+        return {
+            'type_evenement': 'ACHAT_AMAZON',
+            'description': f'Achat {nb_actions} actions Amazon',
+            'confiance': 0.9,
+            'ecritures': [
+                {
+                    'date_ecriture': date_op,
+                    'libelle_ecriture': f'Acquisition {nb_actions} actions Amazon.com Inc.',
+                    'compte_debit': '273',
+                    'compte_credit': '512',
+                    'montant': montant,
+                    'type_ecriture': 'ACHAT_ACTIONS',
+                    'notes': f'Titres immobilisés - {nb_actions} actions Amazon'
+                }
+            ]
+        }
+
+
 class DetecteurFraisBancaires(DetecteurBase):
     """
     Détecte les frais bancaires (tenue de compte, gestion)
@@ -322,6 +510,9 @@ class FactoryDetecteurs:
         """
         return [
             DetecteurAssurancePret(session),
+            DetecteurRemboursementPret(session),
+            DetecteurRevenuSCPI(session),
+            DetecteurAchatAmazon(session),
             DetecteurFraisBancaires(session),
             DetecteurHonorairesComptable(session)
         ]
