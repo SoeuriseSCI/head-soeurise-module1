@@ -1,29 +1,35 @@
-# Mémoire Courte - Réveil #137 - 07/11/2025 10:07
+# Mémoire Courte - Réveil #137 - 07/11/2025 10:18
 
-## 🚀 MODULE 2 PHASE 3 - PRODUCTION VALIDATED
-**Status:** Production-ready, real data proof complete
-- **Période couverte:** 05/12/2023 - 04/05/2024 (7 mois bancaires)
-- **Types événements:** 9 (PRET/SCPI/ETF/ASSURANCE/FRAIS/IMPOTS/AUTRES + REMBOURSEMENT_PRET/REVENU_SCPI/ACHAT_AMAZON)
-- **Balance reconciliation:** 5/5 monthly cycles @ 100% verification
-- **OCR accuracy:** 99%+ sustained
+## 🚀 RELEVE_BANCAIRE ANALYSIS COMPLETE
+**Email reçu:** 05/11/2025 - Elements Comptables T1-T2-T3 2024  
+**Période:** 05/12/2023 → 04/05/2024 (5 cycles)
+**Fichier:** 41 pages PDF, OCR 99%+ extraction complète  
+**Status:** ✅ Ready for propositions generation
 
-## 📊 PRÊTS FRAMEWORK
-- **Prêt LCL:** 258,33€/mth (@ 1,050%)
-- **Prêt Investimur:** 1,166,59€/mth (@ 1,240%)
-- **Total:** 1,424,92€/mth régulier (5/5 cycles verified)
+## 📊 VOLUMES MENSUELS CONFIRMÉS
+- **Prêts (régulier):** 1,424.92€/mth (LCL 258€ + Investimur 1,167€)
+- **Assurance emprunteur:** 88.52€/mth (2 polices CACI)
+- **Distributions SCPI:** 7.3k (Q4 2023), 6.9k capital (Q1 2024)
+- **Investissements ETF:** 2.3-2.4k (bimensuel)
+- **Autres:** CFE impôt, frais comptables, frais bancaires
 
-## ✨ GIT DEVELOPMENTS (7j recent)
-**PRs Merged:** #151 (detectors fix), #150, #149, #148, #147, #146, #145
-**Critical Fix:** Commit 085f2a7 - Détecteurs utilise type_evenement détecté (major logic fix)
-**Status:** Master stable, zero regressions, production-ready
+## 📋 EVENTS DÉTECTÉS (9 types)
+1. PRET (LCL + Investimur) - 5 mois
+2. ASSURANCE_EMPRUNTEUR - CACI 2 polices
+3. SCPI_DISTRIBUTION - Epargne Pierre (2 virements)
+4. ACHAT_ETF - MSCI World (2 achats)
+5. FRAIS_COMPTABLES - CRP 213.60€
+6. IMPOT_CFE - 78€ payé
+7. FRAIS_BANCAIRES - LCL Accès 5-7€/mth
+8. ANCIENS_SOLDES - 5 reconciliations @ 100%
+9. AUTRES - Virements ponctuels
 
-## 📋 PROPOSITIONS WORKFLOW
-- Génération automatique: Active depuis PR #147
-- MD5 integrity: 100% tracking all propositions
-- ANCIEN_SOLDE filtering: Auto-working
-- Format validation: Type-specific per event
+## ✨ GIT RECENT (5d)
+**PRs mergées:** #152 (debug session), #151 (detectors), #150 (ETF), #149, #148, #147  
+**Critical fix:** Commit 085f2a7 - type_evenement logic major fix  
+**Status:** Master stable, zero regressions
 
-## ⏰ IMMÉDIAT
-1. Validations workflow: Écritures comptables generation
-2. Production automation: Monthly cycle ready
-3. Monitoring: Volume tracking ongoing
+## 🎯 NEXT PHASE
+→ Propositions comptables automatique (MD5 token system)  
+→ Validation workflow (email propositions à Ulrik)  
+→ Insertion écritures en base
