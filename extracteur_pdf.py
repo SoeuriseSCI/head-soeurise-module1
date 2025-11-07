@@ -374,7 +374,11 @@ NE retourne QUE le JSON, sans texte avant ou après."""
             }]
         )
 
+        # DEBUG: Vérifier pourquoi l'extraction s'arrête
+        stop_reason = response.stop_reason
         response_text = response.content[0].text
+
+        print(f"   🔍 DEBUG Chunk {chunk_num}: stop_reason={stop_reason}, taille_réponse={len(response_text)} chars")
 
         # Nettoyer la réponse
         json_text = response_text.strip()
@@ -387,8 +391,18 @@ NE retourne QUE le JSON, sans texte avant ou après."""
         json_text = json_text.strip()
 
         # Parser le JSON
-        data = json.loads(json_text)
-        operations = data.get('operations', [])
+        try:
+            data = json.loads(json_text)
+            operations = data.get('operations', [])
+        except json.JSONDecodeError as e:
+            print(f"   ⚠️  ERREUR JSON Chunk {chunk_num}: {e}")
+            print(f"   📄 Début JSON: {json_text[:200]}...")
+            print(f"   📄 Fin JSON: ...{json_text[-200:]}")
+            return []
+
+        # Vérifier si la réponse semble tronquée
+        if stop_reason == 'max_tokens' and len(operations) < 10:
+            print(f"   ⚠️  TRONCATURE DÉTECTÉE Chunk {chunk_num}: stop_reason=max_tokens mais seulement {len(operations)} opérations")
 
         # Afficher le nombre d'opérations extraites pour TOUS les chunks
         if chunk_num > 1:
