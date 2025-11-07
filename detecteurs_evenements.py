@@ -107,12 +107,18 @@ class DetecteurAssurancePret(DetecteurBase):
 
     def detecter(self, evenement: Dict) -> bool:
         """Détecte une assurance emprunteur"""
+        type_evt = evenement.get('type_evenement', '')
+
+        # Si le type est déjà détecté, on l'accepte directement
+        if type_evt == 'ASSURANCE_PRET':
+            return True
+
+        # Sinon, vérification par patterns (fallback)
         libelle_norm = evenement.get('libelle_normalise', '').lower()
         montant = float(evenement.get('montant', 0))
         type_op = evenement.get('type_operation', '')
 
-        # Vérifier le pattern
-        patterns = ['covea', 'assurance pret', 'cotisation assurance', 'prelevement assurance']
+        patterns = ['covea', 'assurance pret', 'cotisation assurance', 'prelevement assurance', 'caci']
         match_libelle = any(pattern in libelle_norm for pattern in patterns)
 
         # Vérifier le montant (avec tolérance)
@@ -276,6 +282,71 @@ class DetecteurRevenuSCPI(DetecteurBase):
         }
 
 
+class DetecteurAchatETF(DetecteurBase):
+    """
+    Détecte les achats d'ETF (Exchange Traded Funds)
+
+    PATTERN:
+    - Libellé contient: ETF, MSCI, AM.MSCI
+    - Montant variable (achats d'ETF)
+    - Type: DEBIT
+    - Fréquence: Occasionnel
+
+    COMPTABILISATION:
+    Débit 273 (Titres immobilisés - ETF) : XX.XX€
+    Crédit 512 (Banque LCL)               : XX.XX€
+
+    NOTE:
+    - Les ETF sont des valeurs mobilières de placement
+    - Compte 273 ou 503 selon stratégie (immobilisation vs placement)
+    - Ici traité comme immobilisation (détention long terme)
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Détecte un achat ETF"""
+        type_evt = evenement.get('type_evenement', '')
+
+        # Si le type est déjà détecté, on l'accepte directement
+        if type_evt == 'ACHAT_ETF':
+            return True
+
+        # Sinon, vérification par patterns (fallback)
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
+
+        patterns = ['etf', 'msci', 'am.msci', 'am msci']
+        match_libelle = any(pattern in libelle_norm for pattern in patterns)
+
+        return match_libelle
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """Génère la proposition d'écriture"""
+        montant = float(evenement.get('montant', 0))
+        date_op = evenement.get('date_operation')
+        libelle = evenement.get('libelle', '')
+
+        # Extraire le nombre d'unités si possible
+        import re
+        match = re.search(r'^(\d+)\s+', libelle)
+        nb_unites = match.group(1) if match else '?'
+
+        return {
+            'type_evenement': 'ACHAT_ETF',
+            'description': f'Achat {nb_unites} parts ETF',
+            'confiance': 0.9,
+            'ecritures': [
+                {
+                    'date_ecriture': date_op,
+                    'libelle_ecriture': f'Acquisition {nb_unites} parts ETF',
+                    'compte_debit': '273',
+                    'compte_credit': '512',
+                    'montant': montant,
+                    'type_ecriture': 'ACHAT_ETF',
+                    'notes': f'Titres immobilisés - {nb_unites} parts ETF'
+                }
+            ]
+        }
+
+
 class DetecteurAchatAmazon(DetecteurBase):
     """
     Détecte les achats d'actions Amazon
@@ -298,17 +369,19 @@ class DetecteurAchatAmazon(DetecteurBase):
 
     def detecter(self, evenement: Dict) -> bool:
         """Détecte un achat Amazon"""
-        libelle_norm = evenement.get('libelle_normalise', '').lower()
         type_evt = evenement.get('type_evenement', '')
 
-        # Vérifier le pattern
+        # Si le type est déjà détecté, on l'accepte directement
+        if type_evt == 'ACHAT_AMAZON':
+            return True
+
+        # Sinon, vérification par patterns (fallback)
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
+
         patterns = ['amazon com achat', 'amazon achat']
         match_libelle = any(pattern in libelle_norm for pattern in patterns)
 
-        # Vérifier le type détecté
-        match_type = type_evt == 'ACHAT_AMAZON'
-
-        return match_libelle or match_type
+        return match_libelle
 
     def generer_proposition(self, evenement: Dict) -> Dict:
         """Génère la proposition d'écriture"""
@@ -362,12 +435,18 @@ class DetecteurFraisBancaires(DetecteurBase):
 
     def detecter(self, evenement: Dict) -> bool:
         """Détecte des frais bancaires"""
+        type_evt = evenement.get('type_evenement', '')
+
+        # Si le type est déjà détecté, on l'accepte directement
+        if type_evt == 'FRAIS_BANCAIRES':
+            return True
+
+        # Sinon, vérification par patterns (fallback)
         libelle_norm = evenement.get('libelle_normalise', '').lower()
         montant = float(evenement.get('montant', 0))
         type_op = evenement.get('type_operation', '')
 
-        # Vérifier le pattern
-        patterns = ['frais', 'tenue de compte', 'gestion compte', 'cotisation carte', 'commission']
+        patterns = ['frais', 'tenue de compte', 'gestion compte', 'cotisation carte', 'commission', 'abon', 'abonnement']
         match_libelle = any(pattern in libelle_norm for pattern in patterns)
 
         # Vérifier que le montant est raisonnable pour des frais
@@ -433,14 +512,20 @@ class DetecteurHonorairesComptable(DetecteurBase):
 
     def detecter(self, evenement: Dict) -> bool:
         """Détecte des honoraires comptables"""
+        type_evt = evenement.get('type_evenement', '')
+
+        # Si le type est déjà détecté, on l'accepte directement
+        if type_evt == 'HONORAIRES_COMPTABLE':
+            return True
+
+        # Sinon, vérification par patterns (fallback)
         libelle_norm = evenement.get('libelle_normalise', '').lower()
         montant = float(evenement.get('montant', 0))
         type_op = evenement.get('type_operation', '')
 
-        # Vérifier le pattern
         patterns = [
             'comptable', 'expert comptable', 'cabinet comptable',
-            'honoraires', 'comptabilite', 'liasse fiscale'
+            'honoraires', 'comptabilite', 'liasse fiscale', 'crp'
         ]
         match_libelle = any(pattern in libelle_norm for pattern in patterns)
 
@@ -512,6 +597,7 @@ class FactoryDetecteurs:
             DetecteurAssurancePret(session),
             DetecteurRemboursementPret(session),
             DetecteurRevenuSCPI(session),
+            DetecteurAchatETF(session),
             DetecteurAchatAmazon(session),
             DetecteurFraisBancaires(session),
             DetecteurHonorairesComptable(session)
