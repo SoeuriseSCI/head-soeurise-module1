@@ -300,49 +300,40 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                 'description': f'Erreur: {str(e)}'
             }
 
-    def extraire_evenements(self, date_debut: str = None, date_fin: str = None) -> List[Dict]:
+    def _extraire_operations_chunk(self, pdf_base64: str, chunk_num: int, total_chunks: int) -> List[Dict]:
         """
-        Extrait tous les événements du PDF via l'API PDF native de Claude
+        Extrait les opérations d'un chunk de PDF
 
         Args:
-            date_debut: Date de début de période (format YYYY-MM-DD, optionnel)
-            date_fin: Date de fin de période (format YYYY-MM-DD, optionnel)
+            pdf_base64: PDF encodé en base64
+            chunk_num: Numéro du chunk (1-based)
+            total_chunks: Nombre total de chunks
 
         Returns:
-            Liste de dictionnaires d'événements prêts pour GestionnaireEvenements
+            Liste des opérations extraites
         """
-        if not self.client:
-            raise ValueError("ANTHROPIC_API_KEY non définie - impossible d'extraire les PDF")
+        if chunk_num > 1:
+            print(f"🔄 Chunk {chunk_num}/{total_chunks}: Envoi à Claude pour extraction...")
+        else:
+            print(f"🔄 Envoi du PDF à Claude pour extraction... ({total_chunks} lot{'s' if total_chunks > 1 else ''})")
 
-        if not os.path.exists(self.pdf_path):
-            raise FileNotFoundError(f"PDF non trouvé: {self.pdf_path}")
-
-        print(f"📄 Extraction du PDF: {os.path.basename(self.pdf_path)}")
-
-        try:
-            # Lire le PDF en base64
-            pdf_base64 = self._lire_pdf_base64()
-
-            # Extraire avec Claude (API PDF native)
-            print("🔄 Envoi du PDF à Claude pour extraction...")
-
-            response = self.client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=16000,  # Plus de tokens pour les gros relevés
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "document",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "application/pdf",
-                                "data": pdf_base64
-                            }
-                        },
-                        {
-                            "type": "text",
-                            "text": """Analyse ce PDF de relevés bancaires et extrais TOUTES les opérations bancaires individuelles de TOUTES les pages.
+        response = self.client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=16000,  # Suffisant pour ~10 pages de relevés
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "application/pdf",
+                            "data": pdf_base64
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": """Analyse ce PDF de relevés bancaires et extrais TOUTES les opérations bancaires individuelles de TOUTES les pages.
 
 Pour CHAQUE opération, extrais:
 - date_operation (format YYYY-MM-DD)
@@ -377,26 +368,137 @@ Retourne un JSON valide avec cette structure:
 }
 
 NE retourne QUE le JSON, sans texte avant ou après."""
-                        }
-                    ]
-                }]
-            )
+                    }
+                ]
+            }]
+        )
 
-            response_text = response.content[0].text
+        response_text = response.content[0].text
 
-            # Nettoyer la réponse
-            json_text = response_text.strip()
-            if json_text.startswith('```json'):
-                json_text = json_text[7:]
-            if json_text.startswith('```'):
-                json_text = json_text[3:]
-            if json_text.endswith('```'):
-                json_text = json_text[:-3]
-            json_text = json_text.strip()
+        # Nettoyer la réponse
+        json_text = response_text.strip()
+        if json_text.startswith('```json'):
+            json_text = json_text[7:]
+        if json_text.startswith('```'):
+            json_text = json_text[3:]
+        if json_text.endswith('```'):
+            json_text = json_text[:-3]
+        json_text = json_text.strip()
 
-            # Parser le JSON
-            data = json.loads(json_text)
-            operations = data.get('operations', [])
+        # Parser le JSON
+        data = json.loads(json_text)
+        operations = data.get('operations', [])
+
+        if chunk_num > 1:
+            print(f"   ✓ Chunk {chunk_num}/{total_chunks}: {len(operations)} opérations extraites")
+
+        return operations
+
+    def _diviser_pdf_en_chunks(self, max_pages_per_chunk: int = 15) -> List[str]:
+        """
+        Divise un PDF en plusieurs chunks de pages (fichiers temporaires)
+
+        Args:
+            max_pages_per_chunk: Nombre maximum de pages par chunk
+
+        Returns:
+            Liste des chemins des PDFs temporaires créés
+        """
+        try:
+            import PyPDF2
+            import tempfile
+
+            # Ouvrir le PDF
+            with open(self.pdf_path, 'rb') as f:
+                pdf_reader = PyPDF2.PdfReader(f)
+                total_pages = len(pdf_reader.pages)
+
+                # Si petit PDF (≤15 pages), pas besoin de diviser
+                if total_pages <= max_pages_per_chunk:
+                    return [self.pdf_path]
+
+                print(f"📄 PDF de {total_pages} pages → Division en chunks de {max_pages_per_chunk} pages")
+
+                # Créer les chunks
+                chunk_paths = []
+                for start_page in range(0, total_pages, max_pages_per_chunk):
+                    end_page = min(start_page + max_pages_per_chunk, total_pages)
+
+                    # Créer un nouveau PDF avec ce chunk
+                    pdf_writer = PyPDF2.PdfWriter()
+                    for page_num in range(start_page, end_page):
+                        pdf_writer.add_page(pdf_reader.pages[page_num])
+
+                    # Écrire dans un fichier temporaire
+                    temp_file = tempfile.NamedTemporaryFile(
+                        delete=False,
+                        suffix=f'_chunk_{start_page+1}-{end_page}.pdf'
+                    )
+                    with open(temp_file.name, 'wb') as out_f:
+                        pdf_writer.write(out_f)
+
+                    chunk_paths.append(temp_file.name)
+                    print(f"   ✓ Chunk créé: pages {start_page+1}-{end_page} → {os.path.basename(temp_file.name)}")
+
+                return chunk_paths
+
+        except ImportError:
+            # PyPDF2 non disponible, retourner le PDF complet
+            print("⚠️  PyPDF2 non disponible - traitement du PDF complet (risque de troncature)")
+            return [self.pdf_path]
+        except Exception as e:
+            print(f"⚠️  Erreur division PDF: {e} - traitement du PDF complet")
+            return [self.pdf_path]
+
+    def extraire_evenements(self, date_debut: str = None, date_fin: str = None) -> List[Dict]:
+        """
+        Extrait tous les événements du PDF via l'API PDF native de Claude
+
+        STRATÉGIE ANTI-TRONCATURE:
+        - Si PDF > 15 pages: Division en chunks de 15 pages
+        - Extraction séparée de chaque chunk
+        - Fusion des résultats + déduplication
+
+        Args:
+            date_debut: Date de début de période (format YYYY-MM-DD, optionnel)
+            date_fin: Date de fin de période (format YYYY-MM-DD, optionnel)
+
+        Returns:
+            Liste de dictionnaires d'événements prêts pour GestionnaireEvenements
+        """
+        if not self.client:
+            raise ValueError("ANTHROPIC_API_KEY non définie - impossible d'extraire les PDF")
+
+        if not os.path.exists(self.pdf_path):
+            raise FileNotFoundError(f"PDF non trouvé: {self.pdf_path}")
+
+        print(f"📄 Extraction du PDF: {os.path.basename(self.pdf_path)}")
+
+        try:
+            # Diviser le PDF en chunks si nécessaire
+            chunk_paths = self._diviser_pdf_en_chunks(max_pages_per_chunk=15)
+            total_chunks = len(chunk_paths)
+
+            # Extraire chaque chunk
+            all_operations = []
+            for i, chunk_path in enumerate(chunk_paths, 1):
+                # Lire le chunk en base64
+                with open(chunk_path, 'rb') as f:
+                    pdf_data = f.read()
+                chunk_base64 = base64.standard_b64encode(pdf_data).decode('utf-8')
+
+                # Extraire les opérations du chunk
+                operations = self._extraire_operations_chunk(chunk_base64, i, total_chunks)
+                all_operations.extend(operations)
+
+                # Nettoyer le fichier temporaire (sauf si c'est le PDF original)
+                if chunk_path != self.pdf_path:
+                    try:
+                        os.unlink(chunk_path)
+                    except:
+                        pass
+
+            operations = all_operations
 
             print(f"✅ {len(operations)} opérations extraites du PDF")
 

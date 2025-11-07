@@ -304,6 +304,92 @@ class IntegratorModule2:
 
                                 self.propositions_generees += total_propositions
 
+                                # NOUVEAU: Stocker et envoyer les propositions par email
+                                if total_propositions > 0:
+                                    try:
+                                        # Convertir le format de propositions pour le stockage
+                                        propositions_list = []
+                                        for prop_data in propositions:
+                                            proposition = prop_data['proposition']
+                                            for ecriture in proposition.get('ecritures', []):
+                                                propositions_list.append({
+                                                    'numero_ecriture': f"EVT-{prop_data['evenement_id']}",
+                                                    'type': proposition['type_evenement'],
+                                                    'compte_debit': ecriture['compte_debit'],
+                                                    'compte_credit': ecriture['compte_credit'],
+                                                    'montant': ecriture['montant'],
+                                                    'libelle': ecriture.get('libelle_ecriture', proposition['description'])
+                                                })
+
+                                        # Stocker les propositions en BD avec token
+                                        token_stocke, prop_id = self.propositions_manager.stocker_proposition(
+                                            type_evenement='RELEVE_BANCAIRE',
+                                            propositions=propositions_list,
+                                            email_id=email.get('id'),
+                                            email_from=email.get('from'),
+                                            email_date=email.get('date'),
+                                            email_subject=email.get('subject')
+                                        )
+
+                                        # Générer un Markdown récapitulatif
+                                        from datetime import datetime as dt
+                                        markdown_recap = f"""# Propositions Comptables - Relevés Bancaires
+
+**Date:** {dt.now().strftime('%d/%m/%Y %H:%M')}
+**Token:** `{token_stocke}`
+
+## Résumé
+
+- **{total_propositions} propositions générées** depuis les relevés bancaires
+- **{total_evenements_crees} événements comptables** créés
+
+## Détails des Propositions
+
+"""
+                                        for i, prop_data in enumerate(propositions, 1):
+                                            proposition = prop_data['proposition']
+                                            markdown_recap += f"### Proposition {i}: {proposition['type_evenement']}\n\n"
+                                            markdown_recap += f"**Événement ID**: #{prop_data['evenement_id']}\n"
+                                            markdown_recap += f"**Confiance**: {proposition['confiance']*100:.0f}%\n"
+                                            markdown_recap += f"**Description**: {proposition['description']}\n\n"
+                                            markdown_recap += "**Écritures proposées:**\n\n"
+                                            for ecriture in proposition.get('ecritures', []):
+                                                markdown_recap += f"- Débit {ecriture['compte_debit']} / Crédit {ecriture['compte_credit']} : {ecriture['montant']:.2f}€\n"
+                                                markdown_recap += f"  - Libellé: {ecriture.get('libelle_ecriture', 'N/A')}\n"
+                                            markdown_recap += "\n"
+
+                                        markdown_recap += f"""
+## Validation
+
+Pour valider ces propositions, répondez à cet email avec le tag:
+
+**[_Head] VALIDE: {token_stocke}**
+
+---
+
+_Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
+"""
+
+                                        # Envoyer email à Ulrik avec propositions
+                                        email_envoye = self.envoyeur.envoyer_propositions(
+                                            self.email_ulrik,
+                                            'RELEVE_BANCAIRE',
+                                            markdown_recap,
+                                            token_stocke,
+                                            subject_suffix=f"- {total_propositions} proposition(s)"
+                                        )
+
+                                        if email_envoye:
+                                            resultats['emails_envoyes'] += 1
+                                            print(f"📧 Email de propositions envoyé à {self.email_ulrik}")
+                                        else:
+                                            print(f"⚠️  Échec envoi email de propositions")
+
+                                    except Exception as e:
+                                        print(f"⚠️  Erreur stockage/envoi propositions: {e}")
+                                        import traceback
+                                        traceback.print_exc()
+
                             except Exception as e:
                                 import sys
                                 self.erreurs.append(f"Erreur génération propositions: {str(e)[:200]}")
