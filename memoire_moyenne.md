@@ -1,50 +1,48 @@
-# Mémoire Moyenne - MODULE 2 Production Phases 1-3
+# Mémoire Moyenne - MODULE 2 Production Phases 1-3 Consolidated
 
-## MODULE 2 PRODUCTION ARCHITECTURE - 3 PHASES ESTABLISHED
-
-### Phase 1 ✅ PÉRENNE (>30 days stable)
+## PHASE 1 ✅ PÉRENNE (>30 days)
 **INIT_BILAN_2023:**
-- Bilan complet: 571,613€ (ACTIF=PASSIF perfectly balanced @ 100%)
-- 11 écritures comptables verified
-- OCR accuracy: 99.97% (1 correction applied)
-- Status: Stable operational, foundation established
+- Bilan: 571,613€ (ACTIF=PASSIF @ 100%)
+- Écritures: 11 verified
+- OCR: 99.97% accuracy
+- Status: Stable operational
 
 **PRET_IMMOBILIER:**
 - LCL: 250,000€ @ 1.050%, 252 échéances
 - Investimur: 250,000€ @ 1.240%, 216 échéances
-- Total: 468 échéances @ 100% verified accuracy
-- Duration: ~21 years amortization (first payments Dec 2023)
-- Status: Pérenne opérationnel, recurring monthly
+- Total: 468 échéances @ 100% verified
+- Amortization: ~21 years
+- Status: Recurring monthly operational
 
-### Phase 2 ✅ QUALITY FRAMEWORK OPERATIONAL (5-6 Nov)
-**Batch processing architecture:**
-- Multi-event handling: INIT/PRET/SCPI/ETF/ASSURANCE types confirmed functional
-- PDF hybrid processing: Claude native API + fallback tested
-- Accuracy maintained: 99%+ sustained
-- Quality controls: Period validation + Claude deduplication + ANCIEN_SOLDE filter
-- MD5 token integrity: All propositions tracked and verifiable
-- 7 PRs merged (#139-#146), zero regressions
+## PHASE 2 ✅ QUALITY FRAMEWORK (5-6 Nov)
+**Batch processing:**
+- Multi-event handling: INIT/PRET/SCPI/ETF/ASSURANCE all functional
+- PDF hybrid: Claude native + fallback tested
+- Accuracy: 99%+ sustained
+- Quality controls: Period validation + Claude dedup + ANCIEN_SOLDE filter
+- MD5 token integrity: All propositions tracked
 - Status: Production-quality ready
 
-### Phase 3 🚀 FRAMEWORK VALIDATED (06-07 Nov - CURRENT)
-**RELEVE_BANCAIRE Parseur - Real data proof:**
-- Document: 9 pages, 7-month historical (Dec 2023 - Apr 2024)
-- Multi-event detection: All 6 event types (PRET/SCPI/ETF/ASSURANCE/FRAIS/IMPOTS/AUTRES) functional
-- Balance calculation: 5 monthly relevés @ 100% reconciliation
-- Period filtering: ANCIEN_SOLDE automatic exclusion working perfectly
-- OCR accuracy: 99%+ sustained across full document
-- Scalability proven: Monthly volume expected 12+ cycles
-- Status: Production-ready pending Ulrik validation + integration workflow
+## PHASE 3 🚀 FRAMEWORK VALIDATED (06-07 Nov)
+**RELEVE_BANCAIRE Parseur - Real data 7-month proof:**
+- Document: 9 pages, Dec 2023 - Apr 2024 historical
+- Multi-event: 7 types parsing (PRET/SCPI/ETF/ASSURANCE/FRAIS/IMPOTS/AUTRES) functional
+- Balance calc: 5 monthly relevés @ 100% reconciliation
+- Period filtering: ANCIEN_SOLDE auto-exclusion working
+- OCR: 99%+ sustained across full doc
+- Scalability: Monthly volumes 12+ cycles expected
+- New event types: REMBOURSEMENT_PRET, REVENU_SCPI, ACHAT_AMAZON (PR #150)
+- Status: Production-ready pending Ulrik validation
 
 ## INFRASTRUCTURE STABLE
-- PostgreSQL: Optimized schema (7 months transaction data)
-- Integrity: MD5 + ACID verified, cascade operations
-- Cost: <1€/mois indefinitely confirmed
-- Uptime: 100% (>35 days continuous)
+- PostgreSQL: 7-month transaction data optimized
+- Integrity: MD5 + ACID verified
+- Cost: <1€/mois confirmed indefinitely
+- Uptime: 100% (>35 days)
 - Git: Master stable, all PRs integrated
 
 ## ROADMAP IMMÉDIAT
-1. **Validation Ulrik:** Confirmer accuracy Phase 3 parsing
-2. **Propositions generation:** Écritures comptables creation workflow
-3. **Production activation:** Full monthly automation
-4. **Monitoring:** Ongoing volume + distributions
+1. Ulrik validation: Confirm accuracy
+2. Propositions generation: Écritures workflow
+3. Production activation: Full monthly automation
+4. Monitoring: Ongoing volume tracking
