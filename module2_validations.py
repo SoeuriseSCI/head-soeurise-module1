@@ -157,9 +157,19 @@ class ValidateurIntegriteJSON:
         token_calculated = hashlib.md5(
             json.dumps(propositions, sort_keys=True).encode()
         ).hexdigest()
-        
-        if token_calculated != token_email:
-            return False, f"Token MD5 invalide (tampering detecte?) - Attendu: {token_email}, Calcule: {token_calculated}"
+
+        # Normaliser la comparaison selon le format du token
+        token_to_compare = token_email
+        if token_email.startswith('HEAD-'):
+            # Token court: extraire les 8 caractères hexa et comparer avec les 8 premiers du MD5
+            token_hexa = token_email.replace('HEAD-', '').lower()
+            token_calculated_short = token_calculated[:8]
+            if token_hexa != token_calculated_short:
+                return False, f"Token MD5 invalide (tampering detecte?) - Attendu: HEAD-{token_calculated_short.upper()}, Reçu: {token_email}"
+        else:
+            # MD5 complet: comparer directement
+            if token_calculated != token_email.lower():
+                return False, f"Token MD5 invalide (tampering detecte?) - Attendu: {token_email}, Calcule: {token_calculated}"
         
         # 2. Verifier chaque proposition
         for i, prop in enumerate(propositions):
