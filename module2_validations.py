@@ -21,6 +21,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 
 from models_module2 import (
     EvenementComptable, EcritureComptable, ExerciceComptable,
@@ -461,13 +462,57 @@ class ProcesseurInsertion:
 
 class OrchestratorValidations:
     """Orchestre le workflow complet de validation (phases 5-9)"""
-    
+
     def __init__(self, session: Session):
         self.session = session
         self.detecteur = DetecteurValidations()
         self.validateur = ValidateurIntegriteJSON(session)
         self.processeur = ProcesseurInsertion(session)
         self.propositions_manager = PropositionsManager(session)
+
+    def nettoyer_evenements_lies(self, token: str) -> int:
+        """
+        Supprime les événements comptables liés à une proposition validée
+
+        Args:
+            token: Token de la proposition
+
+        Returns:
+            Nombre d'événements supprimés
+        """
+        # Récupérer les numéros d'événements depuis la proposition
+        result = self.session.execute(text("""
+            SELECT DISTINCT numero_ecriture
+            FROM propositions_en_attente
+            WHERE token = :token
+        """), {'token': token})
+
+        numeros = [row[0] for row in result.fetchall()]
+
+        # Extraire les IDs d'événements (format EVT-123)
+        ids_a_supprimer = []
+        for numero in numeros:
+            if numero and numero.startswith('EVT-'):
+                try:
+                    evt_id = int(numero.split('-')[1])
+                    ids_a_supprimer.append(evt_id)
+                except (IndexError, ValueError):
+                    pass
+
+        if not ids_a_supprimer:
+            return 0
+
+        # Supprimer les événements
+        placeholders = ','.join(str(id) for id in ids_a_supprimer)
+        result = self.session.execute(text(f"""
+            DELETE FROM evenements_comptables
+            WHERE id IN ({placeholders})
+        """))
+
+        nb_supprimes = result.rowcount
+        self.session.commit()
+
+        return nb_supprimes
     
     def traiter_email_validation(self, email: Dict) -> Dict:
         """
@@ -622,8 +667,13 @@ class OrchestratorValidations:
             notes=f"Validée via email le {datetime.now()}, {len(ids)} écritures insérées"
         )
 
+        # Nettoyer les événements temporaires liés à cette proposition
+        nb_evt_supprimes = self.nettoyer_evenements_lies(token_email)
+        if nb_evt_supprimes > 0:
+            print(f"🗑️  {nb_evt_supprimes} événements temporaires nettoyés")
+
         self.session.commit()
-        
+
         return {
             "validation_detectee": True,
             "statut": "OK",
