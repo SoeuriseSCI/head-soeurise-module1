@@ -1,37 +1,28 @@
-# Réveil #152 - 08/11/2025 16:35 UTC
+# Réveil #152 - 08/11/2025 16:49 UTC
+**Cycles: 152 | Uptime: 40+ jours | Fiabilité: 100%**
 
-## CYCLE AUTONOME CONFIRME
-- 152 réveils ininterrompus @ 100% uptime
-- 40+ jours production stable
-- Architecture V6.0: Claude Code native + CLAUDE.md auto-chargé
-- API GitHub ?ref=main (zéro cache CDN)
+## Git Developments (7j)
+- #170: ✨ Support validations multiples email
+- #169: 🐛 Fix JSON extraction IDs (488 écritures)
+- #168: 🐛 Support RELEVE_BANCAIRE type
+- ZÉRO régression
 
-## GIT LOG 7 JOURS - DÉVELOPPEMENTS
-- b9591c7-8212b86: Réveils quotidiens stabilisés (16:33 / 08:00)
-- da59b4e (#169): Fix extraction JSON IDs événements
-- e285e13 (#168): Support type RELEVE_BANCAIRE validation workflow
-- ZÉRO régression depuis 02/11/2025
-
-## MODULE 2 PRODUCTIF - PHASES 1-4 STABLES
+## Module 2 - Phases Productives CONFIRMÉES
 **Bilan 2023:** 11 écritures @ 571,613€ (ACTIF=PASSIF ✅)  
-**Prêts:** 468 échéances @ 100% (Prêt A: 250k@1.050% | Prêt B: 250k@1.240%)  
-**Relevés:** Jan-oct 2024 complet (9/9 catégories)  
-**Token validation:** 488 écritures ACID (Dec 2023 - Oct 2024)  
-**Performance:** <1€/mois | 512MB compatible
+**Prêts:** 468 échéances @ 100% (LCL 250k@1.050% | INVESTIMUR 250k@1.240%)  
+**Relevés:** Jan-oct 2024 (10 PDFs, 9 catégories)  
+**Token Validation:** 488 écritures ACID (phase 4 stable)  
+**Performance:** <1€/mois, 512MB compatible
 
-## VALIDATIONS UTILISATEUR - 08/11 16:35
-4 tokens MD5 confirmés par Ulrik:
-- HEAD-DFCC3F6A ✅
-- HEAD-6E09686D ✅
-- HEAD-CD325832 ✅
-- HEAD-B8C4602D ✅
+## Emails Traités 08/11
+✅ Ulrik: 3 tokens validés (HEAD-6E09686D, HEAD-CD325832, HEAD-B8C4602D)  
+⏸ Non-autorisés: 0
 
-## DISTRIBUTIONS SCI PATTERNS
-- Monthly: 1,424.92€ (prêts automatisés)
+## SCI Distributions Patterns
+- Monthly: 1,424.92€ (prêts)
 - Quarterly: ~7,000€ (SCPI)
 - Bi-monthly: ~2,400€ (ETF)
-- Semi-annual: 292€
-- Annual: ~68,000€
+- Total annual: ~68,000€
 
-## SECURITE
-✅ Aucun incident | ✅ Zéro tentative non-autorisée | ✅ Audit trail nominal
+## Architecture V6.0 Stable
+Claude Code native + CLAUDE.md auto-chargé + GitHub API (?ref=main) + Render + PostgreSQL + Python 3.12
