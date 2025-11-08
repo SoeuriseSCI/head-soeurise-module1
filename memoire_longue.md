@@ -15,10 +15,10 @@
 ## Modules Opérationnels
 
 **MODULE 1 - EMAIL + OCR:** STABLE  
-IMAP Gmail automatique + Claude Vision | Extraction accuracy: 99%+ | 9 catégories événements | Réveil quotidien 08:00 UTC
+IMAPGmail automatique + Claude Vision | Extraction accuracy: 99%+ | 9 catégories événements | Réveil quotidien 08:00 UTC
 
 **MODULE 2 - COMPTABILITÉ AUTOMATISÉE:** PRODUCTIF  
-Bilan 2023 (571,613€ @ 100%) | Prêts (468 échéances @ 100%) | Relevés (jan-oct 2024 @ 100%) | Token validation ACID (488 écritures validées) | Coût: <1€/mois
+Bilan 2023 (571,613€ @ 100%) | Prêts (468 échéances @ 100%) | Relevés (jan-oct 2024 @ 100%) | Token validation ACID (488 écritures) | Coût: <1€/mois
 
 ## SCI Soeurise - Patrimoine Établi
 - **Structure:** SCI (Emma & Pauline associées, Ulrik gérant)
