@@ -38,16 +38,16 @@ class DetecteurValidations:
     """Detecte les validations dans les emails recus"""
     
     @staticmethod
-    def detecter_validation(email: Dict) -> Dict:
+    def detecter_validations_multiples(email: Dict) -> Dict:
         """
-        Detecte si l'email contient une validation avec TOKEN
+        Detecte TOUS les tokens de validation dans un email
 
-        Cherche le tag: [_Head] VALIDE: TOKEN
+        Cherche tous les tags: [_Head] VALIDE: TOKEN
 
         Returns:
             {
               "validation_detectee": bool,
-              "token_email": str ou None,
+              "tokens": List[str],
               "message": str
             }
         """
@@ -59,39 +59,75 @@ class DetecteurValidations:
         # Pattern: [_Head] VALIDE: HEAD-XXXXXXXX ou [_Head] VALIDE:HEAD-XXXXXXXX
         pattern = r'\[_Head\]\s*VALIDE:\s*([A-Z0-9-]+)'
 
-        # Chercher dans le body
-        match = re.search(pattern, body, re.IGNORECASE)
-        if not match:
-            # Chercher dans le subject
-            match = re.search(pattern, subject, re.IGNORECASE)
+        # Chercher TOUTES les occurrences dans le body
+        matches = re.findall(pattern, body, re.IGNORECASE)
 
-        if not match:
+        # Ajouter celles du subject si pas dans body
+        if not matches:
+            matches = re.findall(pattern, subject, re.IGNORECASE)
+
+        if not matches:
             return {
                 "validation_detectee": False,
-                "token_email": None,
+                "tokens": [],
                 "message": "Tag [_Head] VALIDE: TOKEN non trouve"
             }
 
-        # Token trouvé
-        token_email = match.group(1).strip()
+        # Normaliser tous les tokens trouvés
+        tokens_normalises = []
+        for token in matches:
+            token = token.strip()
 
-        # Déterminer le format du token :
-        # - Si 32 caractères hexadécimaux → MD5 complet (format workflow v2)
-        # - Sinon → Token court avec préfixe HEAD-
+            # Déterminer le format du token :
+            # - Si 32 caractères hexadécimaux → MD5 complet (format workflow v2)
+            # - Sinon → Token court avec préfixe HEAD-
 
-        if len(token_email) == 32 and all(c in '0123456789abcdefABCDEF' for c in token_email):
-            # MD5 complet : normaliser en lowercase (format BD)
-            token_email = token_email.lower()
-        else:
-            # Token court : ajouter HEAD- si nécessaire et mettre en majuscules
-            token_email = token_email.upper()
-            if not token_email.startswith('HEAD-'):
-                token_email = f"HEAD-{token_email}"
+            if len(token) == 32 and all(c in '0123456789abcdefABCDEF' for c in token):
+                # MD5 complet : normaliser en lowercase (format BD)
+                token = token.lower()
+            else:
+                # Token court : ajouter HEAD- si nécessaire et mettre en majuscules
+                token = token.upper()
+                if not token.startswith('HEAD-'):
+                    token = f"HEAD-{token}"
+
+            tokens_normalises.append(token)
 
         return {
             "validation_detectee": True,
-            "token_email": token_email,
-            "message": f"Validation detectee avec token: {token_email}"
+            "tokens": tokens_normalises,
+            "message": f"{len(tokens_normalises)} validation(s) detectee(s): {', '.join(tokens_normalises)}"
+        }
+
+    @staticmethod
+    def detecter_validation(email: Dict) -> Dict:
+        """
+        Detecte UNE SEULE validation dans un email (pour compatibilité)
+
+        Cherche le tag: [_Head] VALIDE: TOKEN
+
+        Returns:
+            {
+              "validation_detectee": bool,
+              "token_email": str ou None,
+              "message": str
+            }
+        """
+        # Utiliser la méthode multi et retourner le premier token
+        result = DetecteurValidations.detecter_validations_multiples(email)
+
+        if not result['validation_detectee']:
+            return {
+                "validation_detectee": False,
+                "token_email": None,
+                "message": result['message']
+            }
+
+        # Retourner le premier token pour compatibilité
+        return {
+            "validation_detectee": True,
+            "token_email": result['tokens'][0],
+            "message": f"Validation detectee avec token: {result['tokens'][0]}"
         }
     
     @staticmethod
@@ -704,6 +740,51 @@ class OrchestratorValidations:
             "ecritures_creees": len(ids),
             "type_evenement": type_evenement
         }
+
+    def traiter_email_validations_multiples(self, email: Dict) -> List[Dict]:
+        """
+        Traite TOUTES les validations dans un email (support multi-tokens)
+
+        Returns:
+            Liste de résultats (un par token détecté)
+        """
+        # Détecter tous les tokens dans l'email
+        result_detection = self.detecteur.detecter_validations_multiples(email)
+
+        if not result_detection['validation_detectee']:
+            return [{
+                "validation_detectee": False,
+                "statut": "IGNORE",
+                "message": result_detection['message'],
+                "ecritures_creees": 0,
+                "type_evenement": None
+            }]
+
+        # Traiter chaque token individuellement
+        resultats = []
+        tokens = result_detection['tokens']
+
+        print(f"🔍 {len(tokens)} validation(s) détectée(s) dans l'email")
+
+        for token in tokens:
+            print(f"\n🔄 Traitement de {token}...")
+
+            # Créer un email temporaire avec un seul token pour la compatibilité
+            email_single = email.copy()
+            email_single['body'] = f"[_Head] VALIDE: {token}"
+
+            # Traiter ce token
+            result = self.traiter_email_validation(email_single)
+            resultats.append(result)
+
+            # Afficher le résultat
+            if result['statut'] == 'OK':
+                print(f"   ✅ {result['ecritures_creees']} écriture(s) insérée(s)")
+            else:
+                print(f"   ❌ {result['message']}")
+
+        print(f"\n📊 Résumé: {len(resultats)} validation(s) traitée(s)")
+        return resultats
 
 
 if __name__ == "__main__":
