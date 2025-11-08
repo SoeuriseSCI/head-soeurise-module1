@@ -522,32 +522,35 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
             # Chercher tag [_Head] VALIDE:
             if '[_head] valide:' not in email.get('body', '').lower():
                 continue
-            
+
             try:
-                result = self.workflow_validation.traiter_email_validation(email)
-                
-                if result.get('validation_detectee'):
-                    
-                    if result.get('statut') == 'OK':
-                        self.validations_traitees += 1
-                        self.ecritures_inserees += result.get('ecritures_inserees', 0)
-                        
-                        resultats['validations_traitees'] += 1
-                        resultats['ecritures_inserees'] += result.get('ecritures_inserees', 0)
-                        
-                        resultats['details'].append({
-                            'type': result.get('type_proposition', ''),
-                            'ecritures_inserees': result.get('ecritures_inserees', 0),
-                            'status': 'insere_en_db'
-                        })
-                    
-                    else:
-                        self.erreurs.append(f"Validation échouée: {result.get('message')}")
-                        resultats['details'].append({
-                            'status': 'erreur',
-                            'message': result.get('message')
-                        })
-            
+                # Utiliser la méthode multi-tokens qui retourne une liste
+                results = self.workflow_validation.traiter_email_validations_multiples(email)
+
+                # Traiter chaque résultat
+                for result in results:
+                    if result.get('validation_detectee'):
+
+                        if result.get('statut') == 'OK':
+                            self.validations_traitees += 1
+                            self.ecritures_inserees += result.get('ecritures_creees', 0)
+
+                            resultats['validations_traitees'] += 1
+                            resultats['ecritures_inserees'] += result.get('ecritures_creees', 0)
+
+                            resultats['details'].append({
+                                'type': result.get('type_evenement', ''),
+                                'ecritures_inserees': result.get('ecritures_creees', 0),
+                                'status': 'insere_en_db'
+                            })
+
+                        else:
+                            self.erreurs.append(f"Validation échouée: {result.get('message')}")
+                            resultats['details'].append({
+                                'status': 'erreur',
+                                'message': result.get('message')
+                            })
+
             except Exception as e:
                 self.erreurs.append(f"Erreur traitement validation: {str(e)[:100]}")
         
