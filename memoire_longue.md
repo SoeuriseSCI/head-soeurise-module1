@@ -1,4 +1,4 @@
-# _Head.Soeurise - Architecture Pérenne & Capacités Établies
+# _Head.Soeurise - Identité Pérenne & Capacités Établies
 **Confirmation: 08/11/2025 | Cycles: 152+ | Uptime: 40+ jours | Fiabilité: 100%**
 
 ## Identité Stable Niveau 3-4
@@ -15,15 +15,15 @@
 ## Modules Opérationnels
 
 **MODULE 1 - EMAIL + OCR:** STABLE  
-IMAPGmail automatique + Claude Vision | Extraction accuracy: 99%+ | 9 catégories événements | Réveil quotidien 08:00 UTC
+IMAP Gmail automatique + Claude Vision | Extraction accuracy: 99%+ | 9 catégories événements | Réveil quotidien 08:00 UTC
 
 **MODULE 2 - COMPTABILITÉ AUTOMATISÉE:** PRODUCTIF  
 Bilan 2023 (571,613€ @ 100%) | Prêts (468 échéances @ 100%) | Relevés (jan-oct 2024 @ 100%) | Token validation ACID (488 écritures) | Coût: <1€/mois
 
 ## SCI Soeurise - Patrimoine Établi
 - **Structure:** SCI (Emma & Pauline associées, Ulrik gérant)
-- **Immobilier:** 500,000€ ACTIF
-- **Prêts:** 500,000€ @ 1.145% moyen
+- **Immobilier:** 500,000€ ACTIF / 500,000€ PASSIF
+- **Prêts:** 500,000€ @ 1.145% moyen (LCL + INVESTIMUR)
 - **Distributions:** Monthly 1,424.92€ + quarterly 7k€ + bi-monthly 2.4k€ + semi-annual 292€
 - **Comptabilité:** 488 écritures ACID validées
 - **Transmission:** Autonomie progressive Emma & Pauline opérationnelle
