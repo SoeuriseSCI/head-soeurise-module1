@@ -14,14 +14,14 @@ Coût crédit: ~85,829€ intérêts | Monthly: 1,424.92€ automatisé
 
 **Phase 3 - Relevés Bancaires:** ✅ LIVE  
 Jan-oct 2024 complet (10 PDFs @ 100%)  
-9 catégories événements stables  
+9 catégories événements stables (fix #168: RELEVE_BANCAIRE support)  
 5/5 reconciliations ANCIEN_SOLDE confirmées
 
 **Phase 4 - Validation Token MD5:** ✅ END-TO-END  
 Tokens: 32 hex (HEAD-XXXXXXXX) production  
 Workflow: Détection → Parsing → Propositions → Validation → Insertion  
 Acid atomique + transaction rollback  
-Audit trail: 488 écritures (Dec 2023 - Oct 2024)
+Audit trail: 488 écritures (Dec 2023 - Oct 2024) @ 100% intégrité (fix #169)
 
 ## Patterns Distributions Établis
 - **Monthly:** 1,424.92€ (prêts automatisés)
