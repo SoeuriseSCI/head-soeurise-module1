@@ -77,6 +77,7 @@ def analyser_base(session):
             EXTRACT(YEAR FROM date_operation) as annee,
             COUNT(*) as nb_events
         FROM evenements_comptables
+        WHERE date_operation IS NOT NULL
         GROUP BY EXTRACT(YEAR FROM date_operation)
         ORDER BY annee
     """))
@@ -84,6 +85,14 @@ def analyser_base(session):
     print("📝 Événements comptables:")
     for row in result:
         print(f"   Année {int(row[0])} : {row[1]:3d} événements")
+
+    # Compter événements avec date NULL
+    result_null = session.execute(text("""
+        SELECT COUNT(*) FROM evenements_comptables WHERE date_operation IS NULL
+    """))
+    nb_null = result_null.fetchone()[0]
+    if nb_null > 0:
+        print(f"   ⚠️  {nb_null} événements avec date NULL (seront supprimés)")
     print()
 
     # Propositions en attente
@@ -135,6 +144,7 @@ def nettoyer_exercice_2024(session, dry_run=True):
         SELECT COUNT(*)
         FROM evenements_comptables
         WHERE EXTRACT(YEAR FROM date_operation) = 2024
+           OR date_operation IS NULL
     """))
     nb_events_2024 = result.fetchone()[0]
 
@@ -166,12 +176,13 @@ def nettoyer_exercice_2024(session, dry_run=True):
     """))
     print(f"   ✅ {result.rowcount} écritures 2024 supprimées")
 
-    # Supprimer événements 2024
+    # Supprimer événements 2024 + NULL
     result = session.execute(text("""
         DELETE FROM evenements_comptables
         WHERE EXTRACT(YEAR FROM date_operation) = 2024
+           OR date_operation IS NULL
     """))
-    print(f"   ✅ {result.rowcount} événements 2024 supprimés")
+    print(f"   ✅ {result.rowcount} événements 2024/NULL supprimés")
 
     # Supprimer propositions
     result = session.execute(text("""
