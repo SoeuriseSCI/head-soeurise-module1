@@ -971,7 +971,7 @@ class GenerateurPropositions:
     def generer_propositions_evenement_simple(email: Dict, montant: float, type_evt: str) -> Tuple[str, Dict, str]:
         """
         Génère propositions pour événement simple (loyer/charge)
-        
+
         Returns:
             (markdown_propre, propositions_dict, token_md5)
         """
@@ -980,9 +980,19 @@ class GenerateurPropositions:
             'LOYER': {'debit': '511', 'credit': '701', 'libelle': 'Encaissement loyer'},
             'CHARGE': {'debit': '614', 'credit': '401', 'libelle': 'Charge'},
         }
-        
+
         config = mapping.get(type_evt, mapping['CHARGE'])
-        
+
+        # FIX: Extraire date_ecriture de l'email ou utiliser date courante
+        email_date = email.get('date')
+        if email_date:
+            if hasattr(email_date, 'strftime'):
+                date_str = email_date.strftime('%Y-%m-%d')
+            else:
+                date_str = str(email_date)[:10]
+        else:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+
         propositions = [
             {
                 "numero_ecriture": f"2024-{datetime.now().strftime('%m%d')}-001",
@@ -990,7 +1000,8 @@ class GenerateurPropositions:
                 "compte_debit": config['debit'],
                 "compte_credit": config['credit'],
                 "montant": montant,
-                "libelle": f"{config['libelle']} - {montant}€"
+                "libelle": f"{config['libelle']} - {montant}€",
+                "date_ecriture": date_str
             }
         ]
         
@@ -1032,7 +1043,8 @@ class GenerateurPropositions:
                     "compte_debit": num_compte,
                     "compte_credit": compte_ouverture,
                     "montant": solde,
-                    "libelle": f"Ouverture: {libelle}"
+                    "libelle": f"Ouverture: {libelle}",
+                    "date_ecriture": "2023-01-01"
                 })
             else:
                 # Compte au passif ou provisions/amortissements
@@ -1042,7 +1054,8 @@ class GenerateurPropositions:
                     "compte_debit": compte_ouverture,
                     "compte_credit": num_compte,
                     "montant": solde,
-                    "libelle": f"Ouverture: {libelle}"
+                    "libelle": f"Ouverture: {libelle}",
+                    "date_ecriture": "2023-01-01"
                 })
 
         token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
@@ -1117,9 +1130,9 @@ class GenerateurPropositions:
     @staticmethod
     def generer_propositions_cloture_2023(credit_data: Dict, scpi_data: List[Dict]) -> Tuple[str, Dict, str]:
         """Génère propositions pour clôture exercice 2023"""
-        
+
         propositions = []
-        
+
         # Intérêts crédit
         if credit_data.get('total_interets_payes', 0) > 0:
             propositions.append({
@@ -1128,9 +1141,10 @@ class GenerateurPropositions:
                 "compte_debit": "661",
                 "compte_credit": "401",
                 "montant": credit_data['total_interets_payes'],
-                "libelle": f"Intérêts crédits 2023: {credit_data['total_interets_payes']}€"
+                "libelle": f"Intérêts crédits 2023: {credit_data['total_interets_payes']}€",
+                "date_ecriture": "2023-12-31"
             })
-        
+
         # Réévaluations SCPI
         for i, reevals in enumerate(scpi_data, 1):
             if reevals['type'] == 'GAIN':
@@ -1140,7 +1154,8 @@ class GenerateurPropositions:
                     "compte_debit": "440",
                     "compte_credit": "754",
                     "montant": reevals['montant'],
-                    "libelle": f"Rééval SCPI gain S{reevals['semestre']}: {reevals['montant']}€"
+                    "libelle": f"Rééval SCPI gain S{reevals['semestre']}: {reevals['montant']}€",
+                    "date_ecriture": "2023-12-31"
                 })
             else:
                 propositions.append({
@@ -1149,7 +1164,8 @@ class GenerateurPropositions:
                     "compte_debit": "654",
                     "compte_credit": "440",
                     "montant": reevals['montant'],
-                    "libelle": f"Rééval SCPI perte S{reevals['semestre']}: {reevals['montant']}€"
+                    "libelle": f"Rééval SCPI perte S{reevals['semestre']}: {reevals['montant']}€",
+                    "date_ecriture": "2023-12-31"
                 })
         
         token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
