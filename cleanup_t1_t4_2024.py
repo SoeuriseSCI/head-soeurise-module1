@@ -18,7 +18,7 @@ USAGE:
 import os
 import sys
 from datetime import datetime
-from models_module2 import get_session, EcritureComptable, ExerciceComptable, PretsImmobiliers, EcheancesPrets
+from models_module2 import get_session, EcritureComptable, ExerciceComptable, PretImmobilier, EcheancePret
 from sqlalchemy import text
 
 # Coleurs pour le terminal
@@ -97,12 +97,12 @@ def verify_before_deletion(session):
         print(f"    - {row[0]}: {row[1]}")
 
     # Prêts (à conserver)
-    prets_count = session.query(PretsImmobiliers).count()
+    prets_count = session.query(PretImmobilier).count()
     print(f"\nPrêts immobiliers (à conserver): {prets_count}")
     print_success("Prêts intacts") if prets_count == 2 else print_warning(f"Attendu 2, trouvé {prets_count}")
 
     # Échéances (à conserver)
-    echeances_count = session.query(EcheancesPrets).count()
+    echeances_count = session.query(EcheancePret).count()
     print(f"Échéances prêts (à conserver): {echeances_count}")
     print_success("Échéances intactes") if echeances_count == 467 else print_warning(f"Attendu 467, trouvé {echeances_count}")
 
@@ -192,12 +192,12 @@ def verify_after_deletion(session):
     print_success("Supprimé") if t1_t4 == 0 else print_error(f"PROBLÈME: {t1_t4} encore présentes")
 
     # Prêts
-    prets = session.query(PretsImmobiliers).count()
+    prets = session.query(PretImmobilier).count()
     print(f"Prêts immobiliers: {prets}")
     print_success("Intacts") if prets == 2 else print_error(f"PROBLÈME: {prets}")
 
     # Échéances
-    echeances = session.query(EcheancesPrets).count()
+    echeances = session.query(EcheancePret).count()
     print(f"Échéances: {echeances}")
     print_success("Intactes") if echeances == 467 else print_error(f"PROBLÈME: {echeances}")
 
