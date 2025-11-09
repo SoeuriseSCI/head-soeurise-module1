@@ -236,10 +236,23 @@ class ValidateurIntegriteJSON:
             else:
                 # Validation pour écritures comptables classiques (BILAN, CLOTURE, EVENEMENT_SIMPLE)
                 # Verifier structure
-                required_keys = ['compte_debit', 'compte_credit', 'montant', 'numero_ecriture']
+                required_keys = ['compte_debit', 'compte_credit', 'montant', 'numero_ecriture', 'date_ecriture']
                 for key in required_keys:
                     if key not in prop:
                         return False, f"Proposition {i}: cle '{key}' manquante"
+
+                # FIX: Verifier que date_ecriture n'est pas NULL
+                date_ecriture = prop.get('date_ecriture')
+                if date_ecriture is None:
+                    return False, f"Proposition {i}: date_ecriture ne peut pas etre None"
+
+                # FIX: Parser et valider la date si elle est une string
+                if isinstance(date_ecriture, str):
+                    try:
+                        from datetime import datetime as dt
+                        dt.strptime(date_ecriture, '%Y-%m-%d')
+                    except ValueError:
+                        return False, f"Proposition {i}: date_ecriture invalide (format attendu: YYYY-MM-DD, recu: {date_ecriture})"
 
                 # Verifier montant
                 try:
@@ -388,6 +401,9 @@ class ProcesseurInsertion:
                         # Parser si string (format ISO: 2024-10-15)
                         from datetime import datetime as dt
                         date_ecriture_prop = dt.strptime(date_ecriture_prop, '%Y-%m-%d').date()
+                    elif date_ecriture_prop is None:
+                        # FIX: Fallback robuste - ne jamais passer None à la BD
+                        date_ecriture_prop = datetime.now().date()
 
                     ecriture = EcritureComptable(
                         exercice_id=exercice_id,
