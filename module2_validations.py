@@ -178,13 +178,18 @@ class ValidateurIntegriteJSON:
     def valider_propositions(self, propositions: List[Dict], token_email: str) -> Tuple[bool, str]:
         """
         Valide integrite des propositions
-        
+
         Verifications:
         1. Token MD5 match (detecte tampering)
         2. Tous les comptes existent
         3. Montants > 0
         4. Structure JSON valide
-        
+        5. Champ date_ecriture present pour écritures comptables
+
+        Types reconnus:
+        - PRET_IMMOBILIER: ['type', 'action', 'pret', 'nb_echeances']
+        - Autres (BILAN, CLOTURE, EVENEMENT, RELEVE, etc): ['compte_debit', 'compte_credit', 'montant', 'numero_ecriture', 'date_ecriture']
+
         Returns:
             (valide, message_erreur)
         """
@@ -234,12 +239,13 @@ class ValidateurIntegriteJSON:
                     return False, f"Proposition {i} (PRET): nb_echeances invalide"
 
             else:
-                # Validation pour écritures comptables classiques (BILAN, CLOTURE, EVENEMENT_SIMPLE)
+                # Validation pour écritures comptables classiques (BILAN, CLOTURE, EVENEMENT_SIMPLE, RELEVE, etc)
                 # Verifier structure
                 required_keys = ['compte_debit', 'compte_credit', 'montant', 'numero_ecriture', 'date_ecriture']
                 for key in required_keys:
                     if key not in prop:
-                        return False, f"Proposition {i}: cle '{key}' manquante"
+                        prop_type_info = f" (type={prop_type})" if prop_type else " (type=UNDEFINED)"
+                        return False, f"Proposition {i}{prop_type_info}: cle '{key}' manquante"
 
                 # FIX: Verifier que date_ecriture n'est pas NULL
                 date_ecriture = prop.get('date_ecriture')
