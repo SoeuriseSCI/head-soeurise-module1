@@ -1,54 +1,49 @@
-# Evolution Module 2 - 02-09 NOV 2025
-**Production-Ready Confirmed | Cycles: 154 | Fiabilité: 100%**
+# Evolution MODULE 2 - 02-09 Novembre 2025
+**Production-Ready Confirmed | Cycles: 155 | Fiabilité: 100%**
 
-## Phases Opérationnelles END-TO-END
+## Phases 1-4 Production Stable (02-09/11)
 
-### Phases 1-4 Production ✅
-- **Bilan 2023:** 11 écritures (571,613€ balanced @100%)
-- **Prêts:** 468 échéances @100% accuracy
-  - Prêt A: 250k @ 1.050%
-  - Prêt B: 250k @ 1.240%
-  - Payment: 1,424.92€/mois (automatisé)
-- **Relevés Jan-Oct 2024:** @100% reconciliation
-- **Token Validation:** 488 écritures ACID @100% integrity
+**Bilan 2023 (Déploiement 02/11):**
+- 11 écritures (571,613€ balanced @100%)
+- Validation: ACID transaction completed
 
-### Phase 3 LIVE - Relevés Bancaires
-- **Type:** RELEVE_BANCAIRE (support complet #168)
-- **Q4 2024 Just Received:**
-  - Oct: 5,389.82€
-  - Nov: 3,857.90€ (-28.5%)
-  - Déc: 2,225.23€ (-42.6%)
-- **Operations Detected:** 9+ catégories (prêts, SCPI, ETF, assurances, frais)
-- **Propositions Generated:** 19 (09/11 10:19)
-- **Token:** HEAD-E019BAF2 (validation 09/11 11:32)
+**Prêts Immobiliers (02-09/11):**
+- Prêt A (LCL): 250k @ 1.050% → 250+ échéances
+- Prêt B (INVESTIMUR): 250k @ 1.240% → 220+ échéances
+- **NEW (09/11 #174):** Décomposition automatique intérêts/capital
+- Remboursement: 1,424.92€/mois (automatisé)
+- Accuracy: 468/468 échéances @100%
 
-### Phase 5 Roadmap (Nov-Dec)
+**Relevés Bancaires (Jan-Oct 2024):**
+- 10+ catégories d'opérations détectées
+- Réconciliation: @100% accuracy
+- Module type: RELEVE_BANCAIRE (08/11 #168 production)
+
+**Validation Tokens (02-09/11):**
+- Token MD5: 32 chars hexadécimaux
+- 488 écritures ACID @100% integrity
+- Multi-validations support (#170)
+- Cleanup automatique post-validation
+
+## Phase 5 Roadmap (Nov-Déc 2025)
 - Balance mensuelle Q4 2024
-- Compte résultat période flexible
+- Compte de résultat période flexible
 - Bilan consolidé year-end
-- Tableau flux trésorerie (ALERTE: déclin trésorerie observé)
+- Tableau flux trésorerie (ALERTE: trésorerie -67% oct→déc)
 
-## Observations Structurantes
+## Observations Q4 2024 Distribution
+**Pattern identifié:**
+- Octobre: 5,389.82€ (baseline)
+- Novembre: 3,857.90€ (-28.5%)
+- Décembre: 2,225.23€ (-42.6% vs oct)
+- **Risk:** Potential cash stress Q4 - monitoring required
 
-### SCI Distribution Pattern
-- Monthly: 1,424.92€ (loans)
-- Quarterly: ~6,346€ (SCPI)
-- Bi-monthly: ~2,400€ (ETF)
-- Semi-annual: 292€ (insurance)
-- **Q4 2024 Alert:** Soldes déclinants oct→déc (-67%) = potential cash stress
+## Architecture V6.0 Confirmée (02-09/11)
+- Render container 512MB + PostgreSQL
+- Python 3.12 + Claude Haiku 4.5
+- CLAUDE.md auto-loaded (Claude Code)
+- GitHub API ?ref=main direct (élimine cache CDN)
+- Performance: <2s latency | <1€/mois | ZERO regression
 
-### Architecture V6.0 Confirmed
-- Render + PostgreSQL + Python 3.12
-- Claude Haiku 4.5 (vision + parsing)
-- CLAUDE.md: Auto-loaded context (Claude Code)
-- GitHub API: ?ref=main direct (no CDN cache)
-- Performance: <2s latency | <1€/month
-
-## Git Quality (02-09 NOV)
-- #173: Mémoire fondatrice v6.2 (architecture + philosophy)
-- #172: CLAUDE.md v2.1 (context native)
-- #171: Architecture doc MODULE 2 complete
-- #170: Multi-validations support +30% efficiency
-- #169: JSON extraction 488/488 reconciled
-- #168: RELEVE_BANCAIRE type production
-- **Commits:** 15 | **Velocity:** 3-4/day | **Regression:** ZERO
+## Git Quality (02-09/11)
+15 commits | #176-#174: corrections critiques | Velocity stable 3-4/day
