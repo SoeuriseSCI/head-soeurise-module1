@@ -378,16 +378,49 @@ class ProcesseurInsertion:
                 exercice_id = exercice_2024.id
             
             ecriture_ids = []
-            
-            for prop in propositions:
+
+            # Récupérer la liste des événements comptables source pour obtenir les dates si nécessaire
+            evenements_map = {}
+            if evt_original_id and evt_original_id != 'UNKNOWN':
+                result_evts = self.session.execute(
+                    text("""
+                        SELECT id, date_operation, libelle
+                        FROM evenements_comptables
+                        WHERE email_id = :email_id
+                    """),
+                    {'email_id': evt_original_id}
+                )
+                for evt in result_evts:
+                    evenements_map[evt[0]] = {'date_operation': evt[1], 'libelle': evt[2]}
+
+            for i, prop in enumerate(propositions):
                 try:
                     # CORRECTION: Utiliser date_ecriture de la proposition (date opération réelle)
                     # au lieu de datetime.now() (date de traitement)
                     date_ecriture_prop = prop.get('date_ecriture')
+
                     if isinstance(date_ecriture_prop, str):
                         # Parser si string (format ISO: 2024-10-15)
                         from datetime import datetime as dt
                         date_ecriture_prop = dt.strptime(date_ecriture_prop, '%Y-%m-%d').date()
+
+                    # FALLBACK: Si date_ecriture manquante, essayer de récupérer depuis événement source
+                    if date_ecriture_prop is None:
+                        # Essayer d'extraire l'ID événement depuis le numero_ecriture (format: EVT-XXX-YYY)
+                        numero = prop.get('numero_ecriture', '')
+                        if numero.startswith('EVT-'):
+                            parts = numero.split('-')
+                            if len(parts) >= 2:
+                                try:
+                                    evt_id = int(parts[1])
+                                    if evt_id in evenements_map:
+                                        date_ecriture_prop = evenements_map[evt_id]['date_operation']
+                                except (ValueError, IndexError):
+                                    pass
+
+                        # Si toujours None, lever une erreur explicite
+                        if date_ecriture_prop is None:
+                            raise ValueError(f"Proposition {i}: date_ecriture manquante et impossible à récupérer depuis événement source")
 
                     ecriture = EcritureComptable(
                         exercice_id=exercice_id,
