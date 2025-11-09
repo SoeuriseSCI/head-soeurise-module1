@@ -1,0 +1,202 @@
+================================================================================
+QUICK REFERENCE: Safe Database Deletion Queries
+================================================================================
+
+CURRENT DATABASE STATE:
+  Total Ecritures: 157
+    - Bilan 2023 (KEEP): 11 entries
+    - T1-T4 2024 (DELETE): 146 entries
+  Prêts (KEEP): 2 contracts
+  Écheances (KEEP): 467 payment schedules
+  Propositions (EMPTY): 0 entries
+  Événements (OPTIONAL): 0 entries
+
+================================================================================
+DELETION CRITERIA
+================================================================================
+
+1. BILAN 2023 (TO KEEP - DO NOT DELETE)
+   WHERE type_ecriture = 'INIT_BILAN_2023' AND exercice_id = 2
+   Count: 11 entries
+
+2. T1-T4 2024 (TO DELETE)
+   WHERE exercice_id = 1 AND type_ecriture != 'INIT_BILAN_2023'
+   Count: 146 entries
+   Breakdown:
+     - REMBOURSEMENT_PRET: 22
+     - ASSURANCE_PRET: 90
+     - REVENU_SCPI: 13
+     - HONORAIRES_COMPTABLE: 10
+     - FRAIS_BANCAIRES: 8
+     - ACHAT_ETF: 3
+
+3. CLÔTURE 2023 (TO DELETE IF EXISTS)
+   WHERE type_ecriture = 'CLOTURE' AND exercice_id = 2
+
+================================================================================
+SAFE DELETION QUERY (COPY-PASTE)
+================================================================================
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- DELETE T1-T4 2024 DATA (146 ECRITURES)
+-- ════════════════════════════════════════════════════════════════════════════
+
+BEGIN TRANSACTION;
+
+-- Verify counts before deletion
+SELECT 'BEFORE DELETE' as phase;
+SELECT COUNT(*) as total_ecritures FROM ecritures_comptables;
+SELECT COUNT(*) as bilan_2023 FROM ecritures_comptables 
+  WHERE type_ecriture = 'INIT_BILAN_2023' AND exercice_id = 2;
+SELECT COUNT(*) as t1_t4_2024 FROM ecritures_comptables 
+  WHERE exercice_id = 1 AND type_ecriture != 'INIT_BILAN_2023';
+
+-- Delete T1-T4 2024 ecritures
+DELETE FROM ecritures_comptables 
+WHERE exercice_id = 1 AND type_ecriture != 'INIT_BILAN_2023';
+
+-- Clean related tables
+DELETE FROM balances_mensuelles WHERE exercice_id = 1;
+DELETE FROM rapports_comptables WHERE exercice_id = 1;
+DELETE FROM propositions_en_attente WHERE statut IN ('REJETEE', 'EXPIREE');
+
+-- Verify after deletion
+SELECT 'AFTER DELETE' as phase;
+SELECT COUNT(*) as remaining_ecritures FROM ecritures_comptables;
+SELECT COUNT(*) as remaining_bilan_2023 FROM ecritures_comptables 
+  WHERE type_ecriture = 'INIT_BILAN_2023' AND exercice_id = 2;
+SELECT COUNT(*) as remaining_2024 FROM ecritures_comptables WHERE exercice_id = 1;
+SELECT COUNT(*) as prets_still_intact FROM prets_immobiliers;
+SELECT COUNT(*) as echeances_still_intact FROM echeances_prets;
+
+COMMIT;
+
+================================================================================
+VERIFICATION BEFORE DELETION
+================================================================================
+
+Run these queries BEFORE deletion to verify current state:
+
+  -- 1. Check bilan 2023 exists and has 11 entries
+  SELECT COUNT(*) FROM ecritures_comptables 
+  WHERE type_ecriture = 'INIT_BILAN_2023' AND exercice_id = 2;
+  Expected: 11
+
+  -- 2. Check T1-T4 2024 count
+  SELECT COUNT(*) FROM ecritures_comptables 
+  WHERE exercice_id = 1 AND type_ecriture != 'INIT_BILAN_2023';
+  Expected: 146
+
+  -- 3. Check prêts are NOT LINKED to T1-T4 ecritures
+  SELECT COUNT(*) FROM echeances_prets 
+  WHERE ecriture_comptable_id IN (
+    SELECT id FROM ecritures_comptables 
+    WHERE exercice_id = 1 AND type_ecriture != 'INIT_BILAN_2023'
+  );
+  Expected: 0 (no prêt payment echeances linked to T1-T4)
+
+  -- 4. Check pret count
+  SELECT COUNT(*) FROM prets_immobiliers;
+  Expected: 2
+
+  -- 5. Check echeances count
+  SELECT COUNT(*) FROM echeances_prets;
+  Expected: 467
+
+================================================================================
+VERIFICATION AFTER DELETION
+================================================================================
+
+Run these queries AFTER deletion to verify nothing broke:
+
+  -- 1. Remaining ecritures
+  SELECT COUNT(*) as total FROM ecritures_comptables;
+  Expected: 11 (only bilan 2023)
+
+  -- 2. Bilan 2023 preserved
+  SELECT COUNT(*) FROM ecritures_comptables 
+  WHERE type_ecriture = 'INIT_BILAN_2023' AND exercice_id = 2;
+  Expected: 11
+
+  -- 3. T1-T4 2024 deleted
+  SELECT COUNT(*) FROM ecritures_comptables WHERE exercice_id = 1;
+  Expected: 0
+
+  -- 4. Prêts still intact
+  SELECT COUNT(*) FROM prets_immobiliers;
+  Expected: 2
+
+  -- 5. Écheances still intact
+  SELECT COUNT(*) FROM echeances_prets;
+  Expected: 467
+
+  -- 6. No orphaned echeances
+  SELECT COUNT(*) FROM echeances_prets 
+  WHERE ecriture_comptable_id NOT IN (
+    SELECT id FROM ecritures_comptables
+  ) AND ecriture_comptable_id IS NOT NULL;
+  Expected: 0
+
+================================================================================
+BACKUP COMMANDS (RUN FIRST!)
+================================================================================
+
+# JSON backup (recommended)
+cd /home/user/head-soeurise-module1
+python sauvegarder_base.py
+
+# SQL dump (if available)
+bash sauvegarder_base.sh
+
+# Verify backup was created
+ls -lh backups/soeurise_bd_*.json
+
+================================================================================
+IF DELETION FAILS OR DATA CORRUPTION OCCURS
+================================================================================
+
+Method 1: Restore from JSON backup
+  python restore_from_json_backup.py backups/soeurise_bd_20251109_130355.json
+
+Method 2: Contact Ulrik for Render manual restore
+  (Ulrik has access to Render backup tools)
+
+================================================================================
+FOREIGN KEY SAFETY ANALYSIS
+================================================================================
+
+SAFE TO DELETE because:
+  ✓ prets_immobiliers has NO FK pointing to ecritures_comptables
+  ✓ echeances_prets.ecriture_comptable_id is NULLABLE
+  ✓ No CASCADE DELETE constraints from prêt tables
+  ✓ evenements_comptables has no formal FK to ecritures (logical only)
+
+WHAT DELETING WILL AFFECT:
+  - ecritures_comptables: 146 rows deleted
+  - balances_mensuelles: Cached data (will be stale)
+  - rapports_comptables: Cached data (will be stale)
+  - propositions_en_attente: Empty anyway
+
+WHAT WILL NOT BE AFFECTED:
+  - prets_immobiliers: 2 rows (UNTOUCHED)
+  - echeances_prets: 467 rows (UNTOUCHED)
+  - exercices_comptables: 2 rows (UNTOUCHED)
+  - plans_comptes: All plan data (UNTOUCHED)
+
+================================================================================
+SUMMARY
+================================================================================
+
+BEFORE DELETE:  157 ecritures → 11 bilan 2023 + 146 T1-T4 2024
+AFTER DELETE:   11 ecritures → 11 bilan 2023 only
+
+PRÊTS:          2 contracts + 467 echeances (UNCHANGED)
+PROPOSITIONS:   0 (EMPTY)
+ÉVÉNEMENTS:     0 (OPTIONAL: delete or keep)
+
+RISK LEVEL:     LOW (Nullable FKs, no cascades)
+SAFETY CHECKS:  HIGH (Multiple verifications)
+
+See DATABASE_DELETION_ANALYSIS.md for complete documentation.
+
+================================================================================
