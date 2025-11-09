@@ -170,19 +170,19 @@ class DetecteurRemboursementPret(DetecteurBase):
 
     PATTERN:
     - Libellé contient: PRET IMMOBILIER, ECH, DOSSIER NO
-    - Montant: 1166.59€ (prêt LCL amortissable)
+    - Montant: 1166.59€ (prêt LCL amortissable) OU 258.33€ (prêt INVESTIMUR in fine)
     - Type: DEBIT
     - Fréquence: Mensuel (15 du mois)
 
     COMPTABILISATION:
-    Débit 164 (Emprunts LCL)        : CAPITAL€
     Débit 661 (Charges d'intérêts)  : INTERETS€
-    Crédit 512 (Banque LCL)         : 1166.59€
+    Débit 164 (Emprunts)            : CAPITAL€
+    Crédit 512 (Banque LCL)         : TOTAL€
 
     NOTE IMPORTANTE:
-    - Cette version enregistre le montant total en attente de décomposition capital/intérêts
-    - Le tableau d'amortissement sera nécessaire pour la décomposition exacte
-    - Pour l'instant: 100% du montant → 164 (à corriger après)
+    - Lookup dans echeances_prets par date pour obtenir ventilation exacte
+    - Si échéance trouvée: génère 2 écritures (intérêts + capital)
+    - Si non trouvée: génère 1 écriture temporaire (à corriger manuellement)
     """
 
     MONTANT_ATTENDU = 1166.59
@@ -208,29 +208,90 @@ class DetecteurRemboursementPret(DetecteurBase):
         return (match_libelle or match_type) and match_debit
 
     def generer_proposition(self, evenement: Dict) -> Dict:
-        """Génère la proposition d'écriture"""
+        """
+        Génère la proposition d'écriture avec décomposition intérêts/capital
+
+        Recherche l'échéance correspondante dans echeances_prets pour ventiler
+        automatiquement entre compte 661 (intérêts) et 164 (capital).
+        """
         montant = float(evenement.get('montant', 0))
         date_op = evenement.get('date_operation')
 
-        # Calculer niveau de confiance
-        confiance = 0.8  # Confiance moyenne car décomposition capital/intérêts à faire
-
-        return {
-            'type_evenement': 'REMBOURSEMENT_PRET',
-            'description': f'Remboursement prêt LCL (échéance mensuelle) - À DÉCOMPOSER',
-            'confiance': confiance,
-            'ecritures': [
-                {
-                    'date_ecriture': date_op,
-                    'libelle_ecriture': f'Échéance prêt LCL (TEMPORAIRE - à décomposer capital/intérêts)',
-                    'compte_debit': '164',
-                    'compte_credit': '512',
-                    'montant': montant,
-                    'type_ecriture': 'REMBOURSEMENT_PRET',
-                    'notes': 'ATTENTION: Enregistrement temporaire - Nécessite décomposition capital (164) / intérêts (661) via tableau amortissement'
+        # Rechercher l'échéance correspondante dans la table echeances_prets
+        echeance = None
+        try:
+            result = self.session.execute(
+                text("""
+                    SELECT ep.montant_interet, ep.montant_capital, ep.montant_total,
+                           pi.numero_pret, pi.banque, ep.numero_echeance
+                    FROM echeances_prets ep
+                    JOIN prets_immobiliers pi ON ep.pret_id = pi.id
+                    WHERE ep.date_echeance = :date_op
+                      AND ABS(ep.montant_total - :montant) < 0.10
+                    LIMIT 1
+                """),
+                {'date_op': date_op, 'montant': montant}
+            )
+            row = result.fetchone()
+            if row:
+                echeance = {
+                    'montant_interet': float(row[0]),
+                    'montant_capital': float(row[1]),
+                    'montant_total': float(row[2]),
+                    'numero_pret': row[3],
+                    'banque': row[4],
+                    'numero_echeance': row[5]
                 }
-            ]
-        }
+        except Exception as e:
+            print(f"⚠️  Erreur lookup échéance prêt: {e}")
+            echeance = None
+
+        # CAS 1: Échéance trouvée → Décomposition intérêts/capital
+        if echeance:
+            return {
+                'type_evenement': 'REMBOURSEMENT_PRET',
+                'description': f'Échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]} ({echeance["numero_pret"][:10]}...)',
+                'confiance': 1.0,  # Confiance maximale car données vérifiées
+                'ecritures': [
+                    {
+                        'date_ecriture': date_op,
+                        'libelle_ecriture': f'Intérêts échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]}',
+                        'compte_debit': '661',
+                        'compte_credit': '512',
+                        'montant': echeance['montant_interet'],
+                        'type_ecriture': 'INTERET_PRET',
+                        'notes': f'Prêt {echeance["numero_pret"]} - Échéance {echeance["numero_echeance"]}'
+                    },
+                    {
+                        'date_ecriture': date_op,
+                        'libelle_ecriture': f'Remboursement capital échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]}',
+                        'compte_debit': '164',
+                        'compte_credit': '512',
+                        'montant': echeance['montant_capital'],
+                        'type_ecriture': 'REMBOURSEMENT_CAPITAL',
+                        'notes': f'Prêt {echeance["numero_pret"]} - Échéance {echeance["numero_echeance"]}'
+                    }
+                ]
+            }
+
+        # CAS 2: Échéance NON trouvée → Écriture temporaire (fallback)
+        else:
+            return {
+                'type_evenement': 'REMBOURSEMENT_PRET',
+                'description': f'Remboursement prêt (échéance non trouvée dans BD)',
+                'confiance': 0.5,  # Confiance réduite car décomposition impossible
+                'ecritures': [
+                    {
+                        'date_ecriture': date_op,
+                        'libelle_ecriture': f'Échéance prêt (TEMPORAIRE - échéance non trouvée)',
+                        'compte_debit': '164',
+                        'compte_credit': '512',
+                        'montant': montant,
+                        'type_ecriture': 'REMBOURSEMENT_PRET',
+                        'notes': f'ATTENTION: Échéance non trouvée dans echeances_prets pour date {date_op} montant {montant}€. Nécessite correction manuelle pour ventiler intérêts (661) / capital (164).'
+                    }
+                ]
+            }
 
 
 class DetecteurRevenuSCPI(DetecteurBase):
