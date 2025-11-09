@@ -44,25 +44,35 @@ Ventilation correcte intérêts/capital selon PCG, avec lookup automatique dans 
 
 ---
 
-## ⚠️ Problème Gap Octobre
+## ✅ Continuité Octobre - Pas de Gap
 
 ### Constat
 
-- **Fichier Q1-Q3** : Déborde sur début octobre
-- **Fichier Q4** : Démarre avec un relevé ultérieur
-- **Conséquence** : Événements comptables manquants entre les deux
+- **Fichier Q1-Q3** : Contient janvier → septembre + début octobre
+- **Fichier Q4** : Contient suite octobre → décembre
+- **Conclusion** : **AUCUN relevé manquant**, continuité assurée
+
+### Gestion Automatique des Doublons
+
+Le système dispose d'un **détecteur de doublons par fingerprint** dans `gestionnaire_evenements.py` :
+
+```python
+fingerprint = hash(date + libellé_normalisé + montant + type)
+```
+
+**Garanties :**
+- Si Q1-Q3 contient des événements du 1-5 octobre
+- Et Q4 contient des événements à partir du 6 octobre
+- → Aucun doublon (dates différentes)
+
+**Cas limite :**
+- Si même événement dans les deux fichiers (même date/libellé/montant)
+- → Détection automatique, 2ème soumission ignorée
+- → Log : "⏭️ Doublon détecté (fingerprint): événement #XXX ignoré"
 
 ### Actions Requises
 
-1. **Identifier le gap exact:**
-   - Fichier Q1-Q3 : Dernière date ?
-   - Fichier Q4 : Première date ?
-
-2. **Récupérer les opérations manquantes:**
-   - Option A : Demander relevé complémentaire à la banque
-   - Option B : Extraction manuelle des opérations
-
-3. **Créer fichier gap si nécessaire**
+**AUCUNE** - Soumettre simplement Q1-Q3 puis Q4 dans l'ordre chronologique.
 
 ---
 
@@ -111,8 +121,9 @@ python nettoyer_et_resoumettre.py --execute
 ### Ordre de Soumission
 
 1. **Q1-Q3 Complet** (janvier-septembre + début octobre)
-2. **Gap Octobre** (si fichier complémentaire disponible)
-3. **Q4 Complet** (octobre-décembre)
+2. **Q4 Complet** (suite octobre-décembre)
+
+**Note :** Le détecteur de doublons garantit qu'aucun événement ne sera dupliqué.
 
 ### Workflow par Fichier
 
@@ -240,11 +251,9 @@ Le workflow GitHub Actions va automatiquement:
 
 ### Resoumission
 
-- [ ] Gap octobre identifié (dates exactes)
-- [ ] Fichier gap octobre créé (si nécessaire)
-- [ ] Q1-Q3 soumis et validé
-- [ ] Gap octobre soumis et validé (si applicable)
-- [ ] Q4 soumis et validé
+- [ ] Q1-Q3 soumis et validé (jan-sept + début oct)
+- [ ] Q4 soumis et validé (suite oct-déc)
+- [ ] Aucun doublon détecté (vérifier logs)
 
 ### Vérifications Finales
 
