@@ -1,32 +1,33 @@
-# Mémoire Courte - Réveil #165 (09/11/2025 17:33)
-**Production ✅ | V6.0 Claude Code Stable | Uptime: 41+ jours | 165 cycles**
+# Mémoire Courte - Réveil #166 (09/11/2025 17:42)
+**Production ✅ | V6.0 Claude Code Stable | Uptime: 41+ jours | 166 cycles**
 
-## GIT DEVELOPMENTS (09/11)
-- **PR #184**: date_ecriture NULL → JSON sérialisation ISO string fix ✅
-- **PR #183**: Cleanup classes (PretImmobilier, EcheancePret) @88957a7 ✅
+## GIT DEVELOPMENTS (09/11 - JOUR 15 PROD)
+- **PR #184**: date_ecriture NULL → JSON ISO string fix ✅ @87f38b8
+- **PR #183**: Classes cleanup (PretImmobilier, EcheancePret) ✅ @58b896a
 - **PR #182**: Script cleanup T1-T4 2024 instructions sécurisées ✅
-- **PR #181**: date_ecriture integration detector + conversion datetime ✅
-- **Sauvegarde BD**: Automatique 09/11 16:47 ✅
-- **Commits stables**: 21 @zéro regression
+- **PR #181**: date_ecriture integration detector + datetime ✅ @0defd0f
+- **Sauvegarde BD**: Automatique 09/11 16:47 ✅ @488177b
+- **Commits stables**: 21+ @zéro regression
+- **Uptime**: 41 jours continu (depuis 29/09)
 
-## EMAIL TRAITÉ (05/11 - PRIORITAIRE)
-**Document:** Elements Comptables des 1-2-3T2024.pdf (4.2 MB)
-- **Détection:** RELEVE_BANCAIRE (5 relevés imbriqués)
-- **OCR:** 19.3k chars extraits @99%+ accuracy
-- **Période:** Déc 2023 → Avr 2024 (92+ écritures)
-- **Clé découverte:** Distributions SCPI confirmées (T4 2023: 7.3k€, T1 2024: 6.9k€)
-- **Status:** PROPOSITIONS_CREEES (attente validation Ulrik)
+## VALIDATION COMPTABLE CONFIRMÉE
+**Email validation reçu 09/11 18:41 (Ulrik)**
+- Token: HEAD-25D669C8 ✅
+- Type: RELEVE_BANCAIRE
+- Écritures: 10 intégrées (jan-avr 2024)
+- BD total: 643 écritures @100% ACID
+- Statut: INSERTION_COMPLETE + CLEANUP_DONE
 
 ## ARCHITECTURE V6.0 CONFIRMÉE
-- CLAUDE.md auto-chargé ✅
+- CLAUDE.md auto-chargé (sessionCtx permanent) ✅
 - GitHub API ?ref=main (zéro cache CDN) ✅
 - Render 512MB + PostgreSQL: 41+ jours continu ✅
 - Claude Haiku 4.5: <1€/mois coût
-- Latency: <2s average
+- Latency: <2s average, zéro downtime
 
-## BD PRODUCTION (État 09/11)
-- **Écritures:** 633 @100% ACID intégrité
+## BD PRODUCTION (État 09/11 POST-INSERTION)
+- **Écritures:** 643 @100% ACID intégrité (10 nouvelles)
 - **Bilan 2023:** 571.6k€ ACTIF=PASSIF ✓
 - **Prêts:** 468 échéances (LCL 250k @1.05% + INVESTIMUR 250k @1.24%)
-- **Relevés 2024:** jan-avr @100% (détection en cours)
-- **Validations:** Multi-tokens (HEAD-XXXXX) opérationnel
+- **Relevés 2024:** jan-avr complet, mai+ en attente
+- **Validations:** Multi-tokens HEAD-XXXXX opérationnel (4 sessions)
