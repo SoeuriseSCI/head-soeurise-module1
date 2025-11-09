@@ -550,17 +550,34 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
 
             sections = analyse.get('sections', {})
 
-            # Déterminer les pages à extraire (uniquement les relevés bancaires)
+            # Déterminer les pages à extraire (TOUTES les sections avec opérations)
             page_debut = None
             page_fin = None
 
-            if 'releves_bancaires' in sections:
-                releves = sections['releves_bancaires']
-                page_debut = releves.get('page_debut')
-                page_fin = releves.get('page_fin')
-                print(f"📋 Extraction ciblée: pages {page_debut}-{page_fin} (relevés bancaires uniquement)")
+            # FIX: Extraire TOUTES les sections, pas seulement releves_bancaires
+            # Les sections à inclure : releves_bancaires, avis_operations_vm, factures
+            sections_a_extraire = ['releves_bancaires', 'avis_operations_vm', 'factures']
+
+            pages_min = []
+            pages_max = []
+
+            for section_name in sections_a_extraire:
+                if section_name in sections:
+                    section_info = sections[section_name]
+                    if isinstance(section_info, dict):
+                        debut = section_info.get('page_debut')
+                        fin = section_info.get('page_fin')
+                        if debut and fin:
+                            pages_min.append(debut)
+                            pages_max.append(fin)
+                            print(f"📋 Section '{section_name}': pages {debut}-{fin}")
+
+            if pages_min and pages_max:
+                page_debut = min(pages_min)
+                page_fin = max(pages_max)
+                print(f"✅ Extraction globale: pages {page_debut}-{page_fin} (toutes sections)")
             else:
-                print(f"⚠️  Aucune section 'releves_bancaires' détectée - extraction complète du PDF")
+                print(f"⚠️  Aucune section détectée - extraction complète du PDF")
 
             # Diviser le PDF en chunks si nécessaire (5 pages pour extraction complète garantie)
             chunk_paths = self._diviser_pdf_en_chunks(
