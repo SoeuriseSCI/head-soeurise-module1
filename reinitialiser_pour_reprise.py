@@ -78,6 +78,19 @@ def creer_sauvegarde():
         return False
 
 
+def table_exists(session, table_name):
+    """Vérifie si une table existe"""
+    try:
+        result = session.execute(text(f"""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_name = '{table_name}'
+            )
+        """))
+        return result.scalar()
+    except:
+        return False
+
 def verifier_etat_initial(session):
     """Vérifie l'état de la BD avant nettoyage"""
     print_header("ÉTAPE 2/4: ÉTAT INITIAL DE LA BASE")
@@ -100,18 +113,26 @@ def verifier_etat_initial(session):
         else:
             print_success("Bilan 2023 intact")
 
-        # Autres données
-        result = session.execute(text("SELECT COUNT(*) FROM prets_immobiliers"))
-        nb_prets = result.scalar()
+        # Autres données - vérifier existence table avant requête
+        nb_prets = 0
+        if table_exists(session, 'prets_immobiliers'):
+            result = session.execute(text("SELECT COUNT(*) FROM prets_immobiliers"))
+            nb_prets = result.scalar()
 
-        result = session.execute(text("SELECT COUNT(*) FROM echeances_prets"))
-        nb_echeances = result.scalar()
+        nb_echeances = 0
+        if table_exists(session, 'echeances_prets'):
+            result = session.execute(text("SELECT COUNT(*) FROM echeances_prets"))
+            nb_echeances = result.scalar()
 
-        result = session.execute(text("SELECT COUNT(*) FROM evenements_comptables"))
-        nb_evenements = result.scalar()
+        nb_evenements = 0
+        if table_exists(session, 'evenements_comptables'):
+            result = session.execute(text("SELECT COUNT(*) FROM evenements_comptables"))
+            nb_evenements = result.scalar()
 
-        result = session.execute(text("SELECT COUNT(*) FROM propositions_comptables"))
-        nb_propositions = result.scalar()
+        nb_propositions = 0
+        if table_exists(session, 'propositions_comptables'):
+            result = session.execute(text("SELECT COUNT(*) FROM propositions_comptables"))
+            nb_propositions = result.scalar()
 
         result = session.execute(text("SELECT COUNT(*) FROM ecritures_comptables WHERE type_ecriture != 'INIT_BILAN_2023'"))
         nb_ecritures_autres = result.scalar()
@@ -127,6 +148,8 @@ def verifier_etat_initial(session):
 
     except Exception as e:
         print_error(f"Erreur vérification: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -143,25 +166,37 @@ def nettoyer_base(session):
 
         print("🗑️  Suppression en cours...")
 
-        # 1. Supprimer les événements comptables
-        result = session.execute(text("DELETE FROM evenements_comptables"))
-        nb_evenements = result.rowcount
-        print(f"   ✓ {nb_evenements} événements supprimés")
+        # 1. Supprimer les événements comptables (si table existe)
+        if table_exists(session, 'evenements_comptables'):
+            result = session.execute(text("DELETE FROM evenements_comptables"))
+            nb_evenements = result.rowcount
+            print(f"   ✓ {nb_evenements} événements supprimés")
+        else:
+            print(f"   ⊘ Table evenements_comptables non trouvée (ignorée)")
 
-        # 2. Supprimer les propositions
-        result = session.execute(text("DELETE FROM propositions_comptables"))
-        nb_propositions = result.rowcount
-        print(f"   ✓ {nb_propositions} propositions supprimées")
+        # 2. Supprimer les propositions (si table existe)
+        if table_exists(session, 'propositions_comptables'):
+            result = session.execute(text("DELETE FROM propositions_comptables"))
+            nb_propositions = result.rowcount
+            print(f"   ✓ {nb_propositions} propositions supprimées")
+        else:
+            print(f"   ⊘ Table propositions_comptables non trouvée (ignorée)")
 
-        # 3. Supprimer les échéances de prêts
-        result = session.execute(text("DELETE FROM echeances_prets"))
-        nb_echeances = result.rowcount
-        print(f"   ✓ {nb_echeances} échéances supprimées")
+        # 3. Supprimer les échéances de prêts (si table existe)
+        if table_exists(session, 'echeances_prets'):
+            result = session.execute(text("DELETE FROM echeances_prets"))
+            nb_echeances = result.rowcount
+            print(f"   ✓ {nb_echeances} échéances supprimées")
+        else:
+            print(f"   ⊘ Table echeances_prets non trouvée (ignorée)")
 
-        # 4. Supprimer les prêts
-        result = session.execute(text("DELETE FROM prets_immobiliers"))
-        nb_prets = result.rowcount
-        print(f"   ✓ {nb_prets} prêts supprimés")
+        # 4. Supprimer les prêts (si table existe)
+        if table_exists(session, 'prets_immobiliers'):
+            result = session.execute(text("DELETE FROM prets_immobiliers"))
+            nb_prets = result.rowcount
+            print(f"   ✓ {nb_prets} prêts supprimés")
+        else:
+            print(f"   ⊘ Table prets_immobiliers non trouvée (ignorée)")
 
         # 5. Supprimer les écritures SAUF Bilan 2023
         result = session.execute(
@@ -174,10 +209,13 @@ def nettoyer_base(session):
         nb_ecritures = result.rowcount
         print(f"   ✓ {nb_ecritures} écritures (hors Bilan 2023) supprimées")
 
-        # 6. Supprimer balances mensuelles
-        result = session.execute(text("DELETE FROM balances_mensuelles"))
-        nb_balances = result.rowcount
-        print(f"   ✓ {nb_balances} balances supprimées")
+        # 6. Supprimer balances mensuelles (si table existe)
+        if table_exists(session, 'balances_mensuelles'):
+            result = session.execute(text("DELETE FROM balances_mensuelles"))
+            nb_balances = result.rowcount
+            print(f"   ✓ {nb_balances} balances supprimées")
+        else:
+            print(f"   ⊘ Table balances_mensuelles non trouvée (ignorée)")
 
         # Commit
         session.commit()
@@ -188,6 +226,8 @@ def nettoyer_base(session):
     except Exception as e:
         session.rollback()
         print_error(f"Erreur nettoyage: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -210,18 +250,26 @@ def verifier_etat_final(session):
             print_error(f"PROBLÈME: {bilan_2023} écritures au lieu de 11")
             return False
 
-        # Vérifier que tout le reste est vide
-        result = session.execute(text("SELECT COUNT(*) FROM prets_immobiliers"))
-        nb_prets = result.scalar()
+        # Vérifier que tout le reste est vide (si tables existent)
+        nb_prets = 0
+        if table_exists(session, 'prets_immobiliers'):
+            result = session.execute(text("SELECT COUNT(*) FROM prets_immobiliers"))
+            nb_prets = result.scalar()
 
-        result = session.execute(text("SELECT COUNT(*) FROM echeances_prets"))
-        nb_echeances = result.scalar()
+        nb_echeances = 0
+        if table_exists(session, 'echeances_prets'):
+            result = session.execute(text("SELECT COUNT(*) FROM echeances_prets"))
+            nb_echeances = result.scalar()
 
-        result = session.execute(text("SELECT COUNT(*) FROM evenements_comptables"))
-        nb_evenements = result.scalar()
+        nb_evenements = 0
+        if table_exists(session, 'evenements_comptables'):
+            result = session.execute(text("SELECT COUNT(*) FROM evenements_comptables"))
+            nb_evenements = result.scalar()
 
-        result = session.execute(text("SELECT COUNT(*) FROM propositions_comptables"))
-        nb_propositions = result.scalar()
+        nb_propositions = 0
+        if table_exists(session, 'propositions_comptables'):
+            result = session.execute(text("SELECT COUNT(*) FROM propositions_comptables"))
+            nb_propositions = result.scalar()
 
         result = session.execute(text("SELECT COUNT(*) FROM ecritures_comptables WHERE type_ecriture != 'INIT_BILAN_2023'"))
         nb_ecritures_autres = result.scalar()
@@ -245,6 +293,8 @@ def verifier_etat_final(session):
 
     except Exception as e:
         print_error(f"Erreur vérification finale: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
