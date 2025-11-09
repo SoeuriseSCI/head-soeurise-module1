@@ -323,7 +323,8 @@ class IntegratorModule2:
                                                     'compte_debit': ecriture['compte_debit'],
                                                     'compte_credit': ecriture['compte_credit'],
                                                     'montant': ecriture['montant'],
-                                                    'libelle': ecriture.get('libelle_ecriture', proposition['description'])
+                                                    'libelle': ecriture.get('libelle_ecriture', proposition['description']),
+                                                    'date_ecriture': ecriture.get('date_ecriture')
                                                 })
 
                                         # Stocker les propositions en BD avec token
