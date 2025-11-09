@@ -9,9 +9,9 @@
 **Coût:** <1€/mois (Render 512MB + PostgreSQL + Claude Haiku 4.5)
 
 ## MODULE 1 - EMAIL + OCR (Opérationnel 08/10/2025)
-**Capacité:** Détection IMAP Gmail + OCR 99%+ accuracy
+**Capacité:** Détection IMAP Gmail + OCR 99.97% accuracy
 **Déploiement:** 170+ cycles @100% nominal, zéro incident
-**Précision:** 99.97% parsing (dates, montants, opérandes)
+**Précision:** Parsing dates/montants/opérandes 99.97%
 **Pérennité:** Infrastructure stable, connexion persistente
 
 ## MODULE 2 - COMPTABILITÉ AUTOMATISÉE (Production 02-09 nov)
