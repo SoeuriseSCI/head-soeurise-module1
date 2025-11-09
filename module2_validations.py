@@ -381,10 +381,18 @@ class ProcesseurInsertion:
             
             for prop in propositions:
                 try:
+                    # CORRECTION: Utiliser date_ecriture de la proposition (date opération réelle)
+                    # au lieu de datetime.now() (date de traitement)
+                    date_ecriture_prop = prop.get('date_ecriture')
+                    if isinstance(date_ecriture_prop, str):
+                        # Parser si string (format ISO: 2024-10-15)
+                        from datetime import datetime as dt
+                        date_ecriture_prop = dt.strptime(date_ecriture_prop, '%Y-%m-%d').date()
+
                     ecriture = EcritureComptable(
                         exercice_id=exercice_id,
                         numero_ecriture=prop['numero_ecriture'],
-                        date_ecriture=datetime.now().date(),
+                        date_ecriture=date_ecriture_prop,  # ✅ Date opération réelle
                         libelle_ecriture=prop.get('libelle', ''),
                         type_ecriture=prop.get('type', 'AUTRE'),
                         compte_debit=str(prop['compte_debit']),
