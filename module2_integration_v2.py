@@ -317,6 +317,11 @@ class IntegratorModule2:
                                         for prop_data in propositions:
                                             proposition = prop_data['proposition']
                                             for ecriture in proposition.get('ecritures', []):
+                                                # Convertir date_ecriture en string si c'est un objet date
+                                                date_ecriture = ecriture.get('date_ecriture')
+                                                if date_ecriture and hasattr(date_ecriture, 'isoformat'):
+                                                    date_ecriture = date_ecriture.isoformat()
+
                                                 propositions_list.append({
                                                     'numero_ecriture': f"EVT-{prop_data['evenement_id']}",
                                                     'type': proposition['type_evenement'],
@@ -324,7 +329,7 @@ class IntegratorModule2:
                                                     'compte_credit': ecriture['compte_credit'],
                                                     'montant': ecriture['montant'],
                                                     'libelle': ecriture.get('libelle_ecriture', proposition['description']),
-                                                    'date_ecriture': ecriture.get('date_ecriture')
+                                                    'date_ecriture': date_ecriture
                                                 })
 
                                         # Stocker les propositions en BD avec token
