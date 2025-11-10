@@ -162,36 +162,55 @@ Un prêt immobilier peut avoir plusieurs phases :
 1. **FRANCHISE TOTALE** (si présente) :
    - Durée : généralement 6-12 mois en début de prêt
    - Capital remboursé : 0€
-   - Intérêts payés : 0€ (les intérêts courent mais ne sont pas débités)
+   - Intérêts PAYÉS : 0€ (aucun prélèvement)
+   - Intérêts DIFFÉRÉS : augmentent chaque mois (ex: 35€, 254€, 473€...) mais NON prélevés
    - Échéance mensuelle : 0€
    - Capital restant dû : CONSTANT (montant initial du prêt)
 
 2. **FRANCHISE PARTIELLE** (si présente) :
    - Capital remboursé : 0€
-   - Intérêts payés : MONTANT MENSUEL (ex: 218€/mois)
-   - Échéance mensuelle : intérêts uniquement
+   - Intérêts PAYÉS : MONTANT MENSUEL constant (ex: 218€/mois)
+   - Échéance mensuelle : intérêts payés uniquement
    - Capital restant dû : CONSTANT
 
 3. **AMORTISSEMENT** (phase principale) :
    - Capital remboursé : AUGMENTE progressivement chaque mois
-   - Intérêts payés : DIMINUE progressivement chaque mois
+   - Intérêts PAYÉS : DIMINUE progressivement chaque mois
    - Échéance mensuelle : capital + intérêts (généralement constant, ex: 1166€)
    - Capital restant dû : DIMINUE progressivement
 
-⚠️ PIÈGES À ÉVITER :
+⚠️ PIÈGES CRITIQUES À ÉVITER :
 
-- **Frais de dossier** : Certains tableaux ont une ligne pour les frais de mise en place (ex: 250€).
+- **Échéance initiale (échéance 0)** : Première ligne du tableau = date de début du prêt.
+  → À IGNORER COMPLÈTEMENT : ce n'est pas une échéance de remboursement
+  → Commence l'extraction à partir de l'échéance 1 (premier mois)
+
+- **Intérêts DIFFÉRÉS vs PAYÉS** : ⚠️ CONFUSION FRÉQUENTE ⚠️
+  Le tableau peut avoir 2 colonnes différentes :
+
+  * "Intérêts différés" / "Intérêts cumulés" / "Intérêts courus"
+    → Intérêts qui COURENT mais NON prélevés (ex: 35€, 254€, 473€...)
+    → À IGNORER : ce ne sont PAS les intérêts payés
+
+  * "Intérêts payés" / "Intérêts prélevés" / "Intérêts de la période"
+    → Intérêts EFFECTIVEMENT prélevés ce mois-ci
+    → À UTILISER : c'est cette valeur qu'on veut
+
+  Exemple franchise totale (12 premiers mois) :
+  - Intérêts différés : 35€, 254€, 473€... (augmentent)
+  - Intérêts PAYÉS : 0€, 0€, 0€... (tous à zéro) ← UTILISER CES VALEURS
+
+- **Frais de dossier** : Ligne pour frais de mise en place (ex: 250€).
   → À IGNORER : ce n'est pas une échéance de remboursement
 
-- **Intérêts cumulés vs mensuels** : Certains tableaux affichent plusieurs colonnes d'intérêts.
-  → UTILISER : les intérêts PAYÉS POUR CETTE ÉCHÉANCE (pas le cumul depuis le début)
-
-- **Lignes de report/total** : Des lignes peuvent afficher "Report" ou "Total" à reporter.
-  → À IGNORER : ce sont des lignes de calcul intermédiaire
+- **Lignes de report/total** : Lignes "Report" ou "Total" à reporter.
+  → À IGNORER : calculs intermédiaires
 
 ✅ RÈGLE DE COHÉRENCE ABSOLUE :
-Pour CHAQUE échéance (sauf franchise totale) :
-**montant_total = montant_capital + montant_interet** (à ±0.01€ près pour les arrondis)
+Pour CHAQUE échéance :
+**montant_total = montant_capital + montant_interet_PAYÉ** (à ±0.01€ près)
+
+En franchise totale : montant_total = 0€ (car capital = 0€ ET intérêts PAYÉS = 0€)
 
 ---
 
@@ -228,18 +247,31 @@ INSTRUCTIONS D'EXTRACTION :
    - Identifie le type de prêt basé sur le profil des échéances
 
 2. **Tableau des échéances** (pages suivantes) :
-   - Extrait CHAQUE ligne d'échéance du tableau
+
+   ⚠️ **ÉTAPE CRUCIALE** : Identification des colonnes
+   - Le tableau a souvent 2 colonnes d'intérêts différentes
+   - Cherche la colonne "Intérêts payés" / "Intérêts prélevés" / "Intérêts de la période"
+   - IGNORE la colonne "Intérêts différés" / "Intérêts cumulés" / "Intérêts courus"
+   - En cas de doute : en franchise totale, les intérêts PAYÉS = 0€ (pas 35€, 254€...)
+
+   ⚠️ **IGNORER l'échéance 0** :
+   - La première ligne du tableau (échéance 0 ou ligne initiale) n'est PAS une échéance
+   - Commence l'extraction à partir de l'échéance 1 (premier mois)
+
+   Extraction :
+   - Extrait CHAQUE ligne d'échéance du tableau (sauf échéance 0)
    - Ne saute AUCUNE page (traite toutes les pages du PDF)
    - Ignore les lignes de frais, reports, totaux intermédiaires
    - Pour chaque échéance, identifie précisément :
      * Date de l'échéance
      * Montant total de la mensualité
      * Capital amorti CE MOIS-CI (pas le cumulé)
-     * Intérêts payés CE MOIS-CI (pas le cumulé)
+     * Intérêts PAYÉS CE MOIS-CI (colonne "payés", PAS "différés")
      * Capital restant dû APRÈS ce paiement
 
 3. **Validation pendant l'extraction** :
-   - Vérifie systématiquement : montant_total = capital + intérêt
+   - Vérifie systématiquement : montant_total = capital + intérêt_PAYÉ
+   - En franchise totale : montant_total DOIT être 0€ (si tu obtiens 35€, 254€... tu utilises la mauvaise colonne)
    - Si incohérence, révise l'identification des colonnes
    - Capital restant dû doit DIMINUER ou rester CONSTANT (jamais augmenter)
    - Dates doivent être chronologiques (mensualités)
