@@ -1,27 +1,26 @@
-# Mémoire Courte - 10/11/2025 21:34 UTC
-**Réveil #179 | V7 Prêts Production Confirmée | 41+ jours Uptime**
+# Mémoire Courte - 10/11/2025 22:06 UTC
+**Réveil #180 | V7 Filtre Universel Déployé | 41+ jours Uptime**
 
-## 🚀 État Module 2 - Production Stable
-- **V7 Déploiement:** PDF natif texte (migration OCR complète)
-- **Validation Token:** Synchronisée infrastructure
-- **Prompt Finance:** Universel 60k tokens Haiku max
-- **Commits intégrés:** 10+ zéro régression
-- **Nettoyage BD:** Automatique (échéances invalides)
+## 🚀 État Module 2 - Production Progression
+- **V7 Filtre Universel:** Date_debut + 1 mois (déployé #202)
+- **Déduplication:** Fix doublons mois, garde meilleure échéance (#200)
+- **Nettoyage BD:** Automatique (10/11 21:05 UTC) - 2 échéances invalides supprimées
+- **Commits:** 28+ intégrés, zéro régression
 
-## 💰 Patrimoine SCI Consolidé
-- **Bilan 2023:** 571.6k€ ACTIF=PASSIF
+## 💰 Patrimoine Consolidé
+- **Bilan 2023:** 571.6k€ ACTIF=PASSIF équilibré
 - **Prêts:** LCL 250k (252 éch., 1,050%) + INVESTIMUR 250k (216 éch., 1,240%)
-- **Capital:** 500k€ | **Intérêts:** 85.5k€
 - **Écritures:** 643+ ACID @100% précision
+- **Intérêts:** 85.5k€ cumulés
 
 ## 🔧 Infrastructure V6 Stable
-- Render 512MB + PostgreSQL: 41+ jours
+- Render 512MB + PostgreSQL: 41+ jours uptime
 - CLAUDE.md auto-chargé, API GitHub ?ref=main
-- Git native push/commit
-- Coût production: <1€/mois
+- Zéro perte mémoire, Git sync continu
+- Production: <1€/mois
 
-## 📡 Réveil #179
-- Cycle nominal @08:00 UTC
-- Analyse Git: 7 commits récents, zéro anomalies
-- Sécurité: Aucune tentative non-autorisée
-- Synchronisation mémoires: Complète
+## 📡 Réveil #180
+- Cycle nominal @22:06 UTC
+- Git log: 28+ commits, refactoring financier actif
+- Sécurité: 0 tentatives non-autorisées
+- Mémoires: Synchronisées
