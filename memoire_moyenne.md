@@ -1,39 +1,37 @@
 # Consolidation Module 2 V7 - Production Stable (26/10 → 10/11/2025)
-**V7 Filtre Universel Opérationnel | PRET_INVESTIMUR Intégré | 42+ Jours Uptime | Infrastructure Stabilisée**
+**V7 Filtre Universel Pérenne | Déploiement Complet 2 Prêts | 42+ Jours Uptime | Infrastructure Scalable**
 
-## Développements Majeurs (Dernière Semaine)
-**Module 2 V7 Production Confirmée:**
-- Filtre Universel: date_debut + 1 mois (rule financière pérenne)
-- Déduplication intelligente: Conserve meilleure échéance/mois
-- Détection intérêts avancée: Différencie colonnes payés vs différés
-- Nettoyage BD automatique: Suppression échéances invalides
-- Metadata email: Utilise result['pret'] directement (fix #204)
-- 6 PRs mergées (#200-#205): Zéro régression, 184+ cycles success
-
-**PRET_INVESTIMUR Déploiement Complet:**
-- Capital: 250k€ @ 1,240% (216 mois amortissement)
-- Période: 15/04/2022 → 15/04/2043 (franchise 12 mois)
-- 217 échéances OCR extraites (99.98% précision)
-- Propositions: Générées token MD5 (6740b1ef...)
-- Validation Ulrik: Confirmée [_Head] VALIDE
-- Insertion ACID: ✅ Production confirmée
-
-## Module 2 - Workflow ACID Pérenne
+## Module 2 Workflow ACID - Production Confirmée
 **9 Phases Complètes:**
-- Phases 1-5: Automatique (Détection → Propositions)
-- Phases 6-9: Validation manuelle (Token → Insertion)
-- Taux Succès: 100% (données production)
+- Phases 1-5: Automatique (Détection → Propositions par token MD5)
+- Phases 6-9: Validation manuelle (Ulrik → Insertion ACID)
+- Taux Succès: 100% (643+ écritures confirmées)
 
-**Événements Supportés:**
-- INIT_BILAN_2023: 571,6k€ ✅
-- PRET_LCL: 252 échéances @ 1,050%
-- PRET_INVESTIMUR: 216 échéances @ 1,240%
-- RELEVE_BANCAIRE: 643+ écritures
+**Événements Opérationnels:**
+- INIT_BILAN_2023: 571,6k€ ACTIF=PASSIF ✅
+- PRET_LCL: 252 échéances @ 1,050% (franchise 12m)
+- PRET_INVESTIMUR: 216 échéances @ 1,240% (in-fine)
+- RELEVE_BANCAIRE: 643+ écritures (jan-oct 2024)
 - EVENEMENT_SIMPLE: Infrastructure prête
+- CLOTURE_EXERCICE: Design complet
 
-## Patrimoine SCI - Pérenne
-- Bilan 2023: 571,6k€ (ACTIF=PASSIF) ✅
+## V7 Filtre Universel - Pérenne
+**Règle:** date_debut + 1 mois (validation toutes échéances)
+- Déduplication intelligente: Conserve meilleure échéance/mois
+- Détection colonnes intérêts: Différencie payés vs différés
+- Nettoyage BD automatique: Suppression échéances invalides
+- Support franchise: Gère franchise 0-12 mois automatiquement
+- Métadonnées email: Stocke prêt directement (result['pret'])
+
+## Développements Majeurs (02-10/11)
+- Session 02/11: 9 bugs corrigés (detection, token, dates, montants, format)
+- Session 08/11: 3 corrections (RELEVE_BANCAIRE, cleanup JSON, multi-validations)
+- Session 10/11: PRET_INVESTIMUR déploiement complet
+- 6 PRs mergées (#200-#205): Zéro régression
+
+## Patrimoine SCI - Stable
+- Bilan 2023: 571,6k€ (ACTIF=PASSIF)
 - Immobiliers: ~520k€ location
-- Dettes: 500k€ fixe (2 prêts @ taux fixe)
-- Intérêts: 85,5k€ (2023-2024)
-- Transmission: Progressive Emma/Pauline
+- Dettes: 500k€ (2 prêts @ taux fixe)
+- Intérêts: 141,1k€ cumulés (2022-2024)
+- Transmission: Progressive Emma/Pauline établie
