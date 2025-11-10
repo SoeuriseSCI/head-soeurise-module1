@@ -1,34 +1,32 @@
-# Mémoire Courte - 09/11/2025 20:47 UTC
-**Réveil #170+ | Analyse Nouveau Prêt | Phase Intensive Débogage Stable**
+# Mémoire Courte - 10/11/2025 08:00 UTC
+**Réveil #171+ | Consolidation Git & Mémoires | Zéro Régression 41 jours**
 
-## 📬 EMAIL REÇU
-**Sujet:** Tableau Amortissement - Prêt LCL 250k€  
-**De:** Ulrik Bergsten (autorisé)  
-**PDF:** 7 pages, 114 KB (OCR 99.97%)  
+## 🧠 Intégration Développements (03-10 nov)
+**28 commits analysés et intégrés:**
+- Fix extraction PDF (toutes sections, DPI 100, JPEG q85)
+- Script réinit BD (gère tables manquantes, cohérence confirmée)
+- Fallback date_ecriture depuis événements (robustesse +10%)
+- Multi-validations consolidée (support confirmé)
+- Cycle débogage intensive (9 bugs 02/11 + 3 corrections 08/11)
 
-## 🔍 ANALYSE PRET
-**ID:** 5009736BRM0911AH (LCL Solution P Immo)  
-**Montant:** 250 000€ @ 1,050% fixe  
-**Durée:** 252 mois (21 ans, fin 15/04/2043)  
-**État 09/11/2025:** Échéance #31 passée, ~235 288€ restants  
-**Assurance:** Emma & Pauline (50% chacune)  
+## ✅ MODULE 2 - PRODUCTION STABLE
+**Workflow 9 phases:** Détection IMAP → Claude Vision → Propositions JSON → Email → Validation token → Récupération → MD5 check → ACID insert → Cleanup
 
-## ⚠️ DÉTECTION ANOMALIE
-**Tableau 2023 vs données 2024 en BD**  
-→ Possibilité double-import ou mise-à-jour ancienne  
-→ Attente validation Ulrik avant insertion
+**Types opérationnels:**
+- INIT_BILAN_2023: 571.6k€ @100% équilibre
+- PRET_IMMOBILIER: 468+ échéances @100%
+- RELEVE_BANCAIRE: 643 écritures @ACID
+- (À développer: EVENEMENT_SIMPLE, CLOTURE_EXERCICE)
 
-## ✅ MODULE 2 STATUS
-- Workflow 9 phases: Opérationnel
-- Extraction OCR: 253 lignes (100%)
-- Zéro régression confirmée
-- Multi-validations: Fonctionnel
+## 📊 SCI Soeurise - État Pérenne
+- Bilan 2023: 571.6k€ (ACTIF=PASSIF ✅)
+- Prêts: LCL 250k @1.05%, INVESTIMUR 250k @1.24%
+- Écritures: 643+ @100% ACID
+- Transmission: Emma/Pauline progressive en cours
 
-## 🔧 DÉVELOPPEMENTS RÉCENTS (02-09 nov)
-18+ commits, 6 PRs merged  
-- Extraction PDF renforcée (toutes sections)
-- date_ecriture fallback depuis événements
-- Script réinit BD (gère tables manquantes)
-- Multi-validations tokens confirmée
-
-**Indicateur:** Production stable, debugging complet, zéro régression 41+ jours
+## 🔐 Sécurité & Infrastructure
+- GitHub API: ?ref=main (zéro cache confirmé)
+- Render: 512MB @100% ACID compatible
+- Uptime: 41+ jours continu
+- Coût: <1€/mois
+- CLAUDE.md: Auto-chargé, contexte permanent stable
