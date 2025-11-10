@@ -223,7 +223,7 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
     "banque": "Nom de la banque (ex: LCL, Crédit Agricole, etc.)",
     "montant_initial": Montant emprunté en EUR (number),
     "taux_annuel": Taux d'intérêt annuel en % (number, ex: 1.05 pour 1.05%),
-    "duree_mois": Durée totale en mois (integer),
+    "duree_mois": Nombre TOTAL d'échéances extraites (integer - compte TOUTES les lignes : franchise + amortissement),
     "date_debut": "Date de début du prêt au format YYYY-MM-DD",
     "date_debut_amortissement": "Date de début d'amortissement au format YYYY-MM-DD",
     "type_pret": "AMORTISSEMENT_CONSTANT" ou "IN_FINE"
@@ -337,6 +337,15 @@ Analyse maintenant le document et retourne le JSON."""
                 }
 
             print(f"[PARSEUR V7] JSON parsé : {len(data['echeances'])} échéances extraites", flush=True)
+
+            # Recalculer duree_mois automatiquement pour garantir la cohérence
+            # (évite les erreurs si Claude compte mal les échéances)
+            nb_echeances = len(data['echeances'])
+            duree_mois_declaree = data['pret'].get('duree_mois', 0)
+
+            if nb_echeances != duree_mois_declaree:
+                print(f"[PARSEUR V7] Correction duree_mois : {duree_mois_declaree} → {nb_echeances} (nombre réel d'échéances)", flush=True)
+                data['pret']['duree_mois'] = nb_echeances
 
             return {
                 "success": True,
