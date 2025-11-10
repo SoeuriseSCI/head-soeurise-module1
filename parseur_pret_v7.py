@@ -338,6 +338,15 @@ Analyse maintenant le document et retourne le JSON."""
 
             print(f"[PARSEUR V7] JSON parsé : {len(data['echeances'])} échéances extraites", flush=True)
 
+            # NETTOYAGE POST-EXTRACTION : Supprimer échéances invalides
+            # (échéance 0, frais de dossier, lignes avec incohérences majeures)
+            echeances_nettoyees = self._nettoyer_echeances(data['pret'], data['echeances'])
+            nb_supprimees = len(data['echeances']) - len(echeances_nettoyees)
+
+            if nb_supprimees > 0:
+                print(f"[PARSEUR V7] Nettoyage : {nb_supprimees} échéance(s) invalide(s) supprimée(s)", flush=True)
+                data['echeances'] = echeances_nettoyees
+
             # Recalculer duree_mois automatiquement pour garantir la cohérence
             # (évite les erreurs si Claude compte mal les échéances)
             nb_echeances = len(data['echeances'])
@@ -366,6 +375,54 @@ Analyse maintenant le document et retourne le JSON."""
                 "error": str(e),
                 "message": f"Erreur lors de l'appel Claude : {str(e)}"
             }
+
+    def _nettoyer_echeances(self, pret: Dict, echeances: List[Dict]) -> List[Dict]:
+        """
+        Nettoie les échéances extraites en supprimant les lignes invalides
+
+        Supprime :
+        - Échéance 0 (date = date_debut du prêt)
+        - Frais de dossier (montant_total faible mais capital=0 et intérêt=0)
+        - Lignes avec incohérence majeure (|total - (capital+intérêt)| > 1€)
+
+        Returns:
+            Liste des échéances valides
+        """
+        from datetime import datetime
+
+        echeances_valides = []
+        date_debut_str = pret.get('date_debut', '')
+
+        try:
+            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date() if date_debut_str else None
+        except:
+            date_debut = None
+
+        for i, ech in enumerate(echeances):
+            # Critère 1 : Ignorer si date = date_debut (échéance 0)
+            if date_debut:
+                try:
+                    date_ech = datetime.strptime(ech.get('date_echeance', ''), '%Y-%m-%d').date()
+                    if date_ech == date_debut:
+                        print(f"[PARSEUR V7] Échéance {i+1} ignorée : date = date_debut (échéance 0)", flush=True)
+                        continue
+                except:
+                    pass
+
+            # Critère 2 : Ignorer si incohérence majeure (>1€)
+            montant_total = ech.get('montant_total', 0)
+            montant_capital = ech.get('montant_capital', 0)
+            montant_interet = ech.get('montant_interet', 0)
+            total_calc = montant_capital + montant_interet
+
+            if abs(total_calc - montant_total) > 1.0:
+                print(f"[PARSEUR V7] Échéance {i+1} ignorée : incohérence majeure (total={montant_total:.2f}€ vs calc={total_calc:.2f}€)", flush=True)
+                continue
+
+            # Échéance valide
+            echeances_valides.append(ech)
+
+        return echeances_valides
 
     def _validate_pret_data(self, data: Dict) -> List[str]:
         """
