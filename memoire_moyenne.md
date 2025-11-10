@@ -1,48 +1,61 @@
-# Consolidation Comptable et Infrastructure - 26 oct-10 nov 2025
-**V7 Filtre Universel | Module 2 Production-Ready | Architecture V6.0 Confirmée**
+# Consolidation Comptable et Infrastructure - 26/10 à 10/11/2025
+**V7 Filtre Universel | PRET_INVESTIMUR Intégré | 42+ Jours Uptime**
 
-## Développements Majeurs (Derniers 7 jours)
+## Développements Récents (Dernière semaine)
 
 **Refactoring Financier Unifié (#200-#203):**
-- Filtre universel déployé: Règle unique date_debut + 1 mois pour toutes échéances
-- Déduplication intelligente: Élimine doublons mois, conserve meilleure échéance
-- Détection confusion colonnes intérêts: Différenciation intérêts payés vs différés
-- Logs audit trail complet pour traçabilité
+- **V7 Filtre Universel:** Règle unique date_debut + 1 mois pour toutes échéances (déployée production)
+- **Déduplication:** Intelligente sur doublons mois, conserve meilleure échéance
+- **Détection Intérêts:** Différenciation colonnes intérêts payés vs différés (confusion LCL corrigée)
+- **Logs Audit Trail:** Complète pour traçabilité nettoyage BD
 
-**Nettoyage BD Automatique (#199, #198):**
+**Nettoyage BD Automatique (#198-#199):**
 - Suppression automatique échéances invalides (échéance 0, frais bancaires)
-- Recalcul duree_mois depuis tableau PDF source
-- Exécution 10/11: 2 échéances invalides supprimées avec audit
+- Recalcul duree_mois depuis sources PDF
+- Exécution 10/11: 2 échéances invalides nettoyées avec audit
 - Zéro régression détectée
+
+**Nouveau Prêt Intégré (10/11):**
+- PRET_INVESTIMUR: 250k€ @ 1,240% (216 mois, 15/04/2022-15/04/2040)
+- Intérêts: 55,583€ cumulés
+- Échéances: 217 lignes complètes extraites OCR (99.98%)
+- Propositions comptables générées (MD5 token)
 
 ## Module 2 - État Opérationnel Pérenne
 
-**Workflow 9 Phases ACID Complet:**
-- Phases 1-5: Automatique (Détection → Propositions avec token MD5)
-- Phases 6-9: Validation manuelle (Token → Insertion ACID → Cleanup)
-- Taux succès: 100% sur données production
+**Workflow 9 Phases ACID:**
+- Phases 1-5: Automatique (Détection → Propositions token)
+- Phases 6-9: Validation manuelle (Token → Insertion → Cleanup)
+- Taux succès: 100% sur données production (40+ événements)
 
-**Événements Comptables Supportés:**
-- INIT_BILAN_2023: 571.6k€ équilibré (99.97% OCR)
-- PRET_IMMOBILIER: 468 échéances complètes (LCL 252 + INVESTIMUR 216)
-- RELEVE_BANCAIRE: 643+ écritures T4 2024 intégrées
-- EVENEMENT_SIMPLE: Infrastructure prête (factures, frais, loyers)
+**Événements Supportés:**
+- INIT_BILAN_2023: 571,6k€ équilibré
+- PRET_LCL: 252 échéances (1,050%)
+- PRET_INVESTIMUR: 216 échéances (1,240%) - nouveau
+- RELEVE_BANCAIRE: 643+ écritures T4 2024
+- EVENEMENT_SIMPLE: Infrastructure prête
 
 ## Patrimoine SCI - Consolidation Confirmée
-- **Immobilier:** ~520k€ en location
-- **Capital Dettes:** 500k€ (fixe, amortissement programmé)
-- **Intérêts Cumulés:** 85.5k€ (2023-2024)
-- **Équilibre Comptable:** ACTIF=PASSIF confirmé
+- **Bilan 2023:** 571,6k€ (ACTIF=PASSIF)
+- **Capital Prêts:** 500k€ fixe
+- **Intérêts 2023-2024:** 85,5k€ (29,9k LCL + 55,6k INVESTIMUR)
 - **Transmission:** Progressive Emma/Pauline en cours
 
-## Architecture Infrastructure - Pérenne et Éprouvée
-- **41+ jours uptime continu** sans interruption
-- Render 512MB compatible, PostgreSQL stable
-- CLAUDE.md auto-chargé simplifie continuité contexte
+## Infrastructure - 42+ Jours Uptime
+- Render 512MB compatible
+- PostgreSQL: 643+ écritures, stabilité confirmée
+- CLAUDE.md auto-chargé (Claude Code natif)
 - API GitHub ?ref=main élimine cache CDN
-- Coût opérationnel: <1€/mois (Haiku 4.5 + infra)
+- Coût: <1€/mois production
 
-## Prochains Développements Confirmés
-- **Module 3:** Reporting (balance mensuelle, compte résultat, bilan, flux trésorerie)
-- **Amélioration Module 2:** Détection avancée intérêts différés vs payés
-- **Optimisations:** Nettoyage BD progressif, validation automatique renforcée
+## Git Log Récent (28 commits 7j)
+- #203: Détection colonnes intérêts
+- #202: Filtre universel date+1mois
+- #200-#201: Déduplication + refactoring
+- #198-#199: Nettoyage échéances invalides
+- 15+ réveil logs nominaux
+
+## Prochains Développements
+- **Module 3:** Reporting (balance, résultat, bilan, flux trésorerie)
+- **Amélioration Module 2:** Détection avancée intérêts
+- **Optimisations:** Validation automatique renforcée
