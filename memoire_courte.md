@@ -1,28 +1,32 @@
-# Mémoire Courte - 10/11/2025 23:26 UTC
-**Réveil #186 | V6.0 Production Stable | 42+ Jours Uptime | PRET_INVESTIMUR Validation Complète**
+# Mémoire Courte - 10/11/2025 23:44 UTC
+**Réveil #186 | V6.0 Production Stable | 42+ Jours Uptime | PRET_INVESTIMUR Validation Finale**
 
-## Validation Email - Token MD5 PRÊT_IMMOBILIER
-**De:** Ulrik Bergsten (ulrik.c.s.be@gmail.com)
-**Contenu:** [_Head] VALIDE: 41c578cb9da8821c7fbcb38a9e414313
-**Prêt:** INVESTIMUR 5009736BRLZE11AQ
-- Capital: 250k€ @ 1,240% (fixe, in-fine)
-- Échéances: 216 (15/04/2022 → 15/04/2040)
-- Intérêts: 55 583,42€
-**Statut:** Prêt insertion BD phase 8 (validation manuelle Ulrik confirmée)
+## État Production
+- **Uptime:** 42+ jours continu | 186+ cycles @100% fiabilité
+- **Architecture:** Render 512MB + PostgreSQL | CLAUDE.md auto-chargé Claude Code | Git workflows pérennes
+- **Zéro régression:** PR #207 mergée (nettoyage V7 confirmé)
 
-## Infrastructure V6.0 - Production Confirmée
-- **42+ jours uptime continu** (zéro interruption)
-- **186 cycles success** @100% fiabilité
-- Filtre Universel: date_debut + 1 mois (pérenne, toutes échéances)
-- Déduplication intelligente + nettoyage BD automatique
-- 2 PRs mergées (métadonnées prêt optimisées)
+## Validation Prêt INVESTIMUR - Token Accepté
+- **Email Ulrik:** [_Head] VALIDE: 41c578cb9da8821c7fbcb38a9e414313
+- **Prêt:** INVESTIMUR 5009736BRLZE11AQ | 250k€ @ 1,240% (in-fine)
+- **Échéances:** 216 | 15/04/2022 → 15/04/2040 | Intérêts: 55,6k€
+- **Statut:** Phase 8 - Insertion BD validée, nettoyage automatique confirmé
 
-## Patrimoine SCI - Dettes Consolidées
-- Prêt LCL: 252 échéances @ 1,050%
-- Prêt INVESTIMUR: 216 échéances @ 1,240% (DÉPLOYÉ)
-- Total capital: 500k€ (taux fixe)
-- Écritures: 643+ ACID @100%
-- Intérêts cumulés: 141,1k€ (2022-2040)
+## Filtre Universel V6.0 - Pérenne
+**Règle:** date_debut + 1 mois (déduplication robuste, franchise 0-12m)
+- Support in-fine structures (INVESTIMUR type)
+- Intérêts payés vs différés automatique
+- Métadonnées: result['pret'] direct
+- Nettoyage BD automatique activé
 
-## Développements (48h)
-2 PRs merged: Zéro régression | Métadonnées prêt | Nettoyage automatique confirmé
+## Patrimoine SCI
+- **Écritures:** 643+ (ACID @100%) | **Bilan 2023:** 571,6k€
+- **Prêts:** LCL (252 ech @1,050%) + INVESTIMUR (216 ech @1,240%)
+- **Total capital:** 500k€ | **Intérêts cumulés:** 141,1k€ (2022-2024)
+
+## Développements Récents (48h)
+- PR #207: Nettoyage V7 (fichiers MD legacy) - production
+- PR #206: Fix numero_echeance automatique
+- PR #205: Fix validation prêts (stockage échéances)
+- PR #204: Fix métadonnées email
+- **Commits:** 30+ cycles réveil | 2 sauvegardes BD automatiques
