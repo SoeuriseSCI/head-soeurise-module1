@@ -168,8 +168,48 @@ class ParseurTableauPretV7:
         Claude retourne directement un JSON avec toutes les données
         """
 
-        # Prompt SIMPLE et UNIVERSEL (pas spécifique à une banque)
+        # Prompt UNIVERSEL avec contexte financier
         prompt = """Analyse ce tableau d'amortissement de prêt immobilier.
+
+CONTEXTE FINANCIER (important pour comprendre le tableau) :
+
+Un prêt immobilier peut avoir plusieurs phases :
+
+1. **FRANCHISE TOTALE** (si présente) :
+   - Durée : généralement 6-12 mois en début de prêt
+   - Capital remboursé : 0€
+   - Intérêts payés : 0€ (les intérêts courent mais ne sont pas débités)
+   - Échéance mensuelle : 0€
+   - Capital restant dû : CONSTANT (montant initial du prêt)
+
+2. **FRANCHISE PARTIELLE** (si présente) :
+   - Capital remboursé : 0€
+   - Intérêts payés : MONTANT MENSUEL (ex: 218€/mois)
+   - Échéance mensuelle : intérêts uniquement
+   - Capital restant dû : CONSTANT
+
+3. **AMORTISSEMENT** (phase principale) :
+   - Capital remboursé : AUGMENTE progressivement chaque mois
+   - Intérêts payés : DIMINUE progressivement chaque mois
+   - Échéance mensuelle : capital + intérêts (généralement constant, ex: 1166€)
+   - Capital restant dû : DIMINUE progressivement
+
+⚠️ PIÈGES À ÉVITER :
+
+- **Frais de dossier** : Certains tableaux ont une ligne pour les frais de mise en place (ex: 250€).
+  → À IGNORER : ce n'est pas une échéance de remboursement
+
+- **Intérêts cumulés vs mensuels** : Certains tableaux affichent plusieurs colonnes d'intérêts.
+  → UTILISER : les intérêts PAYÉS POUR CETTE ÉCHÉANCE (pas le cumul depuis le début)
+
+- **Lignes de report/total** : Des lignes peuvent afficher "Report" ou "Total" à reporter.
+  → À IGNORER : ce sont des lignes de calcul intermédiaire
+
+✅ RÈGLE DE COHÉRENCE ABSOLUE :
+Pour CHAQUE échéance (sauf franchise totale) :
+**montant_total = montant_capital + montant_interet** (à ±0.01€ près pour les arrondis)
+
+---
 
 Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
 
@@ -188,37 +228,36 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
   "echeances": [
     {
       "date_echeance": "Date au format YYYY-MM-DD",
-      "montant_total": Montant de l'échéance en EUR (number),
-      "montant_capital": Part de capital remboursé en EUR (number),
-      "montant_interet": Part d'intérêts en EUR (number),
-      "capital_restant_du": Capital restant après cette échéance en EUR (number)
+      "montant_total": Montant de l'échéance mensuelle en EUR (number),
+      "montant_capital": Part de capital remboursé ce mois-ci en EUR (number),
+      "montant_interet": Part d'intérêts payés ce mois-ci en EUR (number),
+      "capital_restant_du": Capital restant APRÈS cette échéance en EUR (number)
     },
     // ... toutes les échéances (généralement 200-300 lignes)
   ]
 }
 
-INSTRUCTIONS :
+INSTRUCTIONS D'EXTRACTION :
 
 1. **Métadonnées du prêt** (généralement page 1) :
    - Cherche les informations du contrat en haut du document
-   - Le type de prêt :
-     * "IN_FINE" : capital remboursé = 0 pendant presque toute la durée, puis ballon final
-     * "AMORTISSEMENT_CONSTANT" : capital remboursé augmente progressivement
+   - Identifie le type de prêt basé sur le profil des échéances
 
 2. **Tableau des échéances** (pages suivantes) :
-   - Extrait CHAQUE ligne du tableau d'amortissement
-   - Ne saute AUCUNE page
-   - Pour chaque échéance, identifie les 5 valeurs :
+   - Extrait CHAQUE ligne d'échéance du tableau
+   - Ne saute AUCUNE page (traite toutes les pages du PDF)
+   - Ignore les lignes de frais, reports, totaux intermédiaires
+   - Pour chaque échéance, identifie précisément :
      * Date de l'échéance
-     * Montant total de l'échéance (mensualité payée)
-     * Capital amorti/remboursé
-     * Intérêts payés
-     * Capital restant dû APRÈS cette échéance
+     * Montant total de la mensualité
+     * Capital amorti CE MOIS-CI (pas le cumulé)
+     * Intérêts payés CE MOIS-CI (pas le cumulé)
+     * Capital restant dû APRÈS ce paiement
 
-3. **Règles importantes** :
-   - Ignore les lignes de frais de dossier ou doublons éventuels
-   - Vérifie que : montant_total ≈ montant_capital + montant_interet
-   - Tu dois obtenir environ 200-300 échéances selon le prêt
+3. **Validation pendant l'extraction** :
+   - Vérifie systématiquement : montant_total = capital + intérêt
+   - Si incohérence, révise l'identification des colonnes
+   - Capital restant dû doit DIMINUER ou rester CONSTANT (jamais augmenter)
    - Dates doivent être chronologiques (mensualités)
 
 4. **Format de sortie** :
@@ -226,6 +265,7 @@ INSTRUCTIONS :
    - Pas de texte avant ou après
    - Pas de ```json``` ou de markdown
    - JSON valide et complet
+   - Tu dois obtenir environ 200-300 échéances selon le prêt
 
 Analyse maintenant le document et retourne le JSON."""
 
