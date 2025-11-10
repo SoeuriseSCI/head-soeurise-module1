@@ -1225,7 +1225,7 @@ class GenerateurPropositions:
 ## 📊 Échéances Extraites
 
 - **Nombre total** : {nb_echeances} échéances
-- **Fichier** : `{filename}`
+- **Stockage** : Direct dans propositions (Architecture V7)
 
 ## ✅ Action Proposée
 

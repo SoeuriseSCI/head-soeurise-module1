@@ -115,8 +115,10 @@ class ParseurTableauPretV7:
                     "message": f"{len(validation_errors)} erreur(s) détectée(s)"
                 }
 
-            # 5. Sauvegarde fichier MD
-            filename = self._save_to_md_file(result['data'])
+            # 5. Sauvegarde fichier MD (DÉSACTIVÉ V7 - échéances dans propositions dict)
+            # filename = self._save_to_md_file(result['data'])
+            numero_pret = result['data']['pret'].get('numero_pret', 'INCONNU')
+            filename = f"V7_DIRECT_STORAGE_{numero_pret}"
             result['filename'] = filename
 
             # 6. Insertion BD (optionnel)
