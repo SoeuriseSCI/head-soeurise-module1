@@ -204,19 +204,31 @@ Un prêt immobilier peut avoir plusieurs phases :
   ```
 
 - **Intérêts DIFFÉRÉS vs PAYÉS** : ⚠️ CONFUSION FRÉQUENTE ⚠️
-  Le tableau peut avoir 2 colonnes différentes :
+
+  **CRITIQUE** : Le tableau a 2 colonnes d'intérêts différentes. Tu DOIS identifier la bonne.
 
   * "Intérêts différés" / "Intérêts cumulés" / "Intérêts courus"
-    → Intérêts qui COURENT mais NON prélevés (ex: 35€, 254€, 473€...)
-    → À IGNORER : ce ne sont PAS les intérêts payés
+    → Intérêts qui COURENT mais NON prélevés
+    → Ces valeurs AUGMENTENT chaque mois (ex: 42€, 300€, 559€, 817€...)
+    → À IGNORER ABSOLUMENT
 
   * "Intérêts payés" / "Intérêts prélevés" / "Intérêts de la période"
     → Intérêts EFFECTIVEMENT prélevés ce mois-ci
     → À UTILISER : c'est cette valeur qu'on veut
 
+  **TEST AUTOMATIQUE pour vérifier que tu utilises la bonne colonne** :
+
+  En franchise totale (capital = 0€ tous les mois), les intérêts PAYÉS = 0€.
+
+  Si tu obtiens des intérêts > 0€ pendant la franchise (ex: 42€, 300€, 559€...),
+  c'est que tu utilises la MAUVAISE colonne (intérêts différés au lieu de payés).
+
+  → STOP : Révise l'identification des colonnes et recommence.
+  → Les intérêts en franchise totale doivent être 0€, 0€, 0€...
+
   Exemple franchise totale (12 premiers mois) :
-  - Intérêts différés : 35€, 254€, 473€... (augmentent)
-  - Intérêts PAYÉS : 0€, 0€, 0€... (tous à zéro) ← UTILISER CES VALEURS
+  - ❌ Intérêts différés : 42€, 300€, 559€... (MAUVAISE colonne - augmentent)
+  - ✅ Intérêts PAYÉS : 0€, 0€, 0€... (BONNE colonne - tous zéro)
 
 - **Lignes de report/total** : Lignes "Report" ou "Total" à reporter.
   → À IGNORER : calculs intermédiaires
@@ -225,7 +237,7 @@ Un prêt immobilier peut avoir plusieurs phases :
 Pour CHAQUE échéance :
 **montant_total = montant_capital + montant_interet_PAYÉ** (à ±0.01€ près)
 
-En franchise totale : montant_total = 0€ (car capital = 0€ ET intérêts PAYÉS = 0€)
+En franchise totale : montant_total = 0€ ET montant_interet = 0€ (pas 42€, 300€, 559€...)
 
 ---
 
@@ -491,6 +503,34 @@ Analyse maintenant le document et retourne le JSON."""
 
         if len(echeances) > 500:
             errors.append(f"Trop d'échéances : {len(echeances)} (attendu 200-300)")
+
+        # VALIDATION CRITIQUE : Détecter confusion colonnes intérêts (différés vs payés)
+        # En franchise totale (capital=0), les intérêts PAYÉS = 0€
+        # Si intérêts > 0€ et augmentent → Utilise mauvaise colonne (intérêts différés)
+        echeances_franchise = []
+        for i, ech in enumerate(echeances[:20]):  # Vérifier les 20 premières (franchise probable)
+            if ech.get('montant_capital', 0) == 0:
+                echeances_franchise.append((i, ech.get('montant_interet', 0)))
+
+        if len(echeances_franchise) >= 3:
+            # Au moins 3 échéances en franchise
+            interets_franchise = [interets for _, interets in echeances_franchise]
+
+            # Vérifier si les intérêts augmentent (pattern intérêts différés)
+            if all(interets > 0 for interets in interets_franchise):
+                # Tous > 0 (devrait être 0 en franchise totale)
+                if interets_franchise[1] > interets_franchise[0] and interets_franchise[2] > interets_franchise[1]:
+                    # Augmentent progressivement → C'est les intérêts différés
+                    errors.append(
+                        f"⚠️ ERREUR CRITIQUE : Confusion colonnes intérêts détectée\n"
+                        f"   → En franchise (capital=0), les intérêts PAYÉS doivent être 0€\n"
+                        f"   → Valeurs extraites : {interets_franchise[0]:.2f}€, {interets_franchise[1]:.2f}€, {interets_franchise[2]:.2f}€ (augmentent)\n"
+                        f"   → Tu utilises la colonne 'Intérêts différés/cumulés' (MAUVAISE)\n"
+                        f"   → Utilise la colonne 'Intérêts payés/prélevés' (BONNE)\n"
+                        f"   → Les intérêts en franchise totale doivent être 0€, 0€, 0€..."
+                    )
+                    # Retourner immédiatement, pas besoin d'autres validations
+                    return errors
 
         # Validation ligne par ligne (max 10 erreurs pour ne pas surcharger)
         nb_errors_max = 10
