@@ -181,20 +181,26 @@ Un prêt immobilier peut avoir plusieurs phases :
 
 ⚠️ PIÈGES CRITIQUES À ÉVITER :
 
-- **Échéance initiale (échéance 0)** : Première ligne du tableau = date de début du prêt.
-  → À IGNORER COMPLÈTEMENT : ce n'est pas une échéance de remboursement
-  → Commence l'extraction à partir de l'échéance 1 (premier mois)
+- **Lignes avant la première échéance** : ⚠️ RÈGLE UNIVERSELLE ⚠️
 
-- **Lignes de déblocage (DBL)** : ⚠️ NE SONT PAS DES ÉCHÉANCES ⚠️
-  Lignes qui commencent par "DBL", "DEBLOC" ou contiennent "déblocage"
-  → Ce sont des opérations de mise à disposition des fonds (ex: "DBL 250 000€")
-  → À IGNORER COMPLÈTEMENT : ce ne sont pas des remboursements mensuels
+  La **première vraie échéance** d'un prêt est TOUJOURS 1 mois après le début du prêt.
+  → Calcul : date_debut + 1 mois (ex: début 15/04/2022 → première échéance 15/05/2022)
+
+  **IGNORER TOUTES les lignes dont la date < date_debut + 1 mois**
+
+  Cela élimine automatiquement :
+  - Échéance 0 (ligne initiale = date_debut)
+  - Déblocages (DBL, DEBLOC, mise à disposition des fonds)
+  - Frais de dossier (250€, 1 500€...)
+  - Commissions de mise en place
 
   Exemple type (prêt INVESTIMUR) :
   ```
-  2022-04-15 | Échéance 0      | ...  ← IGNORER (ligne initiale)
-  2022-05-10 | DBL 250 000,00  | ...  ← IGNORER (déblocage fonds)
-  2022-05-15 | Échéance 1      | ...  ← PREMIÈRE VRAIE ÉCHÉANCE
+  2022-04-15 | Échéance 0      | ... ← IGNORER (= date_debut)
+  2022-05-10 | DBL 250 000,00  | ... ← IGNORER (< date_debut + 1 mois)
+  2022-05-15 | Échéance 1      | ... ← PREMIÈRE VRAIE ÉCHÉANCE (= date_debut + 1 mois)
+  2022-06-15 | Échéance 2      | ... ← Extraire
+  ...
   ```
 
 - **Intérêts DIFFÉRÉS vs PAYÉS** : ⚠️ CONFUSION FRÉQUENTE ⚠️
@@ -211,10 +217,6 @@ Un prêt immobilier peut avoir plusieurs phases :
   Exemple franchise totale (12 premiers mois) :
   - Intérêts différés : 35€, 254€, 473€... (augmentent)
   - Intérêts PAYÉS : 0€, 0€, 0€... (tous à zéro) ← UTILISER CES VALEURS
-
-- **Frais de dossier / Commissions** : Ligne pour frais de mise en place (ex: 250€, 1 500€).
-  → À IGNORER : ce ne sont pas des échéances de remboursement
-  → Souvent une seule ligne isolée avec un petit montant
 
 - **Lignes de report/total** : Lignes "Report" ou "Total" à reporter.
   → À IGNORER : calculs intermédiaires
@@ -393,16 +395,18 @@ Analyse maintenant le document et retourne le JSON."""
         """
         Nettoie les échéances extraites en supprimant les lignes invalides
 
-        Critères de suppression (universels) :
-        1. Échéance 0 : date_echeance = date_debut du prêt
-        2. Déblocages : Texte contient "DBL", "DEBLOC", "déblocage" (case-insensitive)
-        3. Incohérences : |montant_total - (capital + intérêt)| > 1€
-        4. Frais isolés : montant < 10 000€ ET capital=0 ET intérêt=0
+        RÈGLE UNIVERSELLE (principe financier) :
+        La première vraie échéance = date_debut + 1 mois
+        → Ignore TOUTES les lignes avant cette date (échéance 0, DBL, frais...)
+
+        Critères supplémentaires :
+        - Incohérences : |montant_total - (capital + intérêt)| > 1€
 
         Returns:
             Liste des échéances valides
         """
         from datetime import datetime
+        from dateutil.relativedelta import relativedelta
 
         date_debut_str = pret.get('date_debut', '')
 
@@ -411,34 +415,29 @@ Analyse maintenant le document et retourne le JSON."""
         except:
             date_debut = None
 
+        # Calculer date première échéance (date_debut + 1 mois)
+        if date_debut:
+            premiere_echeance = date_debut + relativedelta(months=1)
+        else:
+            premiere_echeance = None
+
         echeances_valides = []
 
         for i, ech in enumerate(echeances):
             skip = False
             raison = None
 
-            # Critère 1 : Ignorer si date = date_debut (échéance 0)
-            if date_debut:
+            # CRITÈRE PRINCIPAL : Ignorer si date < date_debut + 1 mois
+            if premiere_echeance:
                 try:
                     date_ech = datetime.strptime(ech.get('date_echeance', ''), '%Y-%m-%d').date()
-                    if date_ech == date_debut:
+                    if date_ech < premiere_echeance:
                         skip = True
-                        raison = "échéance 0 (date = date_debut)"
+                        raison = f"avant première échéance (< {premiere_echeance})"
                 except:
-                    pass
+                    pass  # Date invalide : on laisse passer pour validation ultérieure
 
-            # Critère 2 : Ignorer si ligne de déblocage (DBL)
-            # Vérifier dans tous les champs de l'échéance
-            if not skip:
-                for key, value in ech.items():
-                    if isinstance(value, str):
-                        value_lower = value.lower()
-                        if 'dbl' in value_lower or 'debloc' in value_lower or 'déblocage' in value_lower:
-                            skip = True
-                            raison = "ligne de déblocage (DBL)"
-                            break
-
-            # Critère 3 : Ignorer si incohérence majeure (>1€)
+            # Critère secondaire : Ignorer si incohérence majeure (>1€)
             if not skip:
                 montant_total = ech.get('montant_total', 0)
                 montant_capital = ech.get('montant_capital', 0)
@@ -448,17 +447,6 @@ Analyse maintenant le document et retourne le JSON."""
                 if abs(total_calc - montant_total) > 1.0:
                     skip = True
                     raison = f"incohérence montant (total={montant_total:.2f}€ vs calc={total_calc:.2f}€)"
-
-            # Critère 4 : Ignorer si frais isolés (petit montant sans capital ni intérêt)
-            if not skip:
-                montant_total = ech.get('montant_total', 0)
-                montant_capital = ech.get('montant_capital', 0)
-                montant_interet = ech.get('montant_interet', 0)
-
-                # Frais typiques : 250€, 1 500€, etc. (toujours < 10k€)
-                if 0 < montant_total < 10000 and montant_capital == 0 and montant_interet == 0:
-                    skip = True
-                    raison = f"frais isolés ({montant_total:.2f}€ sans capital ni intérêt)"
 
             # Log et décision
             if skip:
