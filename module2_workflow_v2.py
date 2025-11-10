@@ -1218,7 +1218,7 @@ class GenerateurPropositions:
 | Taux annuel | {pret_data.get('taux_annuel', 0):.4f} % |
 | Durée | {pret_data.get('duree_mois', 0)} mois |
 | Date début | {pret_data.get('date_debut', 'N/A')} |
-| Type | {pret_data.get('type_amortissement', 'N/A')} |
+| Type | {pret_data.get('type_pret', 'N/A')} |
 
 ## 📊 Échéances Extraites
 
@@ -1647,8 +1647,9 @@ class WorkflowModule2V2:
             filename = result.get('filename')
             nb_echeances = result.get('nb_echeances', 0)
 
-            # Lire le fichier MD pour extraire les données du prêt
-            pret_data = self._extraire_donnees_pret_depuis_md(filename)
+            # Utiliser directement les données du prêt retournées par le parseur V7
+            # (pas besoin de lire le fichier MD)
+            pret_data = result.get('pret')
 
             if not pret_data:
                 return {
