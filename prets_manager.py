@@ -152,10 +152,15 @@ class PretsManager:
 
             # Créer EcheancePret pour chaque ligne
             nb_echeances = 0
-            for ech_data in echeances_data:
+            for idx, ech_data in enumerate(echeances_data, start=1):
+                # Générer numero_echeance automatiquement si manquant
+                numero_ech = ech_data.get('numero_echeance')
+                if numero_ech is None:
+                    numero_ech = idx  # Numéro séquentiel (1, 2, 3...)
+
                 echeance = EcheancePret(
                     pret_id=pret.id,
-                    numero_echeance=ech_data.get('numero_echeance'),
+                    numero_echeance=numero_ech,
                     date_echeance=self._parse_date(ech_data.get('date_echeance')),
                     montant_total=Decimal(str(ech_data.get('montant_total', 0))),
                     montant_interet=Decimal(str(ech_data.get('montant_interet', 0))),
