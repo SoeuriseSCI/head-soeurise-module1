@@ -1,8 +1,8 @@
 # 📊 RAPPORT D'ARCHITECTURE - MODULE 2 COMPTABILITÉ
 
-**Date :** 08 novembre 2025
-**Version :** 6.1 - Production
-**Statut :** ✅ Opérationnel end-to-end
+**Date :** 10 novembre 2025
+**Version :** 7.0 - Production
+**Statut :** ✅ Opérationnel end-to-end (V7 prêts déployée)
 
 ---
 
@@ -118,22 +118,39 @@ def traiter_releve_bancaire(email: Dict, pdf_path: str) -> Dict:
 
 ##### **2b. PRET_IMMOBILIER** (Tableaux d'amortissement)
 
-**Fichier :** `module2_workflow_v2.py`
-**Class :** `ParseurTableauPret`
+**Fichier :** `parseur_pret_v7.py`
+**Class :** `ParseurTableauPretV7`
 
 ```python
-def parser_tableau_amortissement(pdf_path: str) -> Dict:
+def parse_from_pdf(filepath: str, auto_insert_bd: bool) -> Dict:
     """
-    1. OCR du tableau d'amortissement
-    2. Claude extrait: numéro prêt, banque, montant, taux, durée
-    3. Parse ligne par ligne: échéance, capital, intérêts
-    4. Stockage dans tables prets_immobiliers + echeances_prets
+    Architecture V7 - Approche simplifiée (SANS Function Calling)
+
+    1. Convertit TOUTES les pages du PDF en images (DPI 150)
+    2. Appelle Claude Haiku 4.5 Vision avec prompt universel
+    3. Claude retourne JSON directement avec :
+       - Métadonnées : numéro prêt, banque, montant, taux, durée, type
+       - Échéances : date, montant total, capital, intérêts, capital restant
+    4. Validation Python stricte de la cohérence des données
+    5. Sauvegarde fichier MD (traçabilité GitHub)
+    6. Insertion BD (prets_immobiliers + echeances_prets)
+
+    Avantages V7 :
+    - Prompt simple et universel (fonctionne avec toute banque)
+    - Pas de limitation sur le nombre de pages
+    - Validation automatique avant sauvegarde
+    - Aucune génération = Données 100% depuis PDF
     """
 ```
 
 **Stockage :**
-- `prets_immobiliers` : Métadonnées du prêt
-- `echeances_prets` : 240 lignes (1 par mois)
+- **Fichier MD** : `PRET_{numero}_echeances.md` (versionné sur GitHub)
+- **Table `prets_immobiliers`** : Métadonnées du prêt
+- **Table `echeances_prets`** : 200-300 échéances (1 par mois sur 15-25 ans)
+
+**Différences vs V6 (obsolète)** :
+- V6 utilisait Function Calling → Complexité élevée, erreurs d'extraction
+- V7 utilise JSON direct → Simple, fiable, universel
 
 ##### **2c. INIT_BILAN_2023** (Bilan d'ouverture)
 
@@ -1084,7 +1101,7 @@ Le **Module 2** est maintenant **100% opérationnel** avec :
 - ✅ Support validations multiples
 - ✅ Cleanup automatique des événements
 - ✅ Intégrité garantie (ACID + MD5 + audit trail)
-- ✅ 138 écritures validées en production
+- ✅ **Architecture V7 prêts** : Prompt universel, validation stricte, zéro limitation
 - ✅ Coût < 1€/mois
 - ✅ Zéro régression
 
@@ -1092,7 +1109,14 @@ Le **Module 2** est maintenant **100% opérationnel** avec :
 
 ---
 
-**Date de rapport :** 08 novembre 2025
-**Version :** 6.1 - Production
+**Date de rapport :** 10 novembre 2025
+**Version :** 7.0 - Production
 **Auteur :** Claude Code (Sonnet 4.5)
 **Validé par :** Ulrik Bergsten (Gérant SCI Soeurise)
+
+**Évolutions V7 (10/11/2025)** :
+- Parseur prêts V7 : Approche simplifiée sans Function Calling
+- Prompt universel (fonctionne avec toutes banques)
+- Validation Python stricte pré-insertion
+- Traitement de TOUTES les pages du PDF (plus de limitation)
+- Cohérence garantie (montant_total = capital + intérêts)
