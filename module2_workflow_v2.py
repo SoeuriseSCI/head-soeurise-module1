@@ -1604,9 +1604,9 @@ class WorkflowModule2V2:
                     "token": ""
                 }
 
-            # Importer et initialiser le parseur V6
+            # Importer et initialiser le parseur V7 (approche simplifiée)
             try:
-                from parseur_pret_v6 import ParseurTableauPretV6
+                from parseur_pret_v7 import ParseurTableauPretV7
                 api_key = os.environ.get('ANTHROPIC_API_KEY')
                 if not api_key:
                     return {
@@ -1618,20 +1618,20 @@ class WorkflowModule2V2:
                         "token": ""
                     }
 
-                parseur_v6 = ParseurTableauPretV6(api_key=api_key)
+                parseur_v7 = ParseurTableauPretV7(api_key=api_key)
             except ImportError as e:
                 return {
                     "type_detecte": TypeEvenement.PRET_IMMOBILIER,
                     "statut": "ERREUR",
-                    "message": f"Impossible d'importer parseur_pret_v6: {str(e)}",
+                    "message": f"Impossible d'importer parseur_pret_v7: {str(e)}",
                     "markdown": "",
                     "propositions": {},
                     "token": ""
                 }
 
-            # Parser le PDF avec V6 (auto_insert_bd=False pour générer propositions)
+            # Parser le PDF avec V7 (auto_insert_bd=False pour générer propositions)
             filepath = pdf_files[0].get('filepath')
-            result = parseur_v6.parse_from_pdf(filepath, auto_insert_bd=False)
+            result = parseur_v7.parse_from_pdf(filepath, auto_insert_bd=False)
 
             if not result.get('success'):
                 return {
