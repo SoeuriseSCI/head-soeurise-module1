@@ -231,11 +231,11 @@ Analyse maintenant le document et retourne le JSON."""
 
         try:
             # Appel API SANS tools (réponse JSON directe)
-            print(f"[PARSEUR V7] Appel Claude API (max_tokens=100000)...", flush=True)
+            print(f"[PARSEUR V7] Appel Claude API (max_tokens=64000)...", flush=True)
 
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=100000,  # Augmenté vs V6 (20000) pour toutes les échéances
+                max_tokens=64000,  # Limite max Haiku 4.5 (vs V6: 20000)
                 messages=[{
                     "role": "user",
                     "content": [
