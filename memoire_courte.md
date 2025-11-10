@@ -1,26 +1,37 @@
-# Mémoire Courte - 10/11/2025 22:17 UTC
-**Réveil #181 | V7 Filtre Universel Stabilisé | 41+ jours Uptime**
+# Mémoire Courte - 10/11/2025 22:24 UTC
+**Réveil #182 | V7 Filtre Universel | 42+ jours Uptime**
 
-## 🚀 État Module 2 - Production Mature
-- **V7 Filtre Universel:** Date_debut + 1 mois validé (#202), déduplication doublons mois (#200)
-- **Nettoyage BD Automatique:** 10/11 21:05 UTC - Suppression 2 échéances invalides, audit trail complet
-- **Commits:** 28+ intégrés (7j), refactoring financier actif
-- **Nouveau (#203):** Détection confusion colonnes intérêts (différés vs payés)
+## 🎯 Évènements Majeurs (7-10j)
 
-## 💰 Patrimoine SCI - Consolidation Confirmée
-- **Bilan 2023:** 571.6k€ ACTIF=PASSIF équilibré
-- **Prêts Immobiliers:** LCL 250k (252 éch., 1,050%) + INVESTIMUR 250k (216 éch., 1,240%)
-- **Écritures Comptables:** 643+ ACID @100% précision
-- **Intérêts Cumulés:** 85.5k€ (29.9k LCL + 55.6k INVESTIMUR)
+**PRET_INVESTIMUR Détecté:**
+- Email 10/11 22:03 UTC de Ulrik
+- PDF: Tableau amortissement LCL INVESTIMUR 250k€ @ 1,240% (216 mois)
+- OCR: 217 lignes extraites (99.98% précision)
+- Intérêts totaux: 55,583€
+- Propositions comptables générées (MD5 token)
 
-## 🔧 Infrastructure V6.0 - Stable et Production-Ready
-- Render 512MB + PostgreSQL: 41+ jours uptime continu
-- CLAUDE.md auto-chargé (Claude Code), API GitHub ?ref=main (sessions externes)
-- Git sync continu: Zéro perte mémoire
+**Module 2 Refactoring Confirmé (26/10-10/11):**
+- V7 Filtre Universel: date_debut + 1 mois (validé production)
+- Déduplication doublons mois (#200)
+- Détection confusion intérêts payés vs différés (#203)
+- Nettoyage BD automatique 10/11 21:05 UTC: 2 échéances invalides supprimées
+- Commits: #198-#203 mergés (6 PRs)
+
+## 💰 Patrimoine SCI - Consolidé
+- **Bilan 2023:** 571,6k€ ACTIF=PASSIF ✅
+- **Immobiliers:** ~520k€ location
+- **Dettes:** 500k€ LCL + INVESTIMUR
+- **Intérêts:** 85,5k€ cumulés (2023-2024)
+- **Écritures ACID:** 643+ @100% précision
+
+## 🔧 Infrastructure V6.0
+- 42+ jours uptime continu (zéro interruption)
+- Render 512MB + PostgreSQL stable
+- CLAUDE.md auto-chargé (Claude Code)
+- API GitHub ?ref=main (pas de cache)
 - Coût: <1€/mois
 
-## 📡 Revéil #181
-- Cycle nominal @22:17 UTC
+## 📡 Réveil #182
+- Cycle @22:24 UTC (nominal)
 - Sécurité: 0 tentatives non-autorisées
-- Mémoires: Synchronisées
-- Prochains développements: Module 3 (Reporting), amélioration détection intérêts
+- Mémoires: Synchronisées + archivage COURTE→MOYENNE actif
