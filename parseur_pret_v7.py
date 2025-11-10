@@ -185,6 +185,18 @@ Un prêt immobilier peut avoir plusieurs phases :
   → À IGNORER COMPLÈTEMENT : ce n'est pas une échéance de remboursement
   → Commence l'extraction à partir de l'échéance 1 (premier mois)
 
+- **Lignes de déblocage (DBL)** : ⚠️ NE SONT PAS DES ÉCHÉANCES ⚠️
+  Lignes qui commencent par "DBL", "DEBLOC" ou contiennent "déblocage"
+  → Ce sont des opérations de mise à disposition des fonds (ex: "DBL 250 000€")
+  → À IGNORER COMPLÈTEMENT : ce ne sont pas des remboursements mensuels
+
+  Exemple type (prêt INVESTIMUR) :
+  ```
+  2022-04-15 | Échéance 0      | ...  ← IGNORER (ligne initiale)
+  2022-05-10 | DBL 250 000,00  | ...  ← IGNORER (déblocage fonds)
+  2022-05-15 | Échéance 1      | ...  ← PREMIÈRE VRAIE ÉCHÉANCE
+  ```
+
 - **Intérêts DIFFÉRÉS vs PAYÉS** : ⚠️ CONFUSION FRÉQUENTE ⚠️
   Le tableau peut avoir 2 colonnes différentes :
 
@@ -200,8 +212,9 @@ Un prêt immobilier peut avoir plusieurs phases :
   - Intérêts différés : 35€, 254€, 473€... (augmentent)
   - Intérêts PAYÉS : 0€, 0€, 0€... (tous à zéro) ← UTILISER CES VALEURS
 
-- **Frais de dossier** : Ligne pour frais de mise en place (ex: 250€).
-  → À IGNORER : ce n'est pas une échéance de remboursement
+- **Frais de dossier / Commissions** : Ligne pour frais de mise en place (ex: 250€, 1 500€).
+  → À IGNORER : ce ne sont pas des échéances de remboursement
+  → Souvent une seule ligne isolée avec un petit montant
 
 - **Lignes de report/total** : Lignes "Report" ou "Total" à reporter.
   → À IGNORER : calculs intermédiaires
@@ -380,15 +393,16 @@ Analyse maintenant le document et retourne le JSON."""
         """
         Nettoie les échéances extraites en supprimant les lignes invalides
 
-        Stratégie en 2 passes :
-        1. Filtrage simple (échéance 0, incohérences majeures)
-        2. Déduplication par mois (garde la meilleure échéance par mois)
+        Critères de suppression (universels) :
+        1. Échéance 0 : date_echeance = date_debut du prêt
+        2. Déblocages : Texte contient "DBL", "DEBLOC", "déblocage" (case-insensitive)
+        3. Incohérences : |montant_total - (capital + intérêt)| > 1€
+        4. Frais isolés : montant < 10 000€ ET capital=0 ET intérêt=0
 
         Returns:
             Liste des échéances valides
         """
         from datetime import datetime
-        from collections import defaultdict
 
         date_debut_str = pret.get('date_debut', '')
 
@@ -397,76 +411,60 @@ Analyse maintenant le document et retourne le JSON."""
         except:
             date_debut = None
 
-        # PASSE 1 : Filtrage basique
-        echeances_filtrees = []
+        echeances_valides = []
 
         for i, ech in enumerate(echeances):
-            # Critère 1 : Ignorer si date = date_debut (échéance 0)
             skip = False
+            raison = None
+
+            # Critère 1 : Ignorer si date = date_debut (échéance 0)
             if date_debut:
                 try:
                     date_ech = datetime.strptime(ech.get('date_echeance', ''), '%Y-%m-%d').date()
                     if date_ech == date_debut:
-                        print(f"[PARSEUR V7] Échéance {i+1} ignorée : date = date_debut (échéance 0)", flush=True)
                         skip = True
+                        raison = "échéance 0 (date = date_debut)"
                 except:
                     pass
 
+            # Critère 2 : Ignorer si ligne de déblocage (DBL)
+            # Vérifier dans tous les champs de l'échéance
+            if not skip:
+                for key, value in ech.items():
+                    if isinstance(value, str):
+                        value_lower = value.lower()
+                        if 'dbl' in value_lower or 'debloc' in value_lower or 'déblocage' in value_lower:
+                            skip = True
+                            raison = "ligne de déblocage (DBL)"
+                            break
+
+            # Critère 3 : Ignorer si incohérence majeure (>1€)
+            if not skip:
+                montant_total = ech.get('montant_total', 0)
+                montant_capital = ech.get('montant_capital', 0)
+                montant_interet = ech.get('montant_interet', 0)
+                total_calc = montant_capital + montant_interet
+
+                if abs(total_calc - montant_total) > 1.0:
+                    skip = True
+                    raison = f"incohérence montant (total={montant_total:.2f}€ vs calc={total_calc:.2f}€)"
+
+            # Critère 4 : Ignorer si frais isolés (petit montant sans capital ni intérêt)
+            if not skip:
+                montant_total = ech.get('montant_total', 0)
+                montant_capital = ech.get('montant_capital', 0)
+                montant_interet = ech.get('montant_interet', 0)
+
+                # Frais typiques : 250€, 1 500€, etc. (toujours < 10k€)
+                if 0 < montant_total < 10000 and montant_capital == 0 and montant_interet == 0:
+                    skip = True
+                    raison = f"frais isolés ({montant_total:.2f}€ sans capital ni intérêt)"
+
+            # Log et décision
             if skip:
-                continue
-
-            # Critère 2 : Ignorer si incohérence majeure (>1€)
-            montant_total = ech.get('montant_total', 0)
-            montant_capital = ech.get('montant_capital', 0)
-            montant_interet = ech.get('montant_interet', 0)
-            total_calc = montant_capital + montant_interet
-
-            if abs(total_calc - montant_total) > 1.0:
-                print(f"[PARSEUR V7] Échéance {i+1} ignorée : incohérence majeure (total={montant_total:.2f}€ vs calc={total_calc:.2f}€)", flush=True)
-                continue
-
-            echeances_filtrees.append((i, ech))
-
-        # PASSE 2 : Déduplication par mois (garde la meilleure)
-        echeances_par_mois = defaultdict(list)
-
-        for idx, ech in echeances_filtrees:
-            try:
-                date_ech = datetime.strptime(ech.get('date_echeance', ''), '%Y-%m-%d').date()
-                mois_annee = (date_ech.year, date_ech.month)
-                echeances_par_mois[mois_annee].append((idx, ech, date_ech))
-            except:
-                # Date invalide : on garde quand même pour validation ultérieure
-                echeances_par_mois[None].append((idx, ech, None))
-
-        # Pour chaque mois, garder la meilleure échéance
-        echeances_valides = []
-
-        for mois_annee, echs_du_mois in sorted(echeances_par_mois.items()):
-            if len(echs_du_mois) == 1:
-                # Pas de doublon
-                echeances_valides.append(echs_du_mois[0][1])
+                print(f"[PARSEUR V7] Échéance {i+1} ({ech.get('date_echeance', 'N/A')}) ignorée : {raison}", flush=True)
             else:
-                # Doublon détecté : garder la meilleure
-                # Priorité : montant_total > 0, puis jour = 15, puis dernière
-                meilleure = echs_du_mois[0]
-
-                for idx, ech, date_ech in echs_du_mois[1:]:
-                    # Préférer celle avec montant > 0
-                    if ech.get('montant_total', 0) > 0 and meilleure[1].get('montant_total', 0) == 0:
-                        meilleure = (idx, ech, date_ech)
-                    # À montant égal, préférer jour = 15
-                    elif (ech.get('montant_total', 0) == meilleure[1].get('montant_total', 0) and
-                          date_ech and date_ech.day == 15 and
-                          meilleure[2] and meilleure[2].day != 15):
-                        meilleure = (idx, ech, date_ech)
-
-                # Log des échéances ignorées
-                for idx, ech, date_ech in echs_du_mois:
-                    if (idx, ech, date_ech) != meilleure:
-                        print(f"[PARSEUR V7] Échéance {idx+1} ({ech.get('date_echeance')}) ignorée : doublon de mois", flush=True)
-
-                echeances_valides.append(meilleure[1])
+                echeances_valides.append(ech)
 
         return echeances_valides
 
