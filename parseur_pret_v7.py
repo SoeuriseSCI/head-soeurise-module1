@@ -380,17 +380,16 @@ Analyse maintenant le document et retourne le JSON."""
         """
         Nettoie les échéances extraites en supprimant les lignes invalides
 
-        Supprime :
-        - Échéance 0 (date = date_debut du prêt)
-        - Frais de dossier (montant_total faible mais capital=0 et intérêt=0)
-        - Lignes avec incohérence majeure (|total - (capital+intérêt)| > 1€)
+        Stratégie en 2 passes :
+        1. Filtrage simple (échéance 0, incohérences majeures)
+        2. Déduplication par mois (garde la meilleure échéance par mois)
 
         Returns:
             Liste des échéances valides
         """
         from datetime import datetime
+        from collections import defaultdict
 
-        echeances_valides = []
         date_debut_str = pret.get('date_debut', '')
 
         try:
@@ -398,16 +397,23 @@ Analyse maintenant le document et retourne le JSON."""
         except:
             date_debut = None
 
+        # PASSE 1 : Filtrage basique
+        echeances_filtrees = []
+
         for i, ech in enumerate(echeances):
             # Critère 1 : Ignorer si date = date_debut (échéance 0)
+            skip = False
             if date_debut:
                 try:
                     date_ech = datetime.strptime(ech.get('date_echeance', ''), '%Y-%m-%d').date()
                     if date_ech == date_debut:
                         print(f"[PARSEUR V7] Échéance {i+1} ignorée : date = date_debut (échéance 0)", flush=True)
-                        continue
+                        skip = True
                 except:
                     pass
+
+            if skip:
+                continue
 
             # Critère 2 : Ignorer si incohérence majeure (>1€)
             montant_total = ech.get('montant_total', 0)
@@ -419,8 +425,48 @@ Analyse maintenant le document et retourne le JSON."""
                 print(f"[PARSEUR V7] Échéance {i+1} ignorée : incohérence majeure (total={montant_total:.2f}€ vs calc={total_calc:.2f}€)", flush=True)
                 continue
 
-            # Échéance valide
-            echeances_valides.append(ech)
+            echeances_filtrees.append((i, ech))
+
+        # PASSE 2 : Déduplication par mois (garde la meilleure)
+        echeances_par_mois = defaultdict(list)
+
+        for idx, ech in echeances_filtrees:
+            try:
+                date_ech = datetime.strptime(ech.get('date_echeance', ''), '%Y-%m-%d').date()
+                mois_annee = (date_ech.year, date_ech.month)
+                echeances_par_mois[mois_annee].append((idx, ech, date_ech))
+            except:
+                # Date invalide : on garde quand même pour validation ultérieure
+                echeances_par_mois[None].append((idx, ech, None))
+
+        # Pour chaque mois, garder la meilleure échéance
+        echeances_valides = []
+
+        for mois_annee, echs_du_mois in sorted(echeances_par_mois.items()):
+            if len(echs_du_mois) == 1:
+                # Pas de doublon
+                echeances_valides.append(echs_du_mois[0][1])
+            else:
+                # Doublon détecté : garder la meilleure
+                # Priorité : montant_total > 0, puis jour = 15, puis dernière
+                meilleure = echs_du_mois[0]
+
+                for idx, ech, date_ech in echs_du_mois[1:]:
+                    # Préférer celle avec montant > 0
+                    if ech.get('montant_total', 0) > 0 and meilleure[1].get('montant_total', 0) == 0:
+                        meilleure = (idx, ech, date_ech)
+                    # À montant égal, préférer jour = 15
+                    elif (ech.get('montant_total', 0) == meilleure[1].get('montant_total', 0) and
+                          date_ech and date_ech.day == 15 and
+                          meilleure[2] and meilleure[2].day != 15):
+                        meilleure = (idx, ech, date_ech)
+
+                # Log des échéances ignorées
+                for idx, ech, date_ech in echs_du_mois:
+                    if (idx, ech, date_ech) != meilleure:
+                        print(f"[PARSEUR V7] Échéance {idx+1} ({ech.get('date_echeance')}) ignorée : doublon de mois", flush=True)
+
+                echeances_valides.append(meilleure[1])
 
         return echeances_valides
 
