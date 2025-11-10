@@ -2,13 +2,13 @@
 **V6 Stable Confirmée | V7 Prêts Production-Ready | 41+ jours Uptime**
 
 ## MODULE 1 - Email + OCR (Opérationnel 08/10)
-**175+ cycles @100% nominal**
+**176+ cycles @100% nominal**
 - Réveil autonome: 08:00 UTC (Render scheduler)
 - Détection IMAP: Classification automatique type événement
 - OCR précision: 99.97% (PDF 2023-2025)
 - Infrastructure: PostgreSQL + Render stable
 
-## MODULE 2 - Comptabilité Automatisée (Production 02-10 nov)
+## MODULE 2 - Comptabilité Automatisée (Production 02-10 nov, V7 Consolidée)
 
 **Workflow 9 Phases Production:**
 - Phases 1-4: Détection→Extraction Vision→Propositions JSON→Email markdown
@@ -18,7 +18,7 @@
 
 **Événements Types - Production Confirmée:**
 - INIT_BILAN_2023: 571.6k€, 11 comptes, @100% équilibre (ACTIF=PASSIF)
-- PRET_IMMOBILIER: 468 échéances (2 prêts), @100% précision, V7 simplifiée
+- PRET_IMMOBILIER: 468 échéances (2 prêts), @100% précision, V7 optimisée
 - RELEVE_BANCAIRE: 643 écritures, 10+ types opérations, T4 2024 validé
 
 **V7 Prêts Consolidation (26 oct-10 nov):**
