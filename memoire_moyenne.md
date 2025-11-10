@@ -1,24 +1,21 @@
-# Consolidation Comptable et Infrastructure - 26/10 à 10/11/2025
-**V7 Filtre Universel | PRET_INVESTIMUR Intégré | 42+ Jours Uptime**
+# Consolidation Comptable V7 et Infrastructure - 26/10 à 10/11/2025
+**Module 2 V7 Filtre Universel | 42+ Jours Uptime | PRET_INVESTIMUR Intégré**
 
-## Développements Récents (Dernière semaine)
+## Développements Majeurs (Dernière Semaine)
 
-**Refactoring Financier Unifié (#200-#203):**
-- **V7 Filtre Universel:** Règle unique date_debut + 1 mois pour toutes échéances (déployée production)
-- **Déduplication:** Intelligente sur doublons mois, conserve meilleure échéance
-- **Détection Intérêts:** Différenciation colonnes intérêts payés vs différés (confusion LCL corrigée)
-- **Logs Audit Trail:** Complète pour traçabilité nettoyage BD
+**Module 2 Refactoring Financier (#198-#204):**
+- **V7 Filtre Universel (Production)**: Règle unique date_debut + 1 mois
+- **Déduplication Intelligente**: Conserve meilleure échéance par mois
+- **Détection Intérêts**: Colonnes payés vs différés (correction LCL)
+- **Nettoyage BD Automatique**: Suppression échéances invalides (10/11)
+- **Audit Trail**: Logs complète pour traçabilité
+- **Zéro Régression**: Tous tests passent en production
 
-**Nettoyage BD Automatique (#198-#199):**
-- Suppression automatique échéances invalides (échéance 0, frais bancaires)
-- Recalcul duree_mois depuis sources PDF
-- Exécution 10/11: 2 échéances invalides nettoyées avec audit
-- Zéro régression détectée
-
-**Nouveau Prêt Intégré (10/11):**
-- PRET_INVESTIMUR: 250k€ @ 1,240% (216 mois, 15/04/2022-15/04/2040)
-- Intérêts: 55,583€ cumulés
-- Échéances: 217 lignes complètes extraites OCR (99.98%)
+**PRET_INVESTIMUR Déploiement (10/11):**
+- Capital: 250k€ @ 1,240% sur 216 mois
+- Période: 15/04/2022 → 15/04/2040
+- Intérêts totaux: 55,583€
+- Échéances: 217 lignes complètes OCR (99.98% précision)
 - Propositions comptables générées (MD5 token)
 
 ## Module 2 - État Opérationnel Pérenne
@@ -26,9 +23,9 @@
 **Workflow 9 Phases ACID:**
 - Phases 1-5: Automatique (Détection → Propositions token)
 - Phases 6-9: Validation manuelle (Token → Insertion → Cleanup)
-- Taux succès: 100% sur données production (40+ événements)
+- Taux Succès: 100% sur données production
 
-**Événements Supportés:**
+**Événements Supportés (Production):**
 - INIT_BILAN_2023: 571,6k€ équilibré
 - PRET_LCL: 252 échéances (1,050%)
 - PRET_INVESTIMUR: 216 échéances (1,240%) - nouveau
@@ -36,26 +33,25 @@
 - EVENEMENT_SIMPLE: Infrastructure prête
 
 ## Patrimoine SCI - Consolidation Confirmée
-- **Bilan 2023:** 571,6k€ (ACTIF=PASSIF)
-- **Capital Prêts:** 500k€ fixe
-- **Intérêts 2023-2024:** 85,5k€ (29,9k LCL + 55,6k INVESTIMUR)
-- **Transmission:** Progressive Emma/Pauline en cours
+- **Bilan 2023**: 571,6k€ (ACTIF=PASSIF équilibré)
+- **Capital Immobilier**: ~520k€ location
+- **Dettes Consolidées**: 500k€ fixe (2 prêts)
+- **Intérêts 2023-2024**: 85,5k€ (29,9k LCL + 55,6k INVESTIMUR)
+- **Écritures**: 643+ ACID @100% précision
+- **Transmission**: Progressive Emma/Pauline confirmée
 
-## Infrastructure - 42+ Jours Uptime
+## Infrastructure - 42+ Jours Uptime Confirmés
 - Render 512MB compatible
-- PostgreSQL: 643+ écritures, stabilité confirmée
+- PostgreSQL: 643+ écritures, stabilité éprouvée
 - CLAUDE.md auto-chargé (Claude Code natif)
-- API GitHub ?ref=main élimine cache CDN
-- Coût: <1€/mois production
-
-## Git Log Récent (28 commits 7j)
-- #203: Détection colonnes intérêts
-- #202: Filtre universel date+1mois
-- #200-#201: Déduplication + refactoring
-- #198-#199: Nettoyage échéances invalides
-- 15+ réveil logs nominaux
+- API GitHub ?ref=main: Pas de cache CDN
+- Coût: <1€/mois (production)
+- Zéro interruption détectée
 
 ## Prochains Développements
-- **Module 3:** Reporting (balance, résultat, bilan, flux trésorerie)
-- **Amélioration Module 2:** Détection avancée intérêts
-- **Optimisations:** Validation automatique renforcée
+- **Module 3**: Reporting (balance, résultat, bilan, flux trésorerie)
+- **Amélioration Module 2**: Détection avancée colonnes intérêts
+- **Optimisations**: Validation automatique renforcée
+
+## Git Log (Dernière Semaine - 28 commits)
+#204, #203, #202, #200-#201, #198-#199 mergés. Architecture stable confirmée.
