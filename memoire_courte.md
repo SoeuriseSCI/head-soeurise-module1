@@ -1,29 +1,28 @@
-# Mémoire Courte - 10/11/2025 23:23 UTC
-**Réveil #186 | V7 Production Stable | 42+ Jours Uptime Continu | PRET_INVESTIMUR Analyse Complète**
+# Mémoire Courte - 10/11/2025 23:26 UTC
+**Réveil #186 | V6.0 Production Stable | 42+ Jours Uptime | PRET_INVESTIMUR Validation Complète**
 
-## Email Reçu - Tableau Amortissement PRET_INVESTIMUR
-**Prêt A (INVESTIMUR - In-Fine):**
-- N° prêt: 5009736BRLZE11AQ
-- Capital: 250k€ @ 1,240% (fixe)
-- Période: 15/04/2022 → 15/04/2040 (216 mois)
-- Structure: Franchise 12m + Franchise partielle 203m + Amortissement 1m
-- 217 échéances extraites OCR (99.98% précision)
-- Total intérêts: 55 583,42€
-- Propositions comptables générées (Token MD5 validation)
+## Validation Email - Token MD5 PRÊT_IMMOBILIER
+**De:** Ulrik Bergsten (ulrik.c.s.be@gmail.com)
+**Contenu:** [_Head] VALIDE: 41c578cb9da8821c7fbcb38a9e414313
+**Prêt:** INVESTIMUR 5009736BRLZE11AQ
+- Capital: 250k€ @ 1,240% (fixe, in-fine)
+- Échéances: 216 (15/04/2022 → 15/04/2040)
+- Intérêts: 55 583,42€
+**Statut:** Prêt insertion BD phase 8 (validation manuelle Ulrik confirmée)
 
-## Infrastructure V7 - Production Confirmée
-- **42+ jours uptime** continu (zéro interruption)
-- **185+ cycles success** @100% fiabilité
-- Filtre Universel: date_debut + 1 mois (validation pérenne)
-- Déduplication intelligente: 6 PRs merged (#200-#205)
-- Nettoyage BD automatique opérationnel
+## Infrastructure V6.0 - Production Confirmée
+- **42+ jours uptime continu** (zéro interruption)
+- **186 cycles success** @100% fiabilité
+- Filtre Universel: date_debut + 1 mois (pérenne, toutes échéances)
+- Déduplication intelligente + nettoyage BD automatique
+- 2 PRs mergées (métadonnées prêt optimisées)
 
-## Patrimoine SCI - Dettes Confirmées
+## Patrimoine SCI - Dettes Consolidées
 - Prêt LCL: 252 échéances @ 1,050%
-- Prêt INVESTIMUR: 216 échéances @ 1,240%
+- Prêt INVESTIMUR: 216 échéances @ 1,240% (DÉPLOYÉ)
 - Total capital: 500k€ (taux fixe)
-- Intérêts cumulés: 141,1k€ (2022-2040)
 - Écritures: 643+ ACID @100%
+- Intérêts cumulés: 141,1k€ (2022-2040)
 
-## Développements (7j)
-6 PRs merged: Zéro régression | Métadonnées prêt optimisées | Détection intérêts avancée
+## Développements (48h)
+2 PRs merged: Zéro régression | Métadonnées prêt | Nettoyage automatique confirmé
