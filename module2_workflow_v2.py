@@ -1174,14 +1174,15 @@ class GenerateurPropositions:
         return markdown, {"propositions": propositions, "token": token}, token
 
     @staticmethod
-    def generer_propositions_pret_immobilier(pret_data: Dict, nb_echeances: int, filename: str) -> Tuple[str, Dict, str]:
+    def generer_propositions_pret_immobilier(pret_data: Dict, nb_echeances: int, filename: str, echeances_data: List[Dict] = None) -> Tuple[str, Dict, str]:
         """
         Génère propositions pour insertion prêt immobilier
 
         Args:
             pret_data: Données du prêt extraites
             nb_echeances: Nombre d'échéances extraites
-            filename: Nom du fichier MD contenant les échéances
+            filename: Nom du fichier MD contenant les échéances (legacy)
+            echeances_data: Liste des échéances extraites (V7)
 
         Returns:
             (markdown, propositions_dict, token)
@@ -1191,7 +1192,8 @@ class GenerateurPropositions:
             "action": "INSERER_PRET",
             "filename": filename,
             "pret": pret_data,
-            "nb_echeances": nb_echeances
+            "nb_echeances": nb_echeances,
+            "echeances": echeances_data or []  # V7: Stocker les échéances directement
         }]
 
         token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
@@ -1646,6 +1648,7 @@ class WorkflowModule2V2:
             # Extraire les données
             filename = result.get('filename')
             nb_echeances = result.get('nb_echeances', 0)
+            echeances = result.get('echeances', [])
 
             # Utiliser directement les données du prêt retournées par le parseur V7
             # (pas besoin de lire le fichier MD)
@@ -1661,9 +1664,9 @@ class WorkflowModule2V2:
                     "token": ""
                 }
 
-            # Générer propositions
+            # Générer propositions (V7: passer les échéances directement)
             markdown, props, token = GenerateurPropositions.generer_propositions_pret_immobilier(
-                pret_data, nb_echeances, filename
+                pret_data, nb_echeances, filename, echeances
             )
 
             return {

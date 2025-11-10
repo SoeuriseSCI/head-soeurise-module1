@@ -501,54 +501,17 @@ class ProcesseurInsertion:
 
             prop = propositions[0]
 
-            # Extraire les données
+            # Extraire les données (V7: échéances dans le dict, pas de fichier MD)
             filename = prop.get('filename', '')
             pret_data = prop.get('pret', {})
             nb_echeances = prop.get('nb_echeances', 0)
-
-            if not filename:
-                return False, "Filename manquant dans proposition PRET", []
+            echeances_data = prop.get('echeances', [])
 
             if not pret_data:
                 return False, "Données prêt manquantes dans proposition", []
 
-            # Lire et parser le fichier MD contenant les échéances
-            import os
-            from pathlib import Path
-
-            # Le fichier est à la racine du projet
-            filepath = Path(__file__).parent / filename
-
-            if not filepath.exists():
-                return False, f"Fichier échéances non trouvé: {filename}", []
-
-            # Parser les échéances depuis le fichier MD
-            echeances_data = []
-            with open(filepath, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    # Ignorer les lignes vides, headers et séparateurs
-                    if not line or line.startswith('#') or line.startswith('**') or line.startswith('---'):
-                        continue
-
-                    # Format: date:total:capital:interet:restant_du
-                    parts = line.split(':')
-                    if len(parts) == 5:
-                        try:
-                            echeance = {
-                                'numero_echeance': len(echeances_data) + 1,  # Numéro séquentiel (1, 2, 3...)
-                                'date_echeance': parts[0],
-                                'montant_total': float(parts[1]),
-                                'montant_capital': float(parts[2]),
-                                'montant_interet': float(parts[3]),
-                                'capital_restant_du': float(parts[4])
-                            }
-                            echeances_data.append(echeance)
-                        except ValueError:
-                            continue  # Ignorer les lignes mal formatées
-
             if not echeances_data:
-                return False, f"Aucune échéance trouvée dans {filename}", []
+                return False, "Échéances manquantes dans proposition", []
 
             # Insérer le prêt et ses échéances via PretsManager
             success, message, pret_id = self.prets_manager.inserer_pret_et_echeances(
