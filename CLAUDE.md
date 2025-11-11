@@ -244,6 +244,50 @@ Lors des interactions :
 
 ## 🔧 Leçons Techniques Critiques
 
+### Nature des Événements Comptables et "Pseudo-Doublons"
+
+**Contexte SCI Soeurise :**
+- Pas d'opérations en espèces (pas de caisse)
+- Une seule banque, un seul compte bancaire
+- → Tout événement comptable apparaît sur le relevé de compte
+
+**DEUX sources d'information COMPLÉMENTAIRES (PAS des doublons !) :**
+
+**1. Relevés de compte bancaire**
+- Synthèse courte : date, libellé court, montant
+- Vision chronologique des mouvements
+- **Insuffisants seuls** pour tenir la comptabilité
+
+**2. Documents justificatifs** (essentiels pour ventilation)
+- Avis d'opération
+- Factures
+- Bulletins de versements de revenus
+- Avis d'opération sur valeurs mobilières
+- Avis d'opération crédits reçus (apports compte courant associé)
+- Tableaux d'amortissement des prêts
+
+**Pourquoi les relevés NE SUFFISENT PAS :**
+- **Échéances de prêt** : ventilation intérêts (661) vs capital amorti (164)
+- **Valeurs mobilières** : commissions + nombre titres + prix unitaire + ISIN + coût de revient moyen
+- **Libellés bancaires** : trop courts pour comptabilisation correcte
+
+**RÈGLE FONDAMENTALE :**
+> Un même événement économique = 1 ligne sur relevé de compte + 1 document justificatif
+>
+> **Ce ne sont PAS des doublons** → Ce sont des informations **COMPLÉMENTAIRES**
+
+**Conséquence pour le système :**
+- Traitement DIFFÉRENCIÉ requis entre relevés et documents justificatifs
+- Ne JAMAIS éliminer comme "doublon" une paire relevé + justificatif
+- Le justificatif apporte les détails pour la ventilation comptable correcte
+
+**Leçon apprise (11/11/2025)** :
+- ❌ ERREUR : Traiter relevé + justificatif comme "doublon" à éliminer
+- ✅ CORRECT : Reconnaître les deux sources comme complémentaires
+- 📖 RÈGLE : Relevé = quoi/quand/combien | Justificatif = comment ventiler
+
+---
+
 ### Modification de Clés Primaires avec FK
 **Problème** : Lors de la renumérotoation d'IDs avec contraintes FK actives, PostgreSQL bloque les UPDATE si les nouvelles valeurs n'existent pas encore.
 
