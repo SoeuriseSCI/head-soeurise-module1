@@ -193,41 +193,38 @@ class DetecteurDoublons:
         """
         Vérifie si un événement est un doublon d'un événement déjà traité
 
-        STRATÉGIE:
-        Vérification stricte par fingerprint (date+libellé+montant+type)
+        STRATÉGIE (MAJ 11/11/2025):
+        Si doublon détecté → ACCEPTER le nouvel événement (le plus récent)
+        Les anciens événements seront supprimés par le garbage collection (> 7 jours)
+
+        LOGIQUE:
+        - Même fingerprint trouvé → On IGNORE l'ancien, on ACCEPTE le nouveau
+        - Permet de re-traiter un événement échoué sans être bloqué
+        - Le garbage collection nettoiera les anciens événements automatiquement
 
         NOTE:
         La déduplication intelligente (doublons avec libellés différents) est
         maintenant gérée par Claude dans extracteur_pdf._deduplicater_operations()
         AVANT la création des événements en base.
 
-        Ce mécanisme ne sert plus qu'à prévenir les doublons exacts (fingerprint).
-
         Args:
             session: Session SQLAlchemy
             evenement: Dictionnaire de l'événement à vérifier
 
         Returns:
-            Dict avec informations du doublon si trouvé, None sinon
-
-        Exemple retour si doublon trouvé:
-            {
-                'est_doublon': True,
-                'evenement_id': 42,
-                'fingerprint': 'a3f5e9c2...',
-                'phase_traitement': 1,
-                'date_traitement': datetime(2024, 11, 5, 10, 30)
-            }
+            None (toujours accepter, même si doublon détecté)
         """
         # Calculer le fingerprint
         fingerprint = DetecteurDoublons.calculer_fingerprint(evenement)
 
         # Chercher un événement avec ce fingerprint
+        # (Garde la logique pour log/debug futur, mais ne bloque plus)
         result = session.execute(
             text("""
-                SELECT id, fingerprint, phase_traitement, traite_at
+                SELECT id, created_at
                 FROM evenements_comptables
                 WHERE fingerprint = :fingerprint
+                ORDER BY created_at DESC
                 LIMIT 1
             """),
             {'fingerprint': fingerprint}
@@ -235,15 +232,8 @@ class DetecteurDoublons:
 
         row = result.fetchone()
 
-        if row:
-            return {
-                'est_doublon': True,
-                'evenement_id': row[0],
-                'fingerprint': row[1],
-                'phase_traitement': row[2],
-                'date_traitement': row[3]
-            }
-
+        # Même si doublon trouvé, on retourne None (accepter le nouvel événement)
+        # L'ancien sera nettoyé par garbage collection
         return None
 
     @staticmethod

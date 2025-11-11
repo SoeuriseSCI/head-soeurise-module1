@@ -110,20 +110,32 @@ class ExtracteurPDF:
                 max_tokens=16000,
                 messages=[{
                     "role": "user",
-                    "content": f"""Voici {len(operations)} opérations bancaires extraites d'un relevé.
+                    "content": f"""Voici {len(operations)} opérations bancaires extraites d'un document.
 
-PROBLÈME: Certaines opérations apparaissent EN DOUBLE avec des libellés différents.
+CONTEXTE CRITIQUE - SCI Soeurise:
+- Pas d'espèces, une seule banque, un seul compte
+- Tout événement comptable = 1 ligne sur relevé de compte + 0, 1 ou N documents justificatifs
+- Relevé + Justificatif = COMPLÉMENTAIRES (PAS des doublons !)
 
-EXEMPLES DE DOUBLONS À DÉTECTER:
-1. Même date + même montant + types similaires (SCPI, virements, etc.)
-2. Une version détaillée vs une version courte
-3. Même opération décrite différemment selon la page du relevé
+RÈGLE FONDAMENTALE:
+Un même événement économique peut apparaître dans:
+1. RELEVÉ DE COMPTE : Synthèse courte (date, libellé court, montant)
+2. DOCUMENT JUSTIFICATIF : Détails pour ventilation comptable
+   - Avis d'opération (échéances prêts : intérêts vs capital)
+   - Avis opérations valeurs mobilières (nb titres, prix unitaire, commissions)
+   - Factures, bulletins versements revenus, etc.
+
+⚠️ NE JAMAIS DÉDUPLICATER relevé + justificatif !
 
 TÂCHE:
 1. Analyse TOUTES les opérations
-2. Identifie les doublons (même date + même montant ± 0.01€)
-3. Pour chaque groupe de doublons, garde LA VERSION LA PLUS DÉTAILLÉE (libellé le plus long et informatif)
-4. Retourne la liste dédupliquée
+2. Identifie le TYPE de chaque opération (relevé bancaire, avis d'opération, etc.)
+3. Identifie les VRAIS DOUBLONS (même document extrait 2 fois, même contenu exact)
+4. NE PAS déduplicater si:
+   - Une opération est une synthèse (relevé) et l'autre est détaillée (justificatif)
+   - Les libellés sont différents (même date/montant) → probablement complémentaires
+5. Supprime UNIQUEMENT les vrais doublons (contenu quasi-identique)
+6. Retourne la liste nettoyée
 
 OPÉRATIONS:
 ```json
@@ -140,13 +152,14 @@ Retourne un JSON avec cette structure exacte:
       "type_operation": "CREDIT"
     }}
   ],
-  "nb_doublons_supprimes": 4,
+  "nb_doublons_supprimes": 2,
   "details_doublons": [
     {{
       "date": "2024-01-29",
       "montant": 7356.24,
+      "raison": "Même contenu exact extrait 2 fois",
       "garde": "VIR SEPA SCPI EPARGNE PIERRE...",
-      "supprime": "SCPI EPARGNE PIERRE DISTRIBUTION..."
+      "supprime": "VIR SEPA SCPI EPARGNE PIERRE..."
     }}
   ]
 }}

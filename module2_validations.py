@@ -737,6 +737,21 @@ class OrchestratorValidations:
             succes, msg, ids = False, f"Type evenement inconnu: {type_evenement}", []
         
         if not succes:
+            # Marquer la proposition comme ERREUR (échec technique d'insertion)
+            try:
+                self.session.execute(text("""
+                    UPDATE propositions_en_attente
+                    SET statut = 'ERREUR',
+                        notes = :erreur,
+                        updated_at = NOW()
+                    WHERE token = :token
+                """), {'token': token_email, 'erreur': f"Erreur insertion: {msg}"})
+                self.session.commit()
+                print(f"⚠️  Proposition {token_email} marquée ERREUR: {msg[:100]}")
+            except Exception as e:
+                print(f"⚠️  Erreur lors du marquage ERREUR: {e}")
+                self.session.rollback()
+
             return {
                 "validation_detectee": True,
                 "statut": "ERREUR",
