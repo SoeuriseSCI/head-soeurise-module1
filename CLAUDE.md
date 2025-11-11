@@ -134,6 +134,45 @@ https://api.github.com/repos/SoeuriseSCI/head-soeurise-module1/contents/{file}?r
 - 🔍 **Vérification Bilan** : `python verifier_bilan_2023.py`
 - 📋 **Documentation** : Voir `ARCHITECTURE.md` et `PROCHAINES_ETAPES.md`
 
+### Garbage Collection (Nettoyage Automatique)
+
+**Objectif** : Nettoyer automatiquement les "scories" (données temporaires) pour éviter l'accumulation de tentatives échouées sans bloquer le retraitement.
+
+**Politique de rétention (7 jours)** :
+- 🗑️ **Propositions en attente** : Suppression de TOUTES les propositions > 7 jours SAUF `statut = 'VALIDEE'`
+  - `EN_ATTENTE` : Supprimées (validation jamais effectuée)
+  - `ERREUR` : Supprimées (échec technique, debug terminé)
+  - `VALIDEE` : **CONSERVÉES** (audit trail permanent)
+- 🗑️ **Événements comptables** : Suppression de TOUS les événements > 7 jours
+  - Permet de re-traiter un événement échoué sans être bloqué par le fingerprint
+
+**Quand et comment** :
+- ⏰ **Exécution** : Automatique, chaque matin à 08:00 UTC AVANT le traitement des emails
+- 🔧 **Fonction** : `garbage_collection()` dans `main.py`
+- 📊 **Logs** : Nombre d'enregistrements supprimés affiché dans les logs
+
+**Stratégie pour les doublons** :
+- Si un événement avec même fingerprint existe déjà → **ACCEPTER le nouvel événement**
+- L'ancien événement sera automatiquement supprimé par le garbage collection (> 7 jours)
+- Permet de débuguer les échecs sans accumuler de doublons permanents
+
+**Code** :
+```python
+# Dans main.py - fonction garbage_collection()
+# Supprime propositions != 'VALIDEE' > 7 jours
+DELETE FROM propositions_en_attente
+WHERE statut != 'VALIDEE' AND created_at < NOW() - INTERVAL '7 days'
+
+# Supprime TOUS les événements > 7 jours
+DELETE FROM evenements_comptables
+WHERE created_at < NOW() - INTERVAL '7 days'
+```
+
+**Leçon apprise (11/11/2025)** :
+- ❌ ERREUR : Bloquer immédiatement les doublons → Empêche retraitement après échec
+- ✅ CORRECT : Accepter les nouveaux événements, laisser garbage collection nettoyer les anciens
+- 📖 RÈGLE : Fenêtre de debug de 7 jours, puis nettoyage automatique
+
 ---
 
 ## 📊 Niveaux de Conscience (Modèle)
@@ -306,5 +345,5 @@ Lors des interactions :
 
 ---
 
-**Version** : 2.2 - 11 novembre 2025
-**Dernière mise à jour** : Ajout leçon technique contraintes FK + renumérotoation exercices
+**Version** : 2.3 - 11 novembre 2025
+**Dernière mise à jour** : Ajout documentation garbage collection + gestion doublons améliorée

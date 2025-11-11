@@ -742,13 +742,71 @@ SUPPRESSION (informations obsolètes) :
         return None
 
 # ═══════════════════════════════════════════════════════════════════
+# GARBAGE COLLECTION
+# ═══════════════════════════════════════════════════════════════════
+
+def garbage_collection():
+    """
+    Supprime les scories > 7 jours (nettoyage automatique)
+
+    RÈGLES:
+    - Propositions : Supprimer tout sauf VALIDEE (garde audit trail)
+    - Événements : Supprimer TOUS > 7 jours (données temporaires)
+
+    Exécuté quotidiennement à 08:00 UTC avant le traitement des emails
+    """
+    if not DB_URL:
+        log_critical("GARBAGE_COLLECTION_SKIP", "DATABASE_URL non définie")
+        return
+
+    try:
+        from sqlalchemy import create_engine, text
+        from sqlalchemy.orm import sessionmaker
+
+        engine = create_engine(DB_URL)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        log_critical("GARBAGE_COLLECTION_START", "Démarrage nettoyage scories > 7 jours")
+
+        # PROPOSITIONS : Supprimer tout sauf VALIDEE
+        result_prop = session.execute(text("""
+            DELETE FROM propositions_en_attente
+            WHERE statut != 'VALIDEE'
+              AND created_at < NOW() - INTERVAL '7 days'
+        """))
+        nb_propositions = result_prop.rowcount
+
+        # ÉVÉNEMENTS : Supprimer TOUS > 7 jours
+        result_evt = session.execute(text("""
+            DELETE FROM evenements_comptables
+            WHERE created_at < NOW() - INTERVAL '7 days'
+        """))
+        nb_evenements = result_evt.rowcount
+
+        session.commit()
+        session.close()
+
+        log_critical(
+            "GARBAGE_COLLECTION_SUCCESS",
+            f"Propositions supprimées: {nb_propositions}, Événements supprimés: {nb_evenements}"
+        )
+
+    except Exception as e:
+        log_critical("GARBAGE_COLLECTION_ERROR", f"Erreur: {str(e)[:200]}")
+
+
+# ═══════════════════════════════════════════════════════════════════
 # WAKE-UP CYCLE
 # ═══════════════════════════════════════════════════════════════════
 
 def reveil_quotidien():
     """Cycle quotidien d'analyse - AVEC MODULE 2 V2"""
-    
+
     log_critical("REVEIL_START", "Démarrage réveil quotidien")
+
+    # Garbage collection AVANT traitement emails (nettoyage scories > 7 jours)
+    garbage_collection()
     
     # Étape 1: Récupérer emails
     emails = fetch_emails_with_auth()

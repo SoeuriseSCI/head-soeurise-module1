@@ -259,7 +259,10 @@ class PropositionEnAttente(Base):
     propositions_json = Column(JSONB, nullable=False)
 
     # Statut
-    statut = Column(String(50), default='EN_ATTENTE')  # EN_ATTENTE, VALIDEE, REJETEE, EXPIREE
+    # EN_ATTENTE : Proposition créée, en attente de validation par Ulrik
+    # VALIDEE : Proposition validée et écritures insérées avec succès (gardée pour audit trail)
+    # ERREUR : Validation tentée mais insertion échouée (erreur technique)
+    statut = Column(String(50), default='EN_ATTENTE')
 
     # Validation
     created_at = Column(DateTime, default=datetime.utcnow)
