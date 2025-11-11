@@ -242,5 +242,25 @@ Lors des interactions :
 
 ---
 
-**Version** : 2.1 - 08 novembre 2025
-**Dernière mise à jour** : MODULE 2 production-ready - Workflow complet 9 phases opérationnel - Documentation architecture complète
+## 🔧 Leçons Techniques Critiques
+
+### Modification de Clés Primaires avec FK
+**Problème** : Lors de la renumérotoation d'IDs avec contraintes FK actives, PostgreSQL bloque les UPDATE si les nouvelles valeurs n'existent pas encore.
+
+**Solution validée** (script `renumeroter_exercices.py`) :
+1. ✅ **DROP CONSTRAINT** FK temporairement (avec IF EXISTS)
+2. ✅ **UPDATE** table principale (exercices_comptables) D'ABORD
+3. ✅ **UPDATE** tables enfants (ecritures, calculs, balances, rapports)
+4. ✅ **ADD CONSTRAINT** FK à nouveau
+5. ✅ **Gestion erreur** : Réactiver FK même en cas d'échec
+
+**Leçon apprise (11/11/2025)** :
+- ❌ ERREUR : UPDATE FK avant UPDATE PK → Violation contrainte FK
+- ✅ CORRECT : Désactiver FK → UPDATE PK → UPDATE FK → Réactiver FK
+- ⚠️ CRITIQUE : Toujours tester en dry-run puis sur environnement de production
+- 📖 RÈGLE : Zéro régression sur fonctionnalités existantes
+
+---
+
+**Version** : 2.2 - 11 novembre 2025
+**Dernière mise à jour** : Ajout leçon technique contraintes FK + renumérotoation exercices
