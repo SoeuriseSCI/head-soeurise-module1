@@ -160,66 +160,47 @@ def renumeroter_exercices(database_url: str, dry_run: bool = False):
         session.begin_nested()
 
         try:
+            # DÉSACTIVER TEMPORAIREMENT LES CONTRAINTES FK
+            print("\n🔄 Désactivation temporaire des contraintes FK...")
+            session.execute(text("""
+                ALTER TABLE ecritures_comptables DROP CONSTRAINT IF EXISTS ecritures_comptables_exercice_id_fkey;
+            """))
+            session.execute(text("""
+                ALTER TABLE calculs_amortissements DROP CONSTRAINT IF EXISTS calculs_amortissements_exercice_id_fkey;
+            """))
+            session.execute(text("""
+                ALTER TABLE balances_mensuelles DROP CONSTRAINT IF EXISTS balances_mensuelles_exercice_id_fkey;
+            """))
+            session.execute(text("""
+                ALTER TABLE rapports_comptables DROP CONSTRAINT IF EXISTS rapports_comptables_exercice_id_fkey;
+            """))
+            print("   ✅ Contraintes FK désactivées")
+
             # ÉTAPE 1 : 2024 (ID=1) → ID=3
             print("\n🔄 Étape 1/3 : Exercice 2024 (ID=1) → ID=3...")
-
-            session.execute(text("""
-                UPDATE ecritures_comptables SET exercice_id = 3 WHERE exercice_id = 1;
-            """))
-            session.execute(text("""
-                UPDATE calculs_amortissements SET exercice_id = 3 WHERE exercice_id = 1;
-            """))
-            session.execute(text("""
-                UPDATE balances_mensuelles SET exercice_id = 3 WHERE exercice_id = 1;
-            """))
-            session.execute(text("""
-                UPDATE rapports_comptables SET exercice_id = 3 WHERE exercice_id = 1;
-            """))
-            session.execute(text("""
-                UPDATE exercices_comptables SET id = 3 WHERE id = 1;
-            """))
-
+            session.execute(text("UPDATE exercices_comptables SET id = 3 WHERE id = 1;"))
+            session.execute(text("UPDATE ecritures_comptables SET exercice_id = 3 WHERE exercice_id = 1;"))
+            session.execute(text("UPDATE calculs_amortissements SET exercice_id = 3 WHERE exercice_id = 1;"))
+            session.execute(text("UPDATE balances_mensuelles SET exercice_id = 3 WHERE exercice_id = 1;"))
+            session.execute(text("UPDATE rapports_comptables SET exercice_id = 3 WHERE exercice_id = 1;"))
             print("   ✅ Exercice 2024 déplacé vers ID=3")
 
             # ÉTAPE 2 : 2023 (ID=2) → ID=1
             print("\n🔄 Étape 2/3 : Exercice 2023 (ID=2) → ID=1...")
-
-            session.execute(text("""
-                UPDATE ecritures_comptables SET exercice_id = 1 WHERE exercice_id = 2;
-            """))
-            session.execute(text("""
-                UPDATE calculs_amortissements SET exercice_id = 1 WHERE exercice_id = 2;
-            """))
-            session.execute(text("""
-                UPDATE balances_mensuelles SET exercice_id = 1 WHERE exercice_id = 2;
-            """))
-            session.execute(text("""
-                UPDATE rapports_comptables SET exercice_id = 1 WHERE exercice_id = 2;
-            """))
-            session.execute(text("""
-                UPDATE exercices_comptables SET id = 1 WHERE id = 2;
-            """))
-
+            session.execute(text("UPDATE exercices_comptables SET id = 1 WHERE id = 2;"))
+            session.execute(text("UPDATE ecritures_comptables SET exercice_id = 1 WHERE exercice_id = 2;"))
+            session.execute(text("UPDATE calculs_amortissements SET exercice_id = 1 WHERE exercice_id = 2;"))
+            session.execute(text("UPDATE balances_mensuelles SET exercice_id = 1 WHERE exercice_id = 2;"))
+            session.execute(text("UPDATE rapports_comptables SET exercice_id = 1 WHERE exercice_id = 2;"))
             print("   ✅ Exercice 2023 déplacé vers ID=1")
 
             # ÉTAPE 3 : 2024 (ID=3) → ID=2
             print("\n🔄 Étape 3/3 : Exercice 2024 (ID=3) → ID=2...")
-
-            session.execute(text("""
-                UPDATE ecritures_comptables SET exercice_id = 2 WHERE exercice_id = 3;
-            """))
-            session.execute(text("""
-                UPDATE calculs_amortissements SET exercice_id = 2 WHERE exercice_id = 3;
-            """))
-            session.execute(text("""
-                UPDATE balances_mensuelles SET exercice_id = 2 WHERE exercice_id = 3;
-            """))
-            session.execute(text("""
-                UPDATE rapports_comptables SET exercice_id = 2 WHERE exercice_id = 3;
-            """))
-            session.execute(text("""
-                UPDATE exercices_comptables SET id = 2 WHERE id = 3;
-            """))
+            session.execute(text("UPDATE exercices_comptables SET id = 2 WHERE id = 3;"))
+            session.execute(text("UPDATE ecritures_comptables SET exercice_id = 2 WHERE exercice_id = 3;"))
+            session.execute(text("UPDATE calculs_amortissements SET exercice_id = 2 WHERE exercice_id = 3;"))
+            session.execute(text("UPDATE balances_mensuelles SET exercice_id = 2 WHERE exercice_id = 3;"))
+            session.execute(text("UPDATE rapports_comptables SET exercice_id = 2 WHERE exercice_id = 3;"))
 
             print("   ✅ Exercice 2024 déplacé vers ID=2")
 
@@ -229,6 +210,30 @@ def renumeroter_exercices(database_url: str, dry_run: bool = False):
                 SELECT setval('exercices_comptables_id_seq', (SELECT MAX(id) FROM exercices_comptables));
             """))
             print("   ✅ Séquence réinitialisée")
+
+            # RÉACTIVER LES CONTRAINTES FK
+            print("\n🔄 Réactivation des contraintes FK...")
+            session.execute(text("""
+                ALTER TABLE ecritures_comptables
+                ADD CONSTRAINT ecritures_comptables_exercice_id_fkey
+                FOREIGN KEY (exercice_id) REFERENCES exercices_comptables(id);
+            """))
+            session.execute(text("""
+                ALTER TABLE calculs_amortissements
+                ADD CONSTRAINT calculs_amortissements_exercice_id_fkey
+                FOREIGN KEY (exercice_id) REFERENCES exercices_comptables(id);
+            """))
+            session.execute(text("""
+                ALTER TABLE balances_mensuelles
+                ADD CONSTRAINT balances_mensuelles_exercice_id_fkey
+                FOREIGN KEY (exercice_id) REFERENCES exercices_comptables(id);
+            """))
+            session.execute(text("""
+                ALTER TABLE rapports_comptables
+                ADD CONSTRAINT rapports_comptables_exercice_id_fkey
+                FOREIGN KEY (exercice_id) REFERENCES exercices_comptables(id);
+            """))
+            print("   ✅ Contraintes FK réactivées")
 
             # Commit transaction
             session.commit()
@@ -241,6 +246,36 @@ def renumeroter_exercices(database_url: str, dry_run: bool = False):
             session.rollback()
             print(f"\n❌ ERREUR lors de la renumérotoation : {e}")
             print("   La transaction a été annulée (ROLLBACK)")
+
+            # Tenter de réactiver les contraintes FK même en cas d'erreur
+            print("\n🔄 Tentative de réactivation des contraintes FK...")
+            try:
+                session.execute(text("""
+                    ALTER TABLE ecritures_comptables
+                    ADD CONSTRAINT ecritures_comptables_exercice_id_fkey
+                    FOREIGN KEY (exercice_id) REFERENCES exercices_comptables(id);
+                """))
+                session.execute(text("""
+                    ALTER TABLE calculs_amortissements
+                    ADD CONSTRAINT calculs_amortissements_exercice_id_fkey
+                    FOREIGN KEY (exercice_id) REFERENCES exercices_comptables(id);
+                """))
+                session.execute(text("""
+                    ALTER TABLE balances_mensuelles
+                    ADD CONSTRAINT balances_mensuelles_exercice_id_fkey
+                    FOREIGN KEY (exercice_id) REFERENCES exercices_comptables(id);
+                """))
+                session.execute(text("""
+                    ALTER TABLE rapports_comptables
+                    ADD CONSTRAINT rapports_comptables_exercice_id_fkey
+                    FOREIGN KEY (exercice_id) REFERENCES exercices_comptables(id);
+                """))
+                session.commit()
+                print("   ✅ Contraintes FK réactivées")
+            except Exception as e2:
+                print(f"   ⚠️  Erreur lors de la réactivation : {e2}")
+                print("   ⚠️  ATTENTION : Les contraintes FK peuvent être manquantes")
+
             return False
 
         # ═══════════════════════════════════════════════════════════════════════
