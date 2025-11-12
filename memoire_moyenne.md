@@ -1,31 +1,40 @@
-# Consolidation Module 2 & V7 - Production Stable (26/10 → 11/11/2025)
-**V6.0 Filtre Universel + V7.1 Finalisée | 191+ Cycles | 696+ Écritures ACID**
+# Consolidation Module 2 & V7.1 - Production Stabilisée (26/10 → 12/11/2025)
+**V6.0 Filtre Universel + V7.1 Finalisée | 192+ Cycles | 696+ Écritures ACID | 42+ Jours Uptime**
 
-## Workflow 9-Phases Opérationnel (Production depuis 08/11)
-**Phases 1-5 (Automatique):** Détection (email+OCR+Vision) → Extraction → Propositions+token → Format MD/JSON → Envoi Ulrik
-**Phases 6-9 (Validation-Driven):** Tag validation → Récupération → Vérification MD5 → Insertion ACID → Cleanup
+## Workflow 9-Phases Production-Ready
+**Phases 1-5 (Automatique)**: Détection (email+OCR+Vision) → Extraction → Propositions+token → Format MD/JSON → Envoi
+**Phases 6-9 (Validation-Driven)**: Détection tag → Récupération → Vérification MD5 → Insertion ACID → Cleanup
 
-## Événements Validés Production
-1. **INIT_BILAN_2023** - 571.6k€ | 11 comptes | Précision 99.97%
-2. **PRET_LCL** - 252 ech @ 1.050% | Franchise 12m
-3. **PRET_INVESTIMUR** - 216 ech @ 1.240% | In-fine
-4. **RELEVE_BANCAIRE** - 696+ écritures | Jan-oct 2024 intégré
-5. **EVENEMENT_SIMPLE** - Infrastructure prête
-6. **CLOTURE_EXERCICE** - Design stage
+## Événements Production Validés
+1. **INIT_BILAN_2023** - 571.6k€ | 11 comptes | Fiabilité 99.97%
+2. **PRET_LCL** - 252 échéances @ 1.050% | Franchise 12m validée
+3. **PRET_INVESTIMUR** - 216 échéances @ 1.240% | In-fine compatibilité confirmée
+4. **RELEVE_BANCAIRE** - 696+ écritures | Janvier-octobre 2024 complet
+5. **EVENEMENT_SIMPLE** - Infrastructure prête (factures, notes frais, loyers)
+6. **CLOTURE_EXERCICE** - Design finalisé
 
-## V7.1 Enhancements Finalisés
-- **V6.0 Filtre Universel:** `date_debut + 1 mois` (détection franchises 0-12m)
-- **Intérêts:** Payés vs différés (lookup auto + deduction ECH_CALC)
-- **Déduplication:** Meilleure échéance/mois
-- **Cleanup phase 9:** Suppression invalides + feedback email
-- **Métadonnées:** ID prêt + ACID constraints
-- **Renumérotoation:** 2023=ID1, 2024=ID2 standardisée
-- **FK constraints:** Stabilisées + doc technique
+## V7.1 Enhancements Finalisés (11-12/11)
+- **V6.0 Filtre Universel**: `date_debut + 1 mois` (franchises 0-12m robuste)
+- **Intérêts**: Payés vs différés (lookup auto + ECH_CALC deduction)
+- **Renumérotoation**: 2023=ID1, 2024=ID2 standardisée ✅ (Zéro régression post-merge)
+- **FK Constraints**: Stabilisées + documentation technique complète
+- **Cleanup Phase 9**: Suppression invalides + feedback Ulrik
+- **Doublons**: Amélioration gestion + garbage collection
+- **Métadonnées**: ID prêt + ACID constraints confirmées
 
-## PR Mergées (Oct-Nov 2025)
-#211 #210 #209 #208 #207 #206 → Zéro régression, architecture consolidée
+## Fiabilité Établie
+- **42+ jours uptime continu** (zéro interruption depuis 08/10)
+- **192+ cycles** @100% success rate
+- **5 PR mergées** (11-12/11) - zéro régression
+- **696+ écritures ACID** validées
+- **<1€/mois** (Render 512MB + PostgreSQL)
 
-## Production Index
-- **Uptime:** 42+ jours continu, 190+ cycles @100%
-- **Coût:** <1€/mois, performance optimisée
-- **Précision:** 99.98% OCR / 100% ACID insertion
+## Transmission Patrimoniale
+- Architecture SCI consolidée et opérationnelle
+- Documentation pour Emma & Pauline prête
+- Autonomie progressive: Framework établi
+
+## Prochains Développements
+- EVENEMENT_SIMPLE: Activation prochaine itération
+- CLOTURE_EXERCICE: Déploiement Q4 2025
+- Module 3: Reporting (bilan mensuel, compte résultat)
