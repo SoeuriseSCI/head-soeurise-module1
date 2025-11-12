@@ -12,15 +12,14 @@
 4. **RELEVE_BANCAIRE:** 696+ écritures (Dec 2023 - Apr 2024) Phase 3 propositions en BD ✅
 5. **EVENEMENT_SIMPLE:** Structure déployable (factures, loyers)
 
-## Améliorations V7.1 Appliquées (11-12/11/2025)
-- **Détecteurs comptables robustes:** PR #218 critiques corrigées
-- **Filtres universels:** `date_debut + 1 mois` pour franchises 0-12m stable
-- **Classification intérêts:** Payés vs différés, lookup automatique fiable
-- **Renumérotoation:** 2023=ID1, 2024=ID2 standardisée
-- **Contraintes FK:** PostgreSQL validées, intégrité référentielle ✅
-- **Phase 9 cleanup:** Suppression événements invalides automatique
-- **Multi-validations:** Support [_Head] VALIDE:<TOKEN1>:<TOKEN2>
-- **Comparaison propositions:** PR #216-#217 validées vs source T1-T3 2024
+## V7.1 Corrections Appliquées (11-12/11/2025)
+- Filtres universels: `date_debut + 1 mois` stable pour franchises 0-12m
+- Classification intérêts payés vs différés, lookup automatique fiable
+- Renumérotoation standardisée (2023=ID1, 2024=ID2)
+- FK constraints PostgreSQL validées, intégrité référentielle ✅
+- Phase 9 cleanup: Suppression événements invalides automatique
+- Support multi-validations: [_Head] VALIDE:<TOKEN1>:<TOKEN2>
+- Comparaison propositions: PR #216-#217 validées vs source T1-T3 2024
 
 ## Patrimoine Consolidé (12/11/2025)
 - **Exercices:** 2023 + 2024 ouverts, prêts programmés
@@ -38,10 +37,3 @@
 - **Qualité:** Zéro régression V7.1, architecture testée end-to-end
 - **Coût:** <1€/mois optimisé (Haiku 4.5 + Render 512MB + PostgreSQL)
 - **Précision:** 99.98% OCR, 100% ACID insertion
-
-## Commits Structurants (14 derniers jours)
-- PR #215: Corrections contraintes UNIQUE
-- PR #216-#217: Analyse comparaison propositions vs source
-- PR #218: Corrections critiques détecteurs
-- PR #219: Tests injection analysis validation
-- 20+ cycles test: Vérification infra, zéro régression confirmée
