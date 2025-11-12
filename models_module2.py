@@ -208,15 +208,32 @@ class EvenementComptable(Base):
 
     id = Column(Integer, primary_key=True)
 
+    # Données de l'opération (ajoutées par migration 05/11/2025)
+    date_operation = Column(Date)  # Date réelle de l'opération (extraite du PDF)
+    libelle = Column(String(500))  # Libellé de l'opération (extrait du relevé)
+    libelle_normalise = Column(String(500))  # Libellé normalisé pour comparaison
+    montant = Column(Numeric(15, 2))  # Montant de l'opération
+    type_operation = Column(String(20))  # Type: DEBIT ou CREDIT
+
+    # Détection de doublons (ajoutée par migration 05/11/2025)
+    # IMPORTANT: Plus de contrainte UNIQUE depuis 12/11/2025
+    # Raison: Permet retraitement après garbage collection (> 7 jours)
+    fingerprint = Column(String(64), index=True)  # Empreinte MD5 pour détection doublons
+
+    # Phase de traitement (ajoutée par migration 05/11/2025)
+    phase_traitement = Column(Integer)  # Phase ayant traité l'événement (1, 2, 3)
+
     # Source email
-    email_id = Column(String(255), unique=True)
+    # IMPORTANT: Plus de contrainte UNIQUE depuis 12/11/2025
+    # Raison: Un email peut contenir plusieurs opérations (relevé bancaire)
+    email_id = Column(String(255), index=True)
     email_from = Column(String(255), nullable=False)
     email_date = Column(DateTime, nullable=False)
     email_subject = Column(String(255))
     email_body = Column(Text, nullable=False)
 
     # Classification
-    type_evenement = Column(String(100))
+    type_evenement = Column(String(100))  # Type détecté automatiquement
     est_comptable = Column(Boolean)  # NULL = non traite, TRUE/FALSE = resultat
 
     # Traitement
@@ -231,6 +248,8 @@ class EvenementComptable(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
+        if self.libelle and self.montant:
+            return f"<EvenementComptable(id={self.id}, {self.date_operation}: {self.libelle[:30]} - {self.montant}€)>"
         return f"<EvenementComptable(email={self.email_id}, statut={self.statut})>"
 
 
