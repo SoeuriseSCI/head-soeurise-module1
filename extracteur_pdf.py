@@ -80,24 +80,21 @@ class ExtracteurPDF:
 
     def _deduplicater_operations(self, operations: List[Dict]) -> List[Dict]:
         """
-        Déduplication déterministe basée sur fingerprint + score de qualité
+        Déduplication déterministe basée sur double fingerprint + score de qualité
 
         STRATÉGIE (FIX 12/11/2025):
-        1. Calculer fingerprint MD5 pour chaque opération (date + libellé + montant + type)
-        2. Grouper opérations par fingerprint
-        3. Dans chaque groupe, garder celle avec le score qualité le plus élevé
-        4. Score qualité = longueur libellé + présence ISIN + présence références
+        1. Calculer DEUX fingerprints pour chaque opération:
+           - Fingerprint complet: date + libellé + montant + type
+           - Fingerprint simplifié: date + montant + type (SANS libellé)
+        2. Grouper d'abord par fingerprint complet (doublons exacts)
+        3. Puis grouper par fingerprint simplifié (doublons SCPI/Apports)
+        4. Dans chaque groupe, garder celle avec le score qualité le plus élevé
 
-        AVANTAGES vs IA Claude Haiku:
-        - Déterministe (pas d'aléa IA)
-        - Rapide (pas d'appel API)
-        - Garde automatiquement la version la plus détaillée
-        - Économies de coûts API
-
-        ANCIENNE MÉTHODE (désactivée):
-        - Utilisait Claude Haiku avec prompt 60+ lignes
-        - Résultats incohérents (doublons partiels ETF/Amazon)
-        - Coût: ~0.50€ par traitement
+        FIX DOUBLONS SCPI/APPORTS (12/11/2025):
+        - Même opération apparaît 2 fois: relevé bancaire + avis d'opération
+        - Libellés différents → fingerprint complet différent
+        - Mais même date + montant + type → fingerprint simplifié identique
+        - Solution: Utiliser les DEUX fingerprints pour détecter tous les doublons
 
         Args:
             operations: Liste des opérations extraites
@@ -112,44 +109,67 @@ class ExtracteurPDF:
             from detection_doublons import DetecteurDoublons
             from collections import defaultdict
 
-            groupes = defaultdict(list)
+            # ÉTAPE 1: Grouper par fingerprint COMPLET (doublons exacts)
+            groupes_complets = defaultdict(list)
 
-            # Grouper par fingerprint
             for op in operations:
                 fingerprint = DetecteurDoublons.calculer_fingerprint(op)
                 score_qualite = DetecteurDoublons.calculer_score_qualite(op)
-                groupes[fingerprint].append((op, score_qualite))
+                groupes_complets[fingerprint].append((op, score_qualite))
 
-            # Garder la meilleure de chaque groupe
-            operations_uniques = []
-            doublons_supprimes = 0
+            # Garder la meilleure de chaque groupe (fingerprint complet)
+            operations_apres_dedupe1 = []
+            doublons_exacts = 0
 
-            for fingerprint, ops_avec_score in groupes.items():
+            for fingerprint, ops_avec_score in groupes_complets.items():
+                if len(ops_avec_score) > 1:
+                    ops_avec_score.sort(key=lambda x: x[1], reverse=True)
+                    doublons_exacts += len(ops_avec_score) - 1
+
+                operations_apres_dedupe1.append((ops_avec_score[0][0], ops_avec_score[0][1]))
+
+            # ÉTAPE 2: Grouper par fingerprint SIMPLIFIÉ (doublons SCPI/Apports)
+            groupes_simplifies = defaultdict(list)
+
+            for op, score in operations_apres_dedupe1:
+                fingerprint_simple = DetecteurDoublons.calculer_fingerprint_simplifie(op)
+                groupes_simplifies[fingerprint_simple].append((op, score))
+
+            # Garder la meilleure de chaque groupe (fingerprint simplifié)
+            operations_finales = []
+            doublons_scpi_apports = 0
+
+            for fingerprint_simple, ops_avec_score in groupes_simplifies.items():
                 if len(ops_avec_score) > 1:
                     # Trier par score décroissant
                     ops_avec_score.sort(key=lambda x: x[1], reverse=True)
-                    doublons_supprimes += len(ops_avec_score) - 1
+                    doublons_scpi_apports += len(ops_avec_score) - 1
 
-                    # Debug: Afficher les doublons (max 3 premiers groupes)
-                    if doublons_supprimes <= 3:
-                        meilleure = ops_avec_score[0][0]
-                        print(f"🔍 Doublon détecté: {meilleure['date_operation']} - {meilleure['montant']}€")
-                        print(f"   Gardé: {meilleure['libelle'][:60]}... (score: {ops_avec_score[0][1]})")
+                    # Debug: Afficher les doublons SCPI/Apports détectés
+                    meilleure = ops_avec_score[0][0]
+                    if doublons_scpi_apports <= 5:  # Limiter l'affichage
+                        print(f"🔍 Doublon SCPI/Apport: {meilleure['date_operation']} - {meilleure['montant']}€")
+                        print(f"   Gardé: {meilleure['libelle'][:70]}... (score: {ops_avec_score[0][1]})")
                         for op_dup, score_dup in ops_avec_score[1:]:
-                            print(f"   Supprimé: {op_dup['libelle'][:60]}... (score: {score_dup})")
+                            print(f"   Supprimé: {op_dup['libelle'][:70]}... (score: {score_dup})")
 
                 # Garder la meilleure (ou la seule)
-                operations_uniques.append(ops_avec_score[0][0])
+                operations_finales.append(ops_avec_score[0][0])
 
-            if doublons_supprimes > 0:
-                print(f"✅ Déduplication: {len(operations)} → {len(operations_uniques)} ({doublons_supprimes} doublons éliminés)")
+            total_doublons = doublons_exacts + doublons_scpi_apports
+            if total_doublons > 0:
+                print(f"✅ Déduplication: {len(operations)} → {len(operations_finales)} opérations")
+                print(f"   • Doublons exacts: {doublons_exacts}")
+                print(f"   • Doublons SCPI/Apports: {doublons_scpi_apports}")
             else:
                 print(f"✅ Déduplication: {len(operations)} opérations (aucun doublon détecté)")
 
-            return operations_uniques
+            return operations_finales
 
         except Exception as e:
             print(f"⚠️  Erreur déduplication déterministe (on garde toutes les opérations): {e}")
+            import traceback
+            traceback.print_exc()
             return operations
 
     def analyser_document(self) -> Dict:

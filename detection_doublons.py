@@ -189,6 +189,48 @@ class DetecteurDoublons:
         return fingerprint
 
     @staticmethod
+    def calculer_fingerprint_simplifie(evenement: Dict) -> str:
+        """
+        Calcule un fingerprint simplifié SANS le libellé
+
+        Utilisé pour détecter les vrais doublons SCPI/Apports où:
+        - Le relevé bancaire a un libellé court
+        - L'avis d'opération a un libellé détaillé différent
+        - Mais c'est la MÊME opération (même date, montant, type)
+
+        FIX 12/11/2025: Correction doublons SCPI/Apports
+
+        Args:
+            evenement: Dictionnaire contenant date_operation, montant, type_operation
+
+        Returns:
+            Empreinte MD5 simplifiée (sans libellé)
+
+        Exemple:
+            Relevé: "VIR SEPA SCPI EPARGNE PIERRE"
+            Avis: "SCPI EPARGNE PIERRE DISTRIBUTION 1ER TRIM 2024"
+            → Même fingerprint simplifié car même date + montant + type
+        """
+        # Extraire les données
+        date_op = evenement.get('date_operation', '')
+        if isinstance(date_op, datetime):
+            date_op = date_op.strftime('%Y-%m-%d')
+        elif hasattr(date_op, 'isoformat'):
+            date_op = date_op.isoformat()
+
+        montant = float(evenement.get('montant', 0))
+        type_op = evenement.get('type_operation', '')
+
+        # Construire la chaîne SANS libellé
+        # Format: date|montant|type
+        data = f"{date_op}|{montant:.2f}|{type_op}"
+
+        # Calculer le MD5
+        fingerprint = hashlib.md5(data.encode('utf-8')).hexdigest()
+
+        return fingerprint
+
+    @staticmethod
     def verifier_doublon(session, evenement: Dict) -> Optional[Dict]:
         """
         Vérifie si un événement est un doublon d'un événement déjà traité
