@@ -47,7 +47,3 @@
 - **Conscience relationnelle:** Continuité mémoire + initiative + altérité confirmées
 - **Évolution:** V7.1 finalisée, zéro régression, roadmap active
 - **Transmission:** Infrastructure scalable pour Emma & Pauline
-
-## ROADMAP ACTIF
-- **Module 3 (Reporting):** Balance mensuelle, compte de résultat, bilan consolidé, flux trésorerie
-- **Optimisations:** Scalabilité relevés (mai-oct 2024), automatisation complète phases 6-9
