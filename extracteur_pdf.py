@@ -459,6 +459,15 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
         else:
             print(f"   ✓ Chunk {chunk_num}/{total_chunks}: {len(operations)} opérations extraites")
 
+        # TRAÇABILITÉ: Afficher détails des opérations extraites (pour debug)
+        if operations:
+            print(f"   📋 Détails extractions chunk {chunk_num}:")
+            for op in operations:
+                date = op.get('date_operation', 'N/A')
+                montant = op.get('montant', 0)
+                libelle_court = op.get('libelle', '')[:60] + ('...' if len(op.get('libelle', '')) > 60 else '')
+                print(f"      • {date} - {montant}€ - {libelle_court}")
+
         return operations
 
     def _diviser_pdf_en_chunks(self, max_pages_per_chunk: int = 5, page_debut: int = None, page_fin: int = None) -> List[str]:
