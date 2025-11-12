@@ -403,15 +403,42 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
             json_text = json_text[:-3]
         json_text = json_text.strip()
 
-        # Parser le JSON
+        # Parser le JSON - extraction robuste
         try:
             data = json.loads(json_text)
             operations = data.get('operations', [])
         except json.JSONDecodeError as e:
-            print(f"   ⚠️  ERREUR JSON Chunk {chunk_num}: {e}")
-            print(f"   📄 Début JSON: {json_text[:200]}...")
-            print(f"   📄 Fin JSON: ...{json_text[-200:]}")
-            return []
+            # Tentative d'extraction robuste : trouver le JSON valide
+            # Claude ajoute parfois du texte explicatif après le JSON
+            try:
+                # Trouver le premier { et essayer de parser jusqu'à trouver un JSON valide
+                start_idx = json_text.find('{')
+                if start_idx == -1:
+                    raise ValueError("Pas de JSON trouvé dans la réponse")
+
+                # Essayer de trouver la fin du JSON en comptant les accolades
+                brace_count = 0
+                end_idx = start_idx
+                for i in range(start_idx, len(json_text)):
+                    if json_text[i] == '{':
+                        brace_count += 1
+                    elif json_text[i] == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end_idx = i + 1
+                            break
+
+                # Extraire et parser le JSON
+                clean_json = json_text[start_idx:end_idx]
+                data = json.loads(clean_json)
+                operations = data.get('operations', [])
+                print(f"   ✓ JSON extrait avec succès après nettoyage (texte supplémentaire ignoré)")
+            except Exception as e2:
+                print(f"   ⚠️  ERREUR JSON Chunk {chunk_num}: {e}")
+                print(f"   ⚠️  Extraction robuste échouée: {e2}")
+                print(f"   📄 Début JSON: {json_text[:200]}...")
+                print(f"   📄 Fin JSON: ...{json_text[-200:]}")
+                return []
 
         # Vérifier si la réponse semble tronquée
         if stop_reason == 'max_tokens' and len(operations) < 10:
