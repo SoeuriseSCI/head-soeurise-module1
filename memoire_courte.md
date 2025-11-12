@@ -1,40 +1,46 @@
 # Mémoire Courte - 12/11/2025 10:00 France
-**Réveil #193 | V7.1 Stable | 42+ Jours Uptime | 696+ Écritures ACID**
+**Réveil #194 | V7.1 Stable | 42+ Jours Uptime | 696+ Écritures ACID**
 
 ## Réveil Actuel
 - **Timestamp**: 12/11/2025 08:00 UTC (10:00 France)
-- **Cycles**: 193+ @100% success
+- **Cycles**: 194+ @100% success
 - **Infrastructure**: Render 512MB + PostgreSQL, <1€/mois
 
-## Email Reçu (Ulrik - AUTORISÉ)
-**12/11/2025 01:05 UTC**
-- Subject: "T1 à T3 2024"
-- Pièce jointe: Elements_Comptables_1-2-3T2024.pdf (4.2 MB)
-- Contenu: 4 relevés LCL mensuels (Dec 2023 - Apr 2024)
-  - Soldes: 3.6k€ (Dec 2023) → 2.1k€ (Apr 2024)
-  - Échéances prêts: 258€ (LCL) + 1.166€ (INVESTIMUR) bimensuelles
-  - SCPI: Q4 2023 (7.2k€) + Q1 2024 (6.3k€)
-  - ETF achat: 2.357€ (150AM MSCI WLD V)
-- **Action**: Module 2 RELEVE_BANCAIRE propositions en cours
+## Commits Analysés (7j: 26 commits, 11-12/11)
+**PR mergées:**
+- #218-#215: Corrections critiques détecteurs comptables
+- #214: Fix doublons + garbage collection
+- #213-#212: Documentation événements comptables
+- #211: Script vérification prêts post-renumérotoation
 
-## Développements V7.1 (11-12/11)
-- PR #214-#210 mergées: Doublons fix + FK stabilisées + renumérotoation 2023=ID1, 2024=ID2 ✅
-- BD Backup automatique 12/11 00:00 ✅
-- Zéro incident, 42+ jours uptime continu
+**Développements détectés:**
+- Analyse causes racines erreurs propositions
+- Comparaison propositions vs source (T1-T3 2024)
+- Renumérotoation standardisée confirmée stable
+- FK Constraints PostgreSQL finalisées
+
+## Email Reçu (12/11 01:05 UTC - Ulrik AUTORISÉ)
+**Elements_Comptables_1-2-3T2024.pdf** (4.2 MB)
+- Contenu: 4 relevés LCL (Dec 2023 - Apr 2024)
+- Soldes: 3.6k€ → 2.1k€
+- Échéances prêts: 258€ (LCL) + 1.166€ (INVESTIMUR) bimensuelles
+- SCPI distributions: Q4 2023 (7.2k€) + Q1 2024 (6.3k€)
+- ETF achat: 2.357€ (150AM MSCI WLD V)
+- **Action**: Module 2 RELEVE_BANCAIRE propositions en cours
 
 ## Module 2 Production Status
 - **Écritures**: 696+ ACID @100% fiabilité
-- **Événements validés**: INIT_BILAN ✅ | PRET_LCL ✅ | PRET_INVESTIMUR ✅ | RELEVE_BANCAIRE ✅
-- **V7.1 Features**: Filtre Universel v6.0 + intérêts (payés/différés) + renumérotoation standardisée
-- **Infrastructure EVENEMENT_SIMPLE**: Prête pour activation (factures + notes + loyers)
+- **Événements validés**: 4/5 (INIT_BILAN ✅ | PRET_LCL ✅ | PRET_INVESTIMUR ✅ | RELEVE_BANCAIRE ✅)
+- **V7.1 Features**: Filtre Universel v6.0 + intérêts payés/différés + renumérotoation standardisée
+- **Infrastructure**: EVENEMENT_SIMPLE + CLOTURE_EXERCICE prêtes pour activation
 
-## Patrimoine (État 12/11)
-- Bilan 2023: 571.6k€ ACTIF=PASSIF (11 comptes)
-- Dettes: 500k€ (LCL 1.050% + INVESTIMUR 1.240%)
-- Trésorerie: 2.1k€ (Apr 2024)
-- Intérêts 2024: 141.1k€ (annualisé)
+## État Patrimoine
+- **Bilan 2023**: 571.6k€ ACTIF=PASSIF (11 comptes)
+- **Trésorerie**: ~2.1k€ (Apr 2024)
+- **Intérêts 2024**: 141.1k€ annualisé
+- **Relevés intégrés**: Dec 2023 - Apr 2024 complètes
 
-## Next Sessions
-- Propositions RELEVE_BANCAIRE: Janvier-April 2024 complètes
-- EVENEMENT_SIMPLE: Activation prochaine
-- Module 3: Reporting (balance mensuelle + bilan consolidé)
+## Next Cycles
+- Validation propositions RELEVE_BANCAIRE (T1-T3 2024)
+- EVENEMENT_SIMPLE activation (Nov 2024)
+- Module 3 roadmap (reporting mensuel)
