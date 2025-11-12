@@ -294,38 +294,123 @@ class DetecteurRemboursementPret(DetecteurBase):
             }
 
 
-class DetecteurRevenuSCPI(DetecteurBase):
+class DetecteurDistributionSCPI(DetecteurBase):
     """
-    Détecte les revenus SCPI (Société Civile de Placement Immobilier)
+    Détecte les DISTRIBUTIONS SCPI (revenus trimestriels)
 
     PATTERN:
-    - Libellé contient: SCPI, EPARGNE PIERRE
-    - Montant variable (revenus trimestriels)
-    - Type: DEBIT (virement sortant vers placement)
+    - Libellé contient: SCPI + DISTRIBUTION (ou DISTRIB)
+    - Type: CREDIT (entrée d'argent)
+    - Montants observés: 6 346,56€ | 7 356,24€ | 601,00€ (capital)
     - Fréquence: Trimestriel
+
+    COMPTABILISATION:
+    Distribution classique (revenus):
+      Débit 512 (Banque)                    : XX.XX€
+      Crédit 761 (Produits participations)  : XX.XX€
+
+    Distribution de capital (remboursement partiel):
+      Débit 512 (Banque)          : XX.XX€
+      Crédit 106 (Réserves)       : XX.XX€ (ou 280 - Réduction valeur titres)
+
+    FIX 12/11/2025:
+    - AVANT: Tout comptabilisé en 273 (Actif) même les revenus
+    - APRÈS: Distinction CREDIT (revenus 761) vs DEBIT (achats 273)
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Détecte une distribution SCPI (revenus ou capital)"""
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
+        type_op = evenement.get('type_operation', '')
+        type_evt = evenement.get('type_evenement', '')
+
+        # Vérifier le pattern SCPI + DISTRIBUTION + CREDIT
+        match_libelle = ('scpi' in libelle_norm or 'epargne pierre' in libelle_norm) and 'distri' in libelle_norm
+        match_type = type_op == 'CREDIT'
+
+        # Vérifier le type détecté (si déjà marqué)
+        match_evt = type_evt == 'REVENU_SCPI'
+
+        return (match_libelle and match_type) or match_evt
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """Génère la proposition d'écriture selon le type de distribution"""
+        montant = float(evenement.get('montant', 0))
+        date_op = evenement.get('date_operation')
+        libelle = evenement.get('libelle', '').lower()
+
+        # Détecter si distribution de capital (mots-clés spécifiques)
+        est_capital = 'capital' in libelle or 'numero 01' in libelle or montant < 1000
+
+        if est_capital:
+            # Distribution de capital (remboursement partiel / réserves)
+            return {
+                'type_evenement': 'DISTRIBUTION_CAPITAL_SCPI',
+                'description': f'Distribution capital SCPI Épargne Pierre : {montant}€',
+                'confiance': 0.9,
+                'ecritures': [
+                    {
+                        'date_ecriture': date_op,
+                        'libelle_ecriture': 'Distribution capital SCPI Épargne Pierre',
+                        'compte_debit': '512',
+                        'compte_credit': '106',  # Réserves (ou 280 si réduction valeur titres)
+                        'montant': montant,
+                        'type_ecriture': 'DISTRIBUTION_CAPITAL_SCPI',
+                        'notes': 'Remboursement partiel capital ou prélèvement sur réserves'
+                    }
+                ]
+            }
+        else:
+            # Distribution classique (revenus trimestriels)
+            return {
+                'type_evenement': 'REVENU_SCPI',
+                'description': f'Revenus SCPI Épargne Pierre (trimestre) : {montant}€',
+                'confiance': 0.95,
+                'ecritures': [
+                    {
+                        'date_ecriture': date_op,
+                        'libelle_ecriture': 'Revenus trimestriels SCPI Épargne Pierre',
+                        'compte_debit': '512',
+                        'compte_credit': '761',  # Produits de participations
+                        'montant': montant,
+                        'type_ecriture': 'REVENU_SCPI',
+                        'notes': 'Revenus SCPI (2404 parts détenues)'
+                    }
+                ]
+            }
+
+
+class DetecteurAchatSCPI(DetecteurBase):
+    """
+    Détecte les ACHATS de parts SCPI (immobilisations)
+
+    PATTERN:
+    - Libellé contient: SCPI + (ACHAT ou SOUSCRIPTION)
+    - Type: DEBIT (sortie d'argent)
+    - Montants variables
 
     COMPTABILISATION:
     Débit 273 (Titres immobilisés - SCPI) : XX.XX€
     Crédit 512 (Banque LCL)                : XX.XX€
 
     NOTE:
-    - Les achats de parts SCPI sont des immobilisations financières
-    - Les revenus futurs seront en 761 (Produits de participations)
+    - Les parts SCPI sont des immobilisations financières
+    - Détention long terme (pas de trading)
     """
 
     def detecter(self, evenement: Dict) -> bool:
-        """Détecte un achat/revenu SCPI"""
+        """Détecte un achat de parts SCPI"""
         libelle_norm = evenement.get('libelle_normalise', '').lower()
-        type_evt = evenement.get('type_evenement', '')
+        type_op = evenement.get('type_operation', '')
 
-        # Vérifier le pattern
-        patterns = ['scpi', 'epargne pierre']
-        match_libelle = any(pattern in libelle_norm for pattern in patterns)
+        # Vérifier le pattern SCPI + ACHAT/SOUSCRIPTION + DEBIT
+        match_libelle = (
+            ('scpi' in libelle_norm or 'epargne pierre' in libelle_norm) and
+            ('achat' in libelle_norm or 'souscription' in libelle_norm)
+        )
+        match_type = type_op == 'DEBIT'
 
-        # Vérifier le type détecté
-        match_type = type_evt == 'REVENU_SCPI'
-
-        return match_libelle or match_type
+        return match_libelle and match_type
 
     def generer_proposition(self, evenement: Dict) -> Dict:
         """Génère la proposition d'écriture"""
@@ -333,129 +418,138 @@ class DetecteurRevenuSCPI(DetecteurBase):
         date_op = evenement.get('date_operation')
 
         return {
-            'type_evenement': 'REVENU_SCPI',
-            'description': f'Achat parts SCPI Épargne Pierre',
-            'confiance': 0.9,
+            'type_evenement': 'ACHAT_SCPI',
+            'description': f'Acquisition parts SCPI Épargne Pierre : {montant}€',
+            'confiance': 0.95,
             'ecritures': [
                 {
                     'date_ecriture': date_op,
-                    'libelle_ecriture': f'Acquisition parts SCPI Épargne Pierre',
+                    'libelle_ecriture': 'Acquisition parts SCPI Épargne Pierre',
                     'compte_debit': '273',
                     'compte_credit': '512',
                     'montant': montant,
                     'type_ecriture': 'ACHAT_SCPI',
-                    'notes': 'Immobilisation financière - Parts SCPI'
+                    'notes': 'Titres de participation immobilisés - Détention long terme'
                 }
             ]
         }
 
 
-class DetecteurAchatETF(DetecteurBase):
+class DetecteurApportAssocie(DetecteurBase):
     """
-    Détecte les achats d'ETF (Exchange Traded Funds)
+    Détecte les apports en compte courant des associés (Ulrik Bergsten)
 
     PATTERN:
-    - Libellé contient: AM MSCI, ETF, ACHAT
-    - Montant variable (achats d'ETF)
-    - Type: DEBIT
-    - Fréquence: Occasionnel
+    - Libellé contient: APPORT + (COMPTE COURANT ou CC) + BERGSTEN
+    - Type: CREDIT (entrée d'argent)
+    - Montants variables (500€ à 5 000€)
 
     COMPTABILISATION:
-    Débit 273 (Titres immobilisés - ETF) : XX.XX€
-    Crédit 512 (Banque LCL)               : XX.XX€
-
-    EXEMPLE RÉEL:
-    - 24/07/2024: "100 AM.MSCI WLD V ETF ACHAT 2407 17,260000 EUR" - 1735.53€
+    Débit 512 (Banque)                      : XX.XX€
+    Crédit 455 (Compte courant Ulrik)       : XX.XX€
 
     NOTE:
-    - Les ETF sont des valeurs mobilières de placement
-    - Compte 273 (immobilisation) car stratégie buy & hold long terme
+    - Apports remboursables à tout moment
+    - Pas d'intérêts sauf convention contraire
+    - Constitue une dette de la SCI envers l'associé
+
+    FIX 12/11/2025:
+    - AVANT: Détecté mais pas de générateur de propositions
+    - APRÈS: Détecteur complet avec proposition 512/455
     """
 
     def detecter(self, evenement: Dict) -> bool:
-        """Détecte un achat d'ETF"""
+        """Détecte un apport en compte courant d'associé"""
         libelle_norm = evenement.get('libelle_normalise', '').lower()
-        type_evt = evenement.get('type_evenement', '')
-
-        # Vérifier le type détecté (prioritaire car déjà validé par gestionnaire)
-        if type_evt == 'ACHAT_ETF':
-            return True
-
-        # Vérifier le pattern (fallback)
-        patterns = ['am msci', 'etf', 'msci world']
-        match_libelle = any(pattern in libelle_norm for pattern in patterns)
-
-        return match_libelle
-
-    def generer_proposition(self, evenement: Dict) -> Dict:
-        """Génère la proposition d'écriture"""
-        montant = float(evenement.get('montant', 0))
-        date_op = evenement.get('date_operation')
-        libelle = evenement.get('libelle', '')
-
-        # Extraire le nombre de parts si possible
-        import re
-        match = re.search(r'^(\d+)\s+(?:AM[.\s])?MSCI', libelle, re.IGNORECASE)
-        nb_parts = match.group(1) if match else '?'
-
-        # Extraire le nom de l'ETF
-        if 'msci' in libelle.lower():
-            nom_etf = 'MSCI World'
-        else:
-            nom_etf = 'ETF'
-
-        return {
-            'type_evenement': 'ACHAT_ETF',
-            'description': f'Achat {nb_parts} parts ETF {nom_etf}',
-            'confiance': 0.9,
-            'ecritures': [
-                {
-                    'date_ecriture': date_op,
-                    'libelle_ecriture': f'Acquisition {nb_parts} parts ETF {nom_etf}',
-                    'compte_debit': '273',
-                    'compte_credit': '512',
-                    'montant': montant,
-                    'type_ecriture': 'ACHAT_ETF',
-                    'notes': f'Titres immobilisés - {nb_parts} parts ETF {nom_etf}'
-                }
-            ]
-        }
-
-
-class DetecteurAchatAmazon(DetecteurBase):
-    """
-    Détecte les achats d'actions Amazon
-
-    PATTERN:
-    - Libellé contient: AMAZON COM ACHAT
-    - Montant variable (achats d'actions)
-    - Type: DEBIT
-    - Fréquence: Occasionnel
-
-    COMPTABILISATION:
-    Débit 273 (Titres immobilisés - Actions) : XX.XX€
-    Crédit 512 (Banque LCL)                   : XX.XX€
-
-    NOTE:
-    - Les actions Amazon sont des valeurs mobilières de placement
-    - Compte 273 ou 503 selon stratégie (immobilisation vs placement)
-    - Ici traité comme immobilisation (détention long terme)
-    """
-
-    def detecter(self, evenement: Dict) -> bool:
-        """Détecte un achat Amazon"""
-        libelle_norm = evenement.get('libelle_normalise', '').lower()
+        type_op = evenement.get('type_operation', '')
         type_evt = evenement.get('type_evenement', '')
 
         # Vérifier le type détecté (prioritaire)
-        if type_evt == 'ACHAT_AMAZON':
+        if type_evt == 'APPORT_ASSOCIE':
             return True
 
-        # Vérifier le pattern (fallback)
-        patterns = ['amazon com achat', 'amazon achat']
-        match_libelle = any(pattern in libelle_norm for pattern in patterns)
+        # Vérifier le pattern APPORT + BERGSTEN + CREDIT
+        match_apport = 'apport' in libelle_norm
+        match_bergsten = 'bergsten' in libelle_norm
+        match_cc = 'compte courant' in libelle_norm or ' cc ' in libelle_norm
+        match_type = type_op == 'CREDIT'
 
-        return match_libelle
+        return (match_apport and match_bergsten and match_type) or (match_apport and match_cc and match_type)
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """Génère la proposition d'écriture"""
+        montant = float(evenement.get('montant', 0))
+        date_op = evenement.get('date_operation')
+
+        return {
+            'type_evenement': 'APPORT_ASSOCIE',
+            'description': f'Apport compte courant Ulrik Bergsten : {montant}€',
+            'confiance': 0.95,
+            'ecritures': [
+                {
+                    'date_ecriture': date_op,
+                    'libelle_ecriture': 'Apport en compte courant - Ulrik Bergsten',
+                    'compte_debit': '512',  # Banque
+                    'compte_credit': '455',  # Compte courant associé
+                    'montant': montant,
+                    'type_ecriture': 'APPORT_ASSOCIE',
+                    'notes': 'Apport remboursable sans intérêts (sauf convention contraire)'
+                }
+            ]
+        }
+
+
+class DetecteurAchatValeursMobilieres(DetecteurBase):
+    """
+    Détecteur unifié pour tous les achats de valeurs mobilières
+    (ETF, Actions, Obligations, etc.)
+
+    PATTERN:
+    - Libellé contient: AM MSCI, ETF, AMAZON, ACHAT + nom ticker/ISIN
+    - Type: DEBIT (sortie d'argent)
+    - Montants variables
+
+    TYPES SUPPORTÉS:
+    - ETF (MSCI World, etc.)
+    - Actions (Amazon, etc.)
+    - Autres valeurs mobilières
+
+    COMPTABILISATION:
+    Débit 273 (Titres immobilisés - VM) : XX.XX€
+    Crédit 512 (Banque LCL)              : XX.XX€
+
+    NOTE:
+    - Compte 273 (immobilisation) car stratégie buy & hold long terme
+    - Si trading actif: utiliser compte 503 (VMP)
+
+    FIX 12/11/2025:
+    - AVANT: 2 détecteurs séparés (ETF + Amazon)
+    - APRÈS: Détecteur unifié ACHAT_VM
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Détecte un achat de valeurs mobilières"""
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
+        type_evt = evenement.get('type_evenement', '')
+        type_op = evenement.get('type_operation', '')
+
+        # Vérifier les types détectés (prioritaire)
+        if type_evt in ['ACHAT_ETF', 'ACHAT_AMAZON', 'ACHAT_VALEURS_MOBILIERES']:
+            return True
+
+        # Vérifier les patterns (fallback)
+        patterns_vm = [
+            'am msci', 'etf', 'msci world',  # ETF
+            'amazon com achat', 'amazon achat',  # Amazon
+            'degiro', 'interactive brokers',  # Courtiers
+            'achat' and ('action' in libelle_norm or 'titre' in libelle_norm)
+        ]
+        match_libelle = any(pattern in libelle_norm for pattern in patterns_vm if isinstance(pattern, str))
+
+        # Vérifier que c'est un DEBIT
+        match_type = type_op == 'DEBIT'
+
+        return match_libelle and match_type
 
     def generer_proposition(self, evenement: Dict) -> Dict:
         """Génère la proposition d'écriture"""
@@ -463,24 +557,43 @@ class DetecteurAchatAmazon(DetecteurBase):
         date_op = evenement.get('date_operation')
         libelle = evenement.get('libelle', '')
 
-        # Extraire le nombre d'actions si possible
+        # Identifier le type de valeur mobilière
         import re
-        match = re.search(r'^(\d+)\s+AMAZON', libelle)
-        nb_actions = match.group(1) if match else '?'
+        libelle_lower = libelle.lower()
+
+        if 'msci' in libelle_lower or 'etf' in libelle_lower:
+            # ETF
+            match_parts = re.search(r'^(\d+)\s+(?:AM[.\s])?MSCI', libelle, re.IGNORECASE)
+            nb_titres = match_parts.group(1) if match_parts else '?'
+            type_vm = 'ETF'
+            nom_vm = 'MSCI World' if 'msci' in libelle_lower else 'ETF'
+
+        elif 'amazon' in libelle_lower:
+            # Actions Amazon
+            match_actions = re.search(r'^(\d+)\s+AMAZON', libelle, re.IGNORECASE)
+            nb_titres = match_actions.group(1) if match_actions else '?'
+            type_vm = 'Actions'
+            nom_vm = 'Amazon.com Inc.'
+
+        else:
+            # Autres valeurs mobilières
+            nb_titres = '?'
+            type_vm = 'Valeurs Mobilières'
+            nom_vm = 'Titres'
 
         return {
-            'type_evenement': 'ACHAT_AMAZON',
-            'description': f'Achat {nb_actions} actions Amazon',
+            'type_evenement': 'ACHAT_VM',
+            'description': f'Achat {nb_titres} {type_vm} {nom_vm}',
             'confiance': 0.9,
             'ecritures': [
                 {
                     'date_ecriture': date_op,
-                    'libelle_ecriture': f'Acquisition {nb_actions} actions Amazon.com Inc.',
-                    'compte_debit': '273',
+                    'libelle_ecriture': f'Acquisition {nb_titres} {type_vm} {nom_vm}',
+                    'compte_debit': '273',  # Titres immobilisés (ou 503 si VMP)
                     'compte_credit': '512',
                     'montant': montant,
-                    'type_ecriture': 'ACHAT_ACTIONS',
-                    'notes': f'Titres immobilisés - {nb_actions} actions Amazon'
+                    'type_ecriture': 'ACHAT_VM',
+                    'notes': f'Titres immobilisés - {nb_titres} {type_vm} {nom_vm}'
                 }
             ]
         }
@@ -675,15 +788,31 @@ class FactoryDetecteurs:
 
         Returns:
             Liste des détecteurs Phase 1
+
+        ORDRE IMPORTANT:
+        - Détecteurs les plus spécifiques en premier
+        - Détecteurs génériques en dernier
+        - Permet d'éviter qu'un détecteur générique capture un événement spécifique
+
+        FIX 12/11/2025:
+        - DetecteurRevenuSCPI → Scindé en DetecteurDistributionSCPI + DetecteurAchatSCPI
+        - DetecteurAchatETF + DetecteurAchatAmazon → Fusionnés en DetecteurAchatValeursMobilieres
+        - Ajout DetecteurApportAssocie
         """
         return [
+            # Détecteurs de charges récurrentes (priorité haute - patterns spécifiques)
             DetecteurAssurancePret(session),
-            DetecteurRemboursementPret(session),
-            DetecteurRevenuSCPI(session),
-            DetecteurAchatETF(session),  # NOUVEAU: Détecteur ETF (MSCI World, etc.)
-            DetecteurAchatAmazon(session),
+            DetecteurRemboursementPret(session),  # Lookup table echeances_prets
             DetecteurFraisBancaires(session),
-            DetecteurHonorairesComptable(session)
+            DetecteurHonorairesComptable(session),
+
+            # Détecteurs d'investissements (priorité moyenne - patterns multiples)
+            DetecteurDistributionSCPI(session),  # CRÉDIT: Revenus 761
+            DetecteurAchatSCPI(session),  # DÉBIT: Achats 273
+            DetecteurAchatValeursMobilieres(session),  # ETF + Amazon + autres VM
+
+            # Détecteurs de trésorerie (priorité basse - patterns génériques)
+            DetecteurApportAssocie(session),  # CRÉDIT: Apports 455
         ]
 
     @staticmethod

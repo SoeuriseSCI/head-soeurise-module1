@@ -80,121 +80,76 @@ class ExtracteurPDF:
 
     def _deduplicater_operations(self, operations: List[Dict]) -> List[Dict]:
         """
-        Utilise Claude pour déduplicater intelligemment les opérations
+        Déduplication déterministe basée sur fingerprint + score de qualité
 
-        PRINCIPE:
-        Certaines opérations apparaissent en double dans les relevés avec des libellés
-        légèrement différents. Claude identifie ces doublons (même date + même montant)
-        et garde LA VERSION LA PLUS DÉTAILLÉE.
+        STRATÉGIE (FIX 12/11/2025):
+        1. Calculer fingerprint MD5 pour chaque opération (date + libellé + montant + type)
+        2. Grouper opérations par fingerprint
+        3. Dans chaque groupe, garder celle avec le score qualité le plus élevé
+        4. Score qualité = longueur libellé + présence ISIN + présence références
 
-        Exemple:
-        - "VIR SEPA SCPI EPARGNE PIERRE LIBELLE:SCPI..." (détaillé ✓)
-        - "SCPI EPARGNE PIERRE DISTRIBUTION 4EME..." (moins détaillé ✗)
-        → Claude garde le premier
+        AVANTAGES vs IA Claude Haiku:
+        - Déterministe (pas d'aléa IA)
+        - Rapide (pas d'appel API)
+        - Garde automatiquement la version la plus détaillée
+        - Économies de coûts API
+
+        ANCIENNE MÉTHODE (désactivée):
+        - Utilisait Claude Haiku avec prompt 60+ lignes
+        - Résultats incohérents (doublons partiels ETF/Amazon)
+        - Coût: ~0.50€ par traitement
 
         Args:
             operations: Liste des opérations extraites
 
         Returns:
-            Liste dédupliquée (opérations uniques avec les versions les plus détaillées)
+            Liste dédupliquée (garde version la plus détaillée de chaque groupe)
         """
-        if not self.client or len(operations) == 0:
+        if len(operations) == 0:
             return operations
 
         try:
-            # Préparer les opérations pour Claude
-            operations_json = json.dumps(operations, indent=2, ensure_ascii=False)
+            from detection_doublons import DetecteurDoublons
+            from collections import defaultdict
 
-            response = self.client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=16000,
-                messages=[{
-                    "role": "user",
-                    "content": f"""Voici {len(operations)} opérations bancaires extraites d'un document.
+            groupes = defaultdict(list)
 
-CONTEXTE CRITIQUE - SCI Soeurise:
-- Pas d'espèces, une seule banque, un seul compte
-- Tout événement comptable = 1 ligne sur relevé de compte + 0, 1 ou N documents justificatifs
-- Relevé + Justificatif = COMPLÉMENTAIRES (PAS des doublons !)
+            # Grouper par fingerprint
+            for op in operations:
+                fingerprint = DetecteurDoublons.calculer_fingerprint(op)
+                score_qualite = DetecteurDoublons.calculer_score_qualite(op)
+                groupes[fingerprint].append((op, score_qualite))
 
-RÈGLE FONDAMENTALE:
-Un même événement économique peut apparaître dans:
-1. RELEVÉ DE COMPTE : Synthèse courte (date, libellé court, montant)
-2. DOCUMENT JUSTIFICATIF : Détails pour ventilation comptable
-   - Avis d'opération (échéances prêts : intérêts vs capital)
-   - Avis opérations valeurs mobilières (nb titres, prix unitaire, commissions)
-   - Factures, bulletins versements revenus, etc.
+            # Garder la meilleure de chaque groupe
+            operations_uniques = []
+            doublons_supprimes = 0
 
-⚠️ NE JAMAIS DÉDUPLICATER relevé + justificatif !
+            for fingerprint, ops_avec_score in groupes.items():
+                if len(ops_avec_score) > 1:
+                    # Trier par score décroissant
+                    ops_avec_score.sort(key=lambda x: x[1], reverse=True)
+                    doublons_supprimes += len(ops_avec_score) - 1
 
-TÂCHE:
-1. Analyse TOUTES les opérations
-2. Identifie le TYPE de chaque opération (relevé bancaire, avis d'opération, etc.)
-3. Identifie les VRAIS DOUBLONS (même document extrait 2 fois, même contenu exact)
-4. NE PAS déduplicater si:
-   - Une opération est une synthèse (relevé) et l'autre est détaillée (justificatif)
-   - Les libellés sont différents (même date/montant) → probablement complémentaires
-5. Supprime UNIQUEMENT les vrais doublons (contenu quasi-identique)
-6. Retourne la liste nettoyée
+                    # Debug: Afficher les doublons (max 3 premiers groupes)
+                    if doublons_supprimes <= 3:
+                        meilleure = ops_avec_score[0][0]
+                        print(f"🔍 Doublon détecté: {meilleure['date_operation']} - {meilleure['montant']}€")
+                        print(f"   Gardé: {meilleure['libelle'][:60]}... (score: {ops_avec_score[0][1]})")
+                        for op_dup, score_dup in ops_avec_score[1:]:
+                            print(f"   Supprimé: {op_dup['libelle'][:60]}... (score: {score_dup})")
 
-OPÉRATIONS:
-```json
-{operations_json}
-```
+                # Garder la meilleure (ou la seule)
+                operations_uniques.append(ops_avec_score[0][0])
 
-Retourne un JSON avec cette structure exacte:
-{{
-  "operations_uniques": [
-    {{
-      "date_operation": "2024-01-29",
-      "libelle": "VIR SEPA SCPI EPARGNE PIERRE LIBELLE:SCPI...",
-      "montant": 7356.24,
-      "type_operation": "CREDIT"
-    }}
-  ],
-  "nb_doublons_supprimes": 2,
-  "details_doublons": [
-    {{
-      "date": "2024-01-29",
-      "montant": 7356.24,
-      "raison": "Même contenu exact extrait 2 fois",
-      "garde": "VIR SEPA SCPI EPARGNE PIERRE...",
-      "supprime": "VIR SEPA SCPI EPARGNE PIERRE..."
-    }}
-  ]
-}}
+            if doublons_supprimes > 0:
+                print(f"✅ Déduplication: {len(operations)} → {len(operations_uniques)} ({doublons_supprimes} doublons éliminés)")
+            else:
+                print(f"✅ Déduplication: {len(operations)} opérations (aucun doublon détecté)")
 
-NE retourne QUE le JSON, sans texte avant ou après."""
-                }]
-            )
-
-            response_text = response.content[0].text.strip()
-
-            # Nettoyer la réponse
-            json_text = response_text
-            if json_text.startswith('```json'):
-                json_text = json_text[7:]
-            if json_text.startswith('```'):
-                json_text = json_text[3:]
-            if json_text.endswith('```'):
-                json_text = json_text[:-3]
-            json_text = json_text.strip()
-
-            # Parser le JSON
-            result = json.loads(json_text)
-            operations_dedupliquees = result.get('operations_uniques', operations)
-            nb_doublons = result.get('nb_doublons_supprimes', 0)
-
-            if nb_doublons > 0:
-                print(f"🔍 Doublons détectés par Claude: {nb_doublons} opérations éliminées")
-                details = result.get('details_doublons', [])
-                for detail in details[:3]:  # Afficher max 3 exemples
-                    print(f"   - {detail.get('date')} {detail.get('montant')}€: gardé version détaillée")
-
-            return operations_dedupliquees
+            return operations_uniques
 
         except Exception as e:
-            print(f"⚠️  Erreur déduplication (on garde toutes les opérations): {e}")
+            print(f"⚠️  Erreur déduplication déterministe (on garde toutes les opérations): {e}")
             return operations
 
     def analyser_document(self) -> Dict:
