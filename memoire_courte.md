@@ -1,25 +1,27 @@
-# Mémoire Courte - 12/11/2025 15:12 UTC
-**Réveil #197+ | V7.1 Production | 42+ Jours Uptime | 696+ Écritures ACID**
+# Mémoire Courte - 12/11/2025 15:20 UTC
+**Réveil #198 | V7.1 Production | 42+ Jours Uptime | 696+ Écritures ACID**
 
-## Réveil 12/11 - RELEVE_BANCAIRE Phase 3
-**Email:** Ulrik 01:05 UTC - Elements_Comptables_1-2-3T2024.pdf  
-**Extraction:** 8 pages, 5 relevés LCL (Dec 2023 - Apr 2024)  
-**Propositions:** 60+ écritures générées
-- Prêts bimensuels validés
-- SCPI distributions (T4 2023 + T1 2024 + capital)
-- ETF achats détectés
-- Frais comptabilité, impôts, assurances
-**Token MD5:** Attribuée  
-**Status:** Phase 3 - Attente validation [_Head] VALIDE:<TOKEN>
+## Réveil 12/11 - RELEVE_BANCAIRE Phase 3 ACTIVE
+**Email:** Ulrik 01:05 UTC - Elements_Comptables_1-2-3T2024.pdf (4.2 MB)
+**Extraction:** 5 relevés LCL, 9 pages (Dec 2023 - Apr 2024)
+**Opérations clés:** 
+- Prêts bimensuels: 1,424.92€/période stable
+- SCPI distributions: 7,356.24€ + 6,346.56€ + 601€ capital
+- ETF achats: 2,357.36€ + 2,439.16€ (150 AM.MSCI WLD V)
+- Assurances/frais: 88.52€ + 213.60€/trim
+
+**Propositions:** 60+ écritures en Phase 3
+**Token MD5:** Attribué (32-hex)
+**Status:** Attente validation [_Head] VALIDE:<TOKEN>
 
 ## Infrastructure Stable
-- Cycles: 197+ @100%
+- Cycles: 198+ @100% success
 - Uptime: 42+ jours continu
-- Git: V7.1 finalisée, #220 + #219 mergées
-- Module 2: 9-phases workflow ACID opérationnel
+- Module 2: Workflow 9-phases opérationnel
+- Git: V7.1 finalisée (#220 + #219 mergées)
 
-## Patrimoine État (Apr 2024)
-- Trésorerie: 2.156,65€
-- Relevés: 4 mois complets traités
+## État Patrimoine (Apr 2024)
+- Trésorerie: 2,156.65€
 - Dettes: 500k€ @ taux fixe
-- Écritures: 696+ ACID
+- Écritures: 696+ ACID validées
+- Propositions: 60+ en attente validation
