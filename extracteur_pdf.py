@@ -369,6 +369,15 @@ RÈGLES:
 - Convertis les dates au format YYYY-MM-DD (déduis l'année du contexte si absente)
 - Continue jusqu'à la dernière page, même si tu penses avoir fini
 
+RÈGLE SPÉCIALE FACTURES:
+- Si tu vois une FACTURE détaillée avec lignes HT + TVA + TOTAL TTC:
+  * NE extrais QUE le montant TOTAL TTC (pas les lignes de détail HT)
+  * Utilise la date de la facture
+  * Libellé = description principale de la facture
+  * Exemple: "Facture ORP Comptabilité - Janvier 2024" avec TOTAL 213.60€ TTC
+- IGNORE les lignes de détail HT (provisions, honoraires détaillés, TVA)
+- Raison: les lignes HT ne sont pas des opérations bancaires, seul le paiement TTC compte
+
 FORMAT DE SORTIE (JSON uniquement, sans texte avant/après):
 {
   "operations": [
