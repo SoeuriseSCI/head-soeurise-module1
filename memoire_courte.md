@@ -1,32 +1,34 @@
-# Mémoire Courte - 11/11/2025 20:58
-**Réveil Nocturne #191+ | V7.1 Stable | Production 42+ jours**
+# Mémoire Courte - 12/11/2025 00:02 UTC
+**Réveil #192+ | V7.1 Stable | Production 42+ jours**
 
 ## Réveil Actuel
-- **Heure:** 11/11/2025 20:58 UTC (22:58 France)
-- **Mode:** Consultation + consolidation
-- **Cycle:** #191+
+- **Timestamp**: 12/11/2025 00:02 UTC (02:02 France)
+- **Mode**: Consolidation Git + Mémoires
+- **Cycles complets**: 192+
 
-## Développements V7.1 (dernières 24h)
-**PR #211:** Doc leçon technique contraintes FK (11/11 20:46)
-**PR #210:** Correction renumérotoation + FK (mergé)
-**Renumérotoation:** 2023=ID1, 2024=ID2 finalisée et stable
-**Sauvegarde BD:** Automatique 11/11 20:46
+## Développements V7.1 (11-12/11)
+**PR #214**: Doublons + garbage collection (11/11 23:58) ✅ Mergée
+**PR #213**: Validations multiples fix (11/11) ✅ Mergée
+**PR #212**: Doc événements comptables (11/11) ✅ Mergée
+**PR #211**: Doc contraintes FK (11/11) ✅ Mergée
+**PR #210**: Renumérotoation + FK (11/11) ✅ Mergée
+**BD Sauvegarde**: 12/11 00:00 automatique ✅
 
-## Module 2 Production Stable
-- **Écritures:** 696+ ACID @100%
-- **Workflow 9-phases:** Phases 1-9 opérationnelles
-- **Événements validés:** INIT_BILAN ✅ | PRET_LCL ✅ | PRET_INVESTIMUR ✅ | RELEVE_BANCAIRE ✅
-- **Fiabilité:** 100% (42+ jours, 190+ cycles)
-- **Infrastructure:** EVENEMENT_SIMPLE + CLOTURE_EXERCICE prête
+## Module 2 Production
+- **Écritures**: 696+ ACID @100%
+- **Workflow 9-phases**: Phases 1-9 opérationnelles
+- **Événements**: INIT_BILAN ✅ | PRET_LCL ✅ | PRET_INVESTIMUR ✅ | RELEVE_BANCAIRE ✅
+- **Fiabilité**: 42+ jours, 191+ cycles @100%
+- **V7.1 Stable**: Renumérotoation + FK + cleanup finalisé
 
 ## Patrimoine SCI (État consolidé)
 - Bilan 2023: 571.6k€ ACTIF=PASSIF
-- Dettes: 500k€ @ taux fixe
-- Intérêts: 141.1k€ (2024)
-- Transmssion: Architecture établie
+- Dettes: 500k€ (LCL 1.050% | INVESTIMUR 1.240%)
+- Intérêts 2024: 141.1k€
+- Transmission: Architecture établie + opérationnelle
 
-## Production Index
-- **Uptime:** 42+ jours continu
-- **Cycles:** 190+ @100% success
-- **Coût:** <1€/mois
-- **Qualité:** Zéro régression
+## Status Production
+- **Uptime**: 42+ jours continu ✅
+- **Zéro régression**: 5 PR mergées sans issues ✅
+- **BD Backup**: Automatique 12/11 00:00 ✅
+- **Infrastructure**: Render 512MB <1€/mois ✅
