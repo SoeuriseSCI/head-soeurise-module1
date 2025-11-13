@@ -322,26 +322,33 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                 'description': f'Erreur: {str(e)}'
             }
 
-    def _extraire_operations_chunk(self, pdf_base64: str, chunk_num: int, total_chunks: int) -> List[Dict]:
+    def _extraire_operations_chunk(self, pdf_base64: str, chunk_num: int, total_chunks: int,
+                                   section_type: str = 'releves_bancaires',
+                                   pages_chunk: str = '') -> List[Dict]:
         """
-        Extrait les opérations d'un chunk de PDF
+        Extrait les opérations d'un chunk de PDF avec un prompt adapté au type de section
 
         Args:
             pdf_base64: PDF encodé en base64
             chunk_num: Numéro du chunk (1-based)
             total_chunks: Nombre total de chunks
+            section_type: Type de section ('releves_bancaires', 'factures_comptables', etc.)
+            pages_chunk: Pages du chunk (ex: "21-25") pour affichage
 
         Returns:
             Liste des opérations extraites
         """
         if chunk_num > 1:
-            print(f"🔄 Chunk {chunk_num}/{total_chunks}: Envoi à Claude pour extraction...")
+            print(f"🔄 Chunk {chunk_num}/{total_chunks} (pages {pages_chunk}, {section_type}): Envoi à Claude...")
         else:
             print(f"🔄 Envoi du PDF à Claude pour extraction... ({total_chunks} lot{'s' if total_chunks > 1 else ''})")
 
+        # Construire le prompt selon le type de section
+        prompt_text = self._construire_prompt_extraction(section_type)
+
         response = self.client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=64000,  # Augmenté pour éviter troncature (jusqu'à 30 opérations/chunk)
+            max_tokens=64000,
             messages=[{
                 "role": "user",
                 "content": [
@@ -355,51 +362,7 @@ NE retourne QUE le JSON, sans texte avant ou après."""
                     },
                     {
                         "type": "text",
-                        "text": """Tu es un extracteur d'opérations bancaires. Ton objectif est d'extraire TOUTES les opérations bancaires de CHAQUE page de ce relevé bancaire.
-
-INSTRUCTIONS CRITIQUES:
-1. LIS ATTENTIVEMENT CHAQUE PAGE du début à la fin
-2. CHAQUE page contient généralement 10-25 opérations bancaires
-3. Ne t'arrête PAS tant que tu n'as pas lu la DERNIÈRE page
-4. Si tu vois moins de 10 opérations dans un relevé de plusieurs pages, tu as probablement manqué des pages
-
-Pour CHAQUE opération trouvée, extrais:
-- date_operation (format YYYY-MM-DD obligatoire)
-- libelle (texte complet sur une ligne)
-- montant (nombre décimal positif)
-- type_operation (DEBIT ou CREDIT selon la colonne)
-
-RÈGLES:
-- Regroupe les opérations multi-lignes (ex: "PRET IMMOBILIER ECH 15/01/24 DOSSIER NO 5009736")
-- Ignore: en-têtes, totaux, soldes d'ouverture/clôture, numéros de relevé
-- Convertis les dates au format YYYY-MM-DD (déduis l'année du contexte si absente)
-- Continue jusqu'à la dernière page, même si tu penses avoir fini
-
-EXTRACTION COMPLÈTE (TEST):
-- Extrais TOUTES les opérations, y compris:
-  * Relevés de compte (libellés courts du relevé bancaire)
-  * Factures (avec n° facture si présent, montant TTC)
-  * Avis d'opération (avec tous les détails: ISIN, nombre titres, prix, commissions)
-  * Bulletins informatifs (SCPI, etc.)
-- Pour chaque opération, capture le MAXIMUM de détails disponibles:
-  * Numéro de facture / référence (si présent dans le libellé ou document)
-  * Détails de ventilation (intérêts/capital, commissions/brut, HT/TVA/TTC)
-  * Identifiants (ISIN pour valeurs mobilières)
-- Ne filtre RIEN : nous ferons le rapprochement après extraction
-
-FORMAT DE SORTIE (JSON uniquement, sans texte avant/après):
-{
-  "operations": [
-    {
-      "date_operation": "2024-01-15",
-      "libelle": "PRLV SEPA CACI NON LIFE LIMITED",
-      "montant": 87.57,
-      "type_operation": "DEBIT"
-    }
-  ]
-}
-
-ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de terminer."""
+                        "text": prompt_text
                     }
                 ]
             }]
@@ -478,6 +441,186 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
                 print(f"      • {date} - {montant}€ - {libelle_court}")
 
         return operations
+
+    def _construire_prompt_extraction(self, section_type: str) -> str:
+        """
+        Construit un prompt d'extraction spécifique selon le type de section
+
+        Args:
+            section_type: Type de section ('releves_bancaires', 'factures_comptables', etc.)
+
+        Returns:
+            Prompt texte pour l'extraction
+        """
+        prompts = {
+            'releves_bancaires': """Tu es un extracteur d'opérations bancaires de relevés de compte.
+
+OBJECTIF: Extraire TOUTES les opérations bancaires de chaque page du relevé.
+
+Pour CHAQUE opération, extrais:
+- date_operation (format YYYY-MM-DD)
+- libelle (texte complet sur une ligne)
+- montant (nombre décimal positif)
+- type_operation (DEBIT ou CREDIT)
+
+RÈGLES:
+- Regroupe les opérations multi-lignes
+- Ignore: en-têtes, totaux, soldes d'ouverture/clôture
+- Continue jusqu'à la dernière page
+
+FORMAT JSON:
+{
+  "operations": [
+    {"date_operation": "2024-01-15", "libelle": "PRLV SEPA...", "montant": 87.57, "type_operation": "DEBIT"}
+  ]
+}""",
+
+            'factures_comptables': """Tu es un extracteur de factures comptables.
+
+OBJECTIF: Pour CHAQUE facture, extraire UNIQUEMENT le montant Total TTC et la date de paiement.
+
+IMPORTANT - SCI NON SOUMISE À TVA:
+- Ignore les lignes de détail (Provision, Honoraires, HT, TVA)
+- Extrait UNIQUEMENT la ligne "Total TTC" ou "régulée par prélèvement"
+- UNE facture = UNE opération (le Total TTC)
+
+Pour chaque facture, extrais:
+- date_operation: Date de paiement/prélèvement (YYYY-MM-DD)
+- libelle: "Facture n° XXXXXX" + fournisseur + "Total TTC"
+- montant: Montant TTC (décimal positif)
+- type_operation: DEBIT
+
+EXEMPLE:
+Facture n° 2024013227 du 02/01/2024, payée le 24/01/2024 par SEPA, Total TTC 213,60€
+→ {"date_operation": "2024-01-24", "libelle": "Facture n° 2024013227 - CRP 2C - Total TTC", "montant": 213.60, "type_operation": "DEBIT"}
+
+FORMAT JSON:
+{
+  "operations": [
+    {"date_operation": "2024-01-24", "libelle": "Facture n° 2024013227...", "montant": 213.60, "type_operation": "DEBIT"}
+  ]
+}""",
+
+            'factures_autres': """Tu es un extracteur de factures diverses (LEI, etc.).
+
+OBJECTIF: Pour CHAQUE facture, extraire UNIQUEMENT le montant Total TTC.
+
+Pour chaque facture, extrais:
+- date_operation: Date de la facture (YYYY-MM-DD)
+- libelle: "Facture" + objet + "Total TTC"
+- montant: Montant TTC (décimal positif)
+- type_operation: DEBIT
+
+FORMAT JSON:
+{
+  "operations": [
+    {"date_operation": "2024-03-21", "libelle": "Facture LEI - Total TTC", "montant": 50.00, "type_operation": "DEBIT"}
+  ]
+}""",
+
+            'bulletins_dividendes_scpi': """Tu es un extracteur de bulletins de dividendes SCPI.
+
+OBJECTIF: Pour CHAQUE bulletin, extraire UNIQUEMENT le montant annoncé de distribution.
+
+IMPORTANT:
+- UN bulletin = UNE opération (même s'il fait plusieurs pages)
+- Extrait le montant total annoncé (pas les détails ligne par ligne)
+- Si un bulletin continue sur plusieurs pages, NE L'EXTRAIT QU'UNE FOIS
+
+Pour chaque bulletin, extrais:
+- date_operation: Date du bulletin (YYYY-MM-DD)
+- libelle: "Bulletin SCPI" + nom SCPI + trimestre
+- montant: Montant total annoncé (décimal positif)
+- type_operation: CREDIT
+
+EXEMPLE:
+Bulletin ATLAND VOISIN - SCPI Epargne Pierre - 4ème trimestre 2023 - 7356,24€
+→ {"date_operation": "2024-01-25", "libelle": "Bulletin SCPI Epargne Pierre - 4ème trimestre 2023", "montant": 7356.24, "type_operation": "CREDIT"}
+
+FORMAT JSON:
+{
+  "operations": [
+    {"date_operation": "2024-01-25", "libelle": "Bulletin SCPI...", "montant": 7356.24, "type_operation": "CREDIT"}
+  ]
+}""",
+
+            'avis_ecriture': """Tu es un extracteur d'avis d'écriture (confirmations bancaires).
+
+OBJECTIF: Extraire les opérations confirmées.
+
+Pour chaque avis, extrais:
+- date_operation (YYYY-MM-DD)
+- libelle (opération confirmée)
+- montant (décimal positif)
+- type_operation (DEBIT ou CREDIT)
+
+FORMAT JSON:
+{
+  "operations": [
+    {"date_operation": "2024-01-29", "libelle": "SCPI EPARGNE PIERRE...", "montant": 7356.24, "type_operation": "CREDIT"}
+  ]
+}""",
+
+            'avis_operations_vm': """Tu es un extracteur d'avis d'opérations sur valeurs mobilières.
+
+OBJECTIF: Extraire les détails complets de CHAQUE opération (achat/vente titres).
+
+Pour chaque opération, extrais:
+- date_operation: Date de l'opération (YYYY-MM-DD)
+- libelle: "Achat" + quantité + nom titre + code ISIN + prix + montant total
+- montant: Montant total opération (décimal positif)
+- type_operation: DEBIT (achat) ou CREDIT (vente)
+
+EXEMPLE:
+Achat de 150 AMUNDI MSCI WORLD V (LU1781541179) à 15,631600 EUR = 2357,36 EUR
+→ {"date_operation": "2024-01-30", "libelle": "Achat 150 AMUNDI MSCI WORLD V (LU1781541179) @ 15,631600 EUR", "montant": 2357.36, "type_operation": "DEBIT"}
+
+FORMAT JSON:
+{
+  "operations": [
+    {"date_operation": "2024-01-30", "libelle": "Achat 150 AMUNDI...", "montant": 2357.36, "type_operation": "DEBIT"}
+  ]
+}"""
+        }
+
+        # Retourner le prompt approprié, ou relevés bancaires par défaut
+        return prompts.get(section_type, prompts['releves_bancaires'])
+
+    def _determiner_section_chunk(self, chunk_page_debut: int, chunk_page_fin: int, sections_ordonnees: List[Dict]) -> str:
+        """
+        Détermine le type de section principal d'un chunk basé sur les pages qu'il contient
+
+        Args:
+            chunk_page_debut: Première page du chunk (1-based)
+            chunk_page_fin: Dernière page du chunk (1-based)
+            sections_ordonnees: Liste des sections triées par page de début
+
+        Returns:
+            Type de section ('releves_bancaires', 'factures_comptables', etc.) ou 'unknown'
+        """
+        if not sections_ordonnees:
+            return 'releves_bancaires'  # Fallback par défaut
+
+        # Calculer quel pourcentage de chaque section est dans ce chunk
+        section_overlaps = []
+        for section in sections_ordonnees:
+            # Calculer l'intersection
+            overlap_debut = max(chunk_page_debut, section['page_debut'])
+            overlap_fin = min(chunk_page_fin, section['page_fin'])
+
+            if overlap_fin >= overlap_debut:
+                overlap_pages = overlap_fin - overlap_debut + 1
+                section_overlaps.append({
+                    'nom': section['nom'],
+                    'overlap': overlap_pages
+                })
+
+        # Retourner la section avec le plus de pages dans ce chunk
+        if section_overlaps:
+            section_dominante = max(section_overlaps, key=lambda x: x['overlap'])
+            return section_dominante['nom']
+
+        return 'releves_bancaires'  # Fallback
 
     def _diviser_pdf_en_chunks(self, max_pages_per_chunk: int = 5, page_debut: int = None, page_fin: int = None) -> List[str]:
         """
@@ -596,30 +739,31 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
             page_debut = None
             page_fin = None
 
-            # FIX: Extraire TOUTES les sections, pas seulement releves_bancaires
-            # Les sections à inclure : releves_bancaires, avis_operations_vm, factures
-            sections_a_extraire = ['releves_bancaires', 'avis_operations_vm', 'factures']
+            # NOUVELLE APPROCHE: Extraire TOUTES les sections détectées
+            # Créer une liste de sections ordonnées par page de début
+            sections_ordonnees = []
+            for section_name, section_info in sections.items():
+                if isinstance(section_info, dict):
+                    debut = section_info.get('page_debut')
+                    fin = section_info.get('page_fin')
+                    if debut and fin:
+                        sections_ordonnees.append({
+                            'nom': section_name,
+                            'page_debut': debut,
+                            'page_fin': fin
+                        })
+                        print(f"📋 Section '{section_name}': pages {debut}-{fin}")
 
-            pages_min = []
-            pages_max = []
+            # Trier par page de début
+            sections_ordonnees.sort(key=lambda x: x['page_debut'])
 
-            for section_name in sections_a_extraire:
-                if section_name in sections:
-                    section_info = sections[section_name]
-                    if isinstance(section_info, dict):
-                        debut = section_info.get('page_debut')
-                        fin = section_info.get('page_fin')
-                        if debut and fin:
-                            pages_min.append(debut)
-                            pages_max.append(fin)
-                            print(f"📋 Section '{section_name}': pages {debut}-{fin}")
-
-            if pages_min and pages_max:
-                page_debut = min(pages_min)
-                page_fin = max(pages_max)
+            if sections_ordonnees:
+                page_debut = min(s['page_debut'] for s in sections_ordonnees)
+                page_fin = max(s['page_fin'] for s in sections_ordonnees)
                 print(f"✅ Extraction globale: pages {page_debut}-{page_fin} (toutes sections)")
             else:
                 print(f"⚠️  Aucune section détectée - extraction complète du PDF")
+                sections_ordonnees = []
 
             # Diviser le PDF en chunks si nécessaire (5 pages pour extraction complète garantie)
             chunk_paths = self._diviser_pdf_en_chunks(
@@ -629,16 +773,49 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
             )
             total_chunks = len(chunk_paths)
 
-            # Extraire chaque chunk
+            # Calculer les pages de chaque chunk et déterminer leur section
+            chunk_infos = []
+            current_page = page_debut if page_debut else 1
+            for chunk_path in chunk_paths:
+                # Extraire les numéros de pages du nom de fichier
+                # Format: _chunk_1-5.pdf ou _pages_1-5.pdf
+                import re
+                match = re.search(r'(\d+)-(\d+)\.pdf$', chunk_path)
+                if match:
+                    chunk_page_debut = int(match.group(1))
+                    chunk_page_fin = int(match.group(2))
+                else:
+                    # Fallback: supposer qu'on avance de 5 pages par chunk
+                    chunk_page_debut = current_page
+                    chunk_page_fin = min(current_page + 4, page_fin if page_fin else 999)
+                    current_page = chunk_page_fin + 1
+
+                # Déterminer quelle section domine ce chunk
+                section_type = self._determiner_section_chunk(chunk_page_debut, chunk_page_fin, sections_ordonnees)
+
+                chunk_infos.append({
+                    'path': chunk_path,
+                    'page_debut': chunk_page_debut,
+                    'page_fin': chunk_page_fin,
+                    'section_type': section_type
+                })
+
+            # Extraire chaque chunk avec son type de section
             all_operations = []
-            for i, chunk_path in enumerate(chunk_paths, 1):
+            for i, chunk_info in enumerate(chunk_infos, 1):
                 # Lire le chunk en base64
-                with open(chunk_path, 'rb') as f:
+                with open(chunk_info['path'], 'rb') as f:
                     pdf_data = f.read()
                 chunk_base64 = base64.standard_b64encode(pdf_data).decode('utf-8')
 
-                # Extraire les opérations du chunk
-                operations = self._extraire_operations_chunk(chunk_base64, i, total_chunks)
+                # Extraire les opérations du chunk avec le type de section approprié
+                operations = self._extraire_operations_chunk(
+                    chunk_base64,
+                    i,
+                    len(chunk_infos),
+                    section_type=chunk_info['section_type'],
+                    pages_chunk=f"{chunk_info['page_debut']}-{chunk_info['page_fin']}"
+                )
                 all_operations.extend(operations)
 
                 # LIBÉRATION MÉMOIRE EXPLICITE (crucial sur Render 512MB)
@@ -648,9 +825,9 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
                 gc.collect()  # Force garbage collection
 
                 # Nettoyer le fichier temporaire (sauf si c'est le PDF original)
-                if chunk_path != self.pdf_path:
+                if chunk_info['path'] != self.pdf_path:
                     try:
-                        os.unlink(chunk_path)
+                        os.unlink(chunk_info['path'])
                     except:
                         pass
 
