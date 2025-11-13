@@ -40,6 +40,7 @@ import gc  # Garbage collector pour libération mémoire explicite
 from datetime import datetime
 from typing import Dict, List, Optional
 from anthropic import Anthropic
+from rapprocheur_operations import RapprocheurOperations
 
 # Configuration
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
@@ -66,6 +67,7 @@ class ExtracteurPDF:
         self.email_metadata = email_metadata or {}
         self.client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
         self._analyse_cache = None  # Cache pour éviter double analyse du document
+        self._justificatifs_metadata = {}  # Métadonnées des justificatifs (Phase 2)
 
     def _lire_pdf_base64(self) -> str:
         """
@@ -656,10 +658,13 @@ ATTENTION: Ce chunk peut contenir 20-50 opérations. Extrais-les TOUTES avant de
 
             print(f"✅ {len(operations)} opérations extraites du PDF")
 
-            # DÉDUPLICATION PAR CLAUDE (nouvelle étape)
+            # RAPPROCHEMENT INTELLIGENT PAR CLAUDE API (Phase 2)
             if len(operations) > 0:
-                operations = self._deduplicater_operations(operations)
-                print(f"✅ {len(operations)} opérations après déduplication intelligente")
+                rapprocheur = RapprocheurOperations()
+                operations, metadata = rapprocheur.rapprocher(operations)
+                # Stocker les justificatifs dans les métadonnées pour audit
+                self._justificatifs_metadata = metadata.get('justificatifs', {})
+                print(f"✅ {len(operations)} opérations après rapprochement intelligent")
 
             # Enrichir et filtrer les opérations
             all_evenements = []
