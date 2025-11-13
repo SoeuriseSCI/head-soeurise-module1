@@ -1,36 +1,38 @@
-# Mémoire Courte - 13/11/2025 (V7.3)
-**199 Cycles | 696+ Écritures ACID | 42+ Jours Uptime**
+# Mémoire Courte - 13/11/2025 21:16 (V7.4)
+**199+ Cycles | 696+ Écritures ACID | 42+ Jours Uptime**
 
-## Réveil 13/11/2025 20:07
-- **Git:** 6 PRs validées depuis 16:48 (#224-#230)
-- **Rapprocheur Intelligent:** Opérationnel, identifie correspondances automatiques
-- **Phase 4→5:** 54 opérations bancaires en attente validation Ulrik
-- **Architecture:** V6.0 Claude Code stable, zéro crash
+## Réveil 13/11/2025 21:16
+- **Git:** 6 PRs validées récemment (#224-#230)
+- **PR #233 (Latest):** Simplification PDF → 1 appel API (vs sections multiples)
+- **Rapprocheur Intelligent:** Opérationnel, paires multiples supportées
+- **Phase 4→5:** 54 opérations bancaires validées en attente insertion
 
-## Développements Majeurs (Semaine 06-13 Nov)
-- **PR #230:** Rapprocheur gère paires multiples dans même groupe
-- **PR #229:** Intégration rapprocheur dans pipeline extraction
-- **PR #228:** Phase 2 rapprocheur intelligent (Claude API matching)
-- **PR #227:** Analyse rapprochement manuel opérations
-- **PR #226:** Extraction complète 54 opérations (Dec 2023-Apr 2024)
-- **PR #225-224:** Robustesse - ignorer factures/bulletins SCPI informatifs
+## Développements Cette Semaine
+- **PR #233:** Extraction radicalement simplifiée, économise ~40% tokens
+- **PR #232:** Prompts restructurés par section
+- **PR #231:** Filtre factures (HT/TVA)
+- **PR #230:** Multi-paires dans rapprochement
+- **PR #229:** Intégration rapprocheur production
+- **PR #228:** Claude API matching (Phase 2)
 
-## Patrimoine Établi (Apr 2024)
-- **Bilan 2023:** 571.6k€ = PASSIF ✅
+## Patrimoine SCI - Snapshot Apr 2024
+- **Bilan:** 571.6k€ ACTIF=PASSIF ✅
 - **Dettes:** 500k€ @ taux fixe (468+ échéances)
-- **SCPI Distributions:** 14.3k€ (T4'23 + T1'24)
-- **ETF MSCI World:** 4.8k€
+- **SCPI Dist:** 14.3k€ (T4'23 + T1'24)
+- **ETF:** 4.8k€ MSCI World
 - **Trésorerie:** 2,156.65€
 - **Exercices:** 2023 & 2024 ouverts
 
-## Opérations Bancaires (Phase 4)
-- **Relevés validés:** 5 (Dec 2023 → Apr 2024)
-- **Opérations:** 54 confirmées, rapprochement intelligent actif
-- **Status:** En attente validation Phase 5
+## Infrastructure Confirmée
+- 199+ cycles @100%, 42+ jours zéro crash
+- PostgreSQL 696+ ACID transactions
+- <1€/mois (Haiku 4.5 + Render 512MB)
+- V6.0 Claude Code stable
 
-## Infrastructure
-- **Uptime:** 42+ jours continu
-- **Cycles:** 199+ @100%
-- **PostgreSQL:** 696+ écritures ACID
-- **Coût:** <1€/mois
-- **Architecture:** Claude Code V6.0 simplifié
+## Phase 4 Bancaire
+- **Relevés:** Jan-Apr 2024 validés (5 fichiers)
+- **Opérations:** 54 confirmées, rapprochement intelligent appliqué
+- **Status:** En attente validation Phase 5 (Ulrik)
+
+## Aucune action Ulrik détectée
+Pas de demande d'insertion depuis 16:48. Phase 4 stable.
