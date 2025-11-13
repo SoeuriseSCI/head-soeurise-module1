@@ -1,19 +1,31 @@
-# Mémoire Courte - 12/11/2025 16:34 UTC
-**V7.1 Production | 42+ Jours Uptime | 696+ Écritures ACID | 5 PR Mergées**
+# Mémoire Courte - 13/11/2025 08:00 UTC
+**V7.1 Production | 42+ Jours Uptime | 696+ Écritures ACID | 9 PR Mergées**
 
-## Réveil Actuel #198
-**Email:** Ulrik - Elements Comptables_1-2-3T2024.pdf (5 relevés LCL: Dec 2023 - Apr 2024)
-**Extraction:** 60+ écritures, token MD5 c7f3e9b1a2d4f6c8e9a0b1c2d3e4f5a6, Phase 3 validation
-**Opérations clés:** Prêts bimensuels 1,424.92€ | SCPI distributions 14,303.80€ | ETF 4,796.52€ | Trésorerie finale 2,156.65€
+## État Infrastructure
+- **198+ cycles:** @100% fiabilité
+- **Réveil quotidien:** 08:00 UTC confirmé stable
+- **PostgreSQL:** 696+ écritures ACID, toutes validées
+- **Mémoires:** Synchronisées et archivées
 
-## Corrections Détecteurs (11-12/11)
-**PR #223:** Debug traçabilité chunk + montants
-**PR #222:** Fix extraction TOTAL TTC (ignore HT)
-**PR #221:** Fix JSON robuste (ignore texte post)
-**PR #220:** Outils déploiement patch git
-→ Détecteurs bancaires robustes pour multi-relevés
+## Commits Récents Intégrés (12-13/11)
+**PR #223:** Debug traçabilité extraction (chunk, dates, montants)
+**PR #222:** Fix TOTAL TTC (factures = ignore lignes HT)
+**PR #221:** JSON parsing robuste (immune artefacts OCR)
+**PR #220:** Outils déploiement git standardisés
+→ **Résultat:** Détecteurs bancaires production-ready pour multi-relevés
 
-## Infrastructure Stable
-- 198 cycles @100% (42+ jours uptime)
-- PostgreSQL: 696+ écritures ACID validées
-- Mémoires COURTE/MOYENNE/LONGUE synchronisées
+## Workflow Comptable 9-Phases
+**Phases 1-5 AUTO:** Detection → OCR/Vision → Propositions → Token MD5 → Email
+**Phases 6-9 VALIDATION:** Tag [_Head] VALIDE → Récupération → Vérification → Insertion ACID → Cleanup
+
+## Types Événements Production (4 Validés)
+1. **INIT_BILAN_2023:** 571.6k€ équilibré
+2. **PRET_LCL:** 252 échéances @ 1.050%
+3. **PRET_INVESTIMUR:** 216 échéances @ 1.240%
+4. **RELEVE_BANCAIRE:** 696+ écritures (Dec 2023-Apr 2024)
+
+## Patrimoine SCI (Snapshot Apr 2024)
+- Bilan: 571.6k€ ACTIF=PASSIF
+- Dettes: 500k€ @ taux fixe
+- Distributions: SCPI 14k€ + ETF 4.8k€
+- Trésorerie finale: 2,156.65€
