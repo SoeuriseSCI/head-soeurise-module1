@@ -102,6 +102,10 @@ class ExtracteurPDF:
         Returns:
             Liste dédupliquée (garde version la plus détaillée de chaque groupe)
         """
+        # TEST EXTRACTION COMPLÈTE: Désactiver déduplication temporairement
+        print(f"⚠️  TEST: Déduplication DÉSACTIVÉE - Garde toutes les {len(operations)} opérations")
+        return operations
+
         if len(operations) == 0:
             return operations
 
@@ -369,25 +373,17 @@ RÈGLES:
 - Convertis les dates au format YYYY-MM-DD (déduis l'année du contexte si absente)
 - Continue jusqu'à la dernière page, même si tu penses avoir fini
 
-RÈGLE SPÉCIALE FACTURES:
-- IGNORE complètement les factures (CRP 2C, ORP Comptabilité, etc.)
-- Ces documents annoncent un FUTUR paiement, ce ne sont PAS des opérations bancaires
-- Exemples à IGNORER:
-  * Factures comptables avec lignes HT + TVA + TOTAL TTC
-  * "Facture ORP Comptabilité - Janvier 2024" (213.60€)
-  * "Facture CRP 2C" avec détails provisions/honoraires
-- Raison: L'opération bancaire réelle apparaîtra dans le relevé bancaire sous forme de SEPA prélèvement
-- N'extrais QUE le prélèvement SEPA effectif (sur le relevé de compte)
-
-RÈGLE SPÉCIALE BULLETINS INFORMATIFS SCPI:
-- IGNORE complètement les bulletins de distribution SCPI (ATLAND VOISIN, etc.)
-- Ces documents annoncent un FUTUR versement, ce ne sont PAS des opérations bancaires
-- Exemples à IGNORER:
-  * "REVENUS DU 4ÈME TRIMESTRE 2023 SCPI Epargne Pierre"
-  * "REVENUS DU 1ER TRIMESTRE 2024 SCPI Epargne Pierre"
-  * Tout document avec "Bulletin" + "trimestre" + montant SCPI
-- Raison: L'opération bancaire réelle apparaîtra dans le relevé bancaire quelques jours plus tard
-- N'extrais QUE le virement bancaire effectif (sur le relevé de compte)
+EXTRACTION COMPLÈTE (TEST):
+- Extrais TOUTES les opérations, y compris:
+  * Relevés de compte (libellés courts du relevé bancaire)
+  * Factures (avec n° facture si présent, montant TTC)
+  * Avis d'opération (avec tous les détails: ISIN, nombre titres, prix, commissions)
+  * Bulletins informatifs (SCPI, etc.)
+- Pour chaque opération, capture le MAXIMUM de détails disponibles:
+  * Numéro de facture / référence (si présent dans le libellé ou document)
+  * Détails de ventilation (intérêts/capital, commissions/brut, HT/TVA/TTC)
+  * Identifiants (ISIN pour valeurs mobilières)
+- Ne filtre RIEN : nous ferons le rapprochement après extraction
 
 FORMAT DE SORTIE (JSON uniquement, sans texte avant/après):
 {
