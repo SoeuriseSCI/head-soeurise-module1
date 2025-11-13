@@ -1,32 +1,36 @@
-# Mémoire Courte - 13/11/2025 (V7.2)
+# Mémoire Courte - 13/11/2025 (V7.3)
 **199 Cycles | 696+ Écritures ACID | 42+ Jours Uptime**
 
-## Réveil 13/11/2025 19:49
-- Git: 6 PRs intégrées (#225-#230)
-- **Développement majeur**: Rapprocheur intelligent d'opérations (Claude API)
-- 54 opérations bancaires extraites + rapprochées (Dec 2023-Apr 2024)
-- 5 relevés validés (factures SCPI exclues)
+## Réveil 13/11/2025 20:07
+- **Git:** 6 PRs validées depuis 16:48 (#224-#230)
+- **Rapprocheur Intelligent:** Opérationnel, identifie correspondances automatiques
+- **Phase 4→5:** 54 opérations bancaires en attente validation Ulrik
+- **Architecture:** V6.0 Claude Code stable, zéro crash
 
-## Commits Récents Clés
-- **PR #229**: Rapprocheur dans pipeline extraction ✅
-- **PR #228**: Phase 2 rapprocheur intelligent ✅
-- **PR #227**: Analyse rapprochement manuel ✅
-- **PR #226**: Extraction complète 54 opérations ✅
-- **PR #225**: Fix factures SCPI (événement #1754-1758) ✅
-- **PR #224**: Fix bulletins SCPI (événement #1473) ✅
+## Développements Majeurs (Semaine 06-13 Nov)
+- **PR #230:** Rapprocheur gère paires multiples dans même groupe
+- **PR #229:** Intégration rapprocheur dans pipeline extraction
+- **PR #228:** Phase 2 rapprocheur intelligent (Claude API matching)
+- **PR #227:** Analyse rapprochement manuel opérations
+- **PR #226:** Extraction complète 54 opérations (Dec 2023-Apr 2024)
+- **PR #225-224:** Robustesse - ignorer factures/bulletins SCPI informatifs
 
-## Phase 4→5 Transition
-**Enjeu**: 54 opérations en attente validation Ulrik → tokens MD5 → Phase 5 insertion ACID
-**Rapprocheur**: Identifie automatiquement correspondances prêts/distributions/ETF
+## Patrimoine Établi (Apr 2024)
+- **Bilan 2023:** 571.6k€ = PASSIF ✅
+- **Dettes:** 500k€ @ taux fixe (468+ échéances)
+- **SCPI Distributions:** 14.3k€ (T4'23 + T1'24)
+- **ETF MSCI World:** 4.8k€
+- **Trésorerie:** 2,156.65€
+- **Exercices:** 2023 & 2024 ouverts
 
-## Patrimoine Snapshot (Apr 2024)
-- Bilan 2023: 571.6k€ = PASSIF
-- Dettes: 500k€ @ taux fixe
-- Distributions: SCPI 6.9k€ (T1) + ETF 4.7k€
-- Trésorerie: 2,156.65€
+## Opérations Bancaires (Phase 4)
+- **Relevés validés:** 5 (Dec 2023 → Apr 2024)
+- **Opérations:** 54 confirmées, rapprochement intelligent actif
+- **Status:** En attente validation Phase 5
 
 ## Infrastructure
-- Uptime: 42+ jours zéro crash
-- PostgreSQL: 696+ écritures ACID
-- Coût: <1€/mois
-- Architecture V6.0 Claude Code stable
+- **Uptime:** 42+ jours continu
+- **Cycles:** 199+ @100%
+- **PostgreSQL:** 696+ écritures ACID
+- **Coût:** <1€/mois
+- **Architecture:** Claude Code V6.0 simplifié
