@@ -74,7 +74,16 @@ class RapprocheurOperations:
         print(f"\n{'='*80}")
         print("RAPPROCHEMENT INTELLIGENT DES OPÉRATIONS")
         print(f"{'='*80}\n")
-        print(f"📊 Opérations à analyser: {len(operations)}")
+
+        nb_operations_initiales = len(operations)
+        print(f"📊 Opérations à analyser: {nb_operations_initiales}")
+
+        # Étape 0: Filtrer les lignes de détail de factures (HT, TVA, etc.)
+        operations = self._filtrer_details_factures(operations)
+        details_filtres = nb_operations_initiales - len(operations)
+        if details_filtres > 0:
+            print(f"🧹 Lignes de détail factures filtrées: {details_filtres}")
+            print(f"📊 Opérations après filtrage: {len(operations)}")
 
         # Étape 1: Grouper par montant
         groupes_montant = self._grouper_par_montant(operations)
@@ -177,6 +186,73 @@ class RapprocheurOperations:
             groupes[montant_arrondi].append(op)
 
         return dict(groupes)
+
+    def _filtrer_details_factures(self, operations: List[Dict]) -> List[Dict]:
+        """
+        Filtre les lignes de détail de factures (HT, TVA, Honoraires, Provision)
+        et garde uniquement les lignes Total TTC.
+
+        Contexte SCI Soeurise:
+        - SCI non soumise à TVA
+        - Détails HT/TVA inutiles pour comptabilité
+        - Seul le montant TTC compte
+
+        Args:
+            operations: Liste des opérations
+
+        Returns:
+            Liste filtrée (sans les lignes de détail)
+        """
+        import re
+        from collections import defaultdict
+
+        # Grouper les opérations par (date, numéro de facture)
+        groupes_factures = defaultdict(list)
+        operations_non_factures = []
+
+        for op in operations:
+            libelle = op.get('libelle', '')
+            date = op.get('date_operation', '')
+
+            # Chercher numéro de facture dans le libellé
+            match = re.search(r'(?:Facture|facture|FACTURE)\s*n[°o]?\s*(\d+)', libelle)
+
+            if match:
+                numero_facture = match.group(1)
+                cle = (date, numero_facture)
+                groupes_factures[cle].append(op)
+            else:
+                # Pas une facture, garder telle quelle
+                operations_non_factures.append(op)
+
+        # Pour chaque groupe de facture, garder uniquement le Total TTC
+        operations_filtrees = operations_non_factures.copy()
+
+        for (date, num_facture), ops_facture in groupes_factures.items():
+            # Chercher la ligne Total TTC
+            ligne_ttc = None
+            lignes_details = []
+
+            for op in ops_facture:
+                libelle = op.get('libelle', '').upper()
+
+                # Ligne Total TTC : contient "TOTAL TTC" ou "RÉGULÉE" ou montant le plus élevé
+                if any(keyword in libelle for keyword in ['TOTAL TTC', 'RÉGULÉE', 'REGULEE']):
+                    ligne_ttc = op
+                else:
+                    # Ligne de détail (Provision, Honoraires, TVA, etc.)
+                    lignes_details.append(op)
+
+            # Si pas de ligne TTC explicite, prendre celle avec le montant le plus élevé
+            if not ligne_ttc and ops_facture:
+                ligne_ttc = max(ops_facture, key=lambda x: float(x.get('montant', 0)))
+                lignes_details = [op for op in ops_facture if op != ligne_ttc]
+
+            # Ajouter uniquement la ligne TTC
+            if ligne_ttc:
+                operations_filtrees.append(ligne_ttc)
+
+        return operations_filtrees
 
     def _rapprocher_groupe(self, operations: List[Dict], groupe_num: int) -> Optional[Dict]:
         """
