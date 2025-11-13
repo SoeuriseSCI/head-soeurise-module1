@@ -224,10 +224,15 @@ class GestionnaireEvenements:
               'caci' in libelle_norm or 'garantie emprunteur' in libelle_norm):
             type_evt = 'ASSURANCE_PRET'
 
-        # Frais bancaires (élargir patterns)
+        # Frais bancaires (élargir patterns pour inclure remises)
         elif ('frais' in libelle_norm or 'cotisation' in libelle_norm or
-              'abon' in libelle_norm or 'abonnement' in libelle_norm):
+              'abon' in libelle_norm or 'abonnement' in libelle_norm or
+              'remise' in libelle_norm or 'lcl a la carte' in libelle_norm):
             type_evt = 'FRAIS_BANCAIRES'
+
+        # Frais administratifs (LEI, certificats, etc.)
+        elif 'lei' in libelle_norm or 'regie recettes insee' in libelle_norm or 'legal entity identifier' in libelle_norm:
+            type_evt = 'FRAIS_ADMINISTRATIFS'
 
         # Honoraires comptable
         elif 'crp' in libelle_norm or 'comptabilit' in libelle_norm or 'expert comptable' in libelle_norm:

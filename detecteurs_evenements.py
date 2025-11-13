@@ -673,6 +673,68 @@ class DetecteurFraisBancaires(DetecteurBase):
         }
 
 
+class DetecteurFraisAdministratifs(DetecteurBase):
+    """
+    Détecte les frais administratifs (LEI, certificats, immatriculations)
+
+    PATTERN:
+    - Libellé contient: LEI, LEGAL ENTITY IDENTIFIER, REGIE RECETTES INSEE, CERTIFICAT, IMMATRICULATION
+    - Montant variable (généralement 50-100€)
+    - Type: DEBIT
+
+    COMPTABILISATION:
+    Débit 627 (Frais bancaires/administratifs) : XX.XX€ TTC
+    Crédit 512 (Banque LCL)                    : XX.XX€
+
+    NOTE IMPORTANTE:
+    - Soeurise NON soumise à TVA
+    - Enregistrement au TTC intégral (pas de compte 4456)
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Détecte des frais administratifs"""
+        type_evt = evenement.get('type_evenement', '')
+
+        # Si le type est déjà détecté, on l'accepte directement
+        if type_evt == 'FRAIS_ADMINISTRATIFS':
+            return True
+
+        # Sinon, vérification par patterns (fallback)
+        libelle_norm = evenement.get('libelle_normalise', '').lower()
+        type_op = evenement.get('type_operation', '')
+
+        patterns = ['lei', 'legal entity identifier', 'regie recettes insee', 'certificat', 'immatriculation']
+        match_libelle = any(pattern in libelle_norm for pattern in patterns)
+
+        # Vérifier que c'est un débit
+        match_type = type_op == 'DEBIT'
+
+        return match_libelle and match_type
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """Génère la proposition d'écriture"""
+        montant = float(evenement.get('montant', 0))
+        date_op = evenement.get('date_operation')
+        libelle = evenement.get('libelle', '')
+
+        return {
+            'type_evenement': 'FRAIS_ADMINISTRATIFS',
+            'description': f'Frais administratifs: {libelle[:50]}',
+            'confiance': 0.95,
+            'ecritures': [
+                {
+                    'date_ecriture': date_op,
+                    'libelle_ecriture': f'Frais administratifs - {libelle[:30]}',
+                    'compte_debit': '627',
+                    'compte_credit': '512',
+                    'montant': montant,
+                    'type_ecriture': 'FRAIS_ADMINISTRATIFS',
+                    'notes': 'Montant TTC (pas de TVA déductible - Soeurise non soumise à TVA)'
+                }
+            ]
+        }
+
+
 class DetecteurHonorairesComptable(DetecteurBase):
     """
     Détecte les paiements d'honoraires d'expert-comptable
@@ -804,6 +866,7 @@ class FactoryDetecteurs:
             DetecteurAssurancePret(session),
             DetecteurRemboursementPret(session),  # Lookup table echeances_prets
             DetecteurFraisBancaires(session),
+            DetecteurFraisAdministratifs(session),  # LEI, certificats, etc.
             DetecteurHonorairesComptable(session),
 
             # Détecteurs d'investissements (priorité moyenne - patterns multiples)
