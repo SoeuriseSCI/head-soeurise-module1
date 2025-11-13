@@ -378,6 +378,16 @@ RÈGLE SPÉCIALE FACTURES:
 - IGNORE les lignes de détail HT (provisions, honoraires détaillés, TVA)
 - Raison: les lignes HT ne sont pas des opérations bancaires, seul le paiement TTC compte
 
+RÈGLE SPÉCIALE BULLETINS INFORMATIFS SCPI:
+- IGNORE complètement les bulletins de distribution SCPI (ATLAND VOISIN, etc.)
+- Ces documents annoncent un FUTUR versement, ce ne sont PAS des opérations bancaires
+- Exemples à IGNORER:
+  * "REVENUS DU 4ÈME TRIMESTRE 2023 SCPI Epargne Pierre"
+  * "REVENUS DU 1ER TRIMESTRE 2024 SCPI Epargne Pierre"
+  * Tout document avec "Bulletin" + "trimestre" + montant SCPI
+- Raison: L'opération bancaire réelle apparaîtra dans le relevé bancaire quelques jours plus tard
+- N'extrais QUE le virement bancaire effectif (sur le relevé de compte)
+
 FORMAT DE SORTIE (JSON uniquement, sans texte avant/après):
 {
   "operations": [
