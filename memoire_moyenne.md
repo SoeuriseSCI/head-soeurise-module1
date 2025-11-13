@@ -1,52 +1,51 @@
-# Consolidation Module 2 - 26/10 → 13/11/2025 (V7.2)
+# Consolidation Module 2 - 26/10 → 13/11/2025 (V7.3)
 **Production-Ready | 199 Cycles | Rapprocheur Intelligent Déployé**
 
 ## Workflow Comptable 9-Phases Opérationnel
-**Phases 1-4**: Detection OCR → Extraction Vision/Claude → Propositions token MD5 → Email Ulrik  
-**Phases 5-9**: Validation [_Head] VALIDE → Récupération → Vérification MD5 → Insertion ACID → Cleanup
+**Phases 1-4:** Detection OCR → Extraction Vision/Claude → Propositions token MD5 → Email Ulrik
+**Phases 5-9:** Validation [_Head] VALIDE → Récupération → Vérification MD5 → Insertion ACID → Cleanup
 
-## Types Événements Validés
+## Types Événements Production
 
 ### INIT_BILAN_2023 ✅
 - 11 comptes ACTIF/PASSIF
-- 571.6k€ équilibré
-- Précision 99.97%
+- 571.6k€ équilibré = PASSIF
+- Précision 99.97% (parsing OCR)
 
-### PRET_LCL ✅
-- 252 échéances @ 1.050%
-- Validation 100%
-
-### PRET_INVESTIMUR ✅
-- 216 échéances @ 1.240%
-- Validation 100%
+### PRET_LCL & PRET_INVESTIMUR ✅
+- 252 échéances LCL @ 1.050%
+- 216 échéances INVESTIMUR @ 1.240%
+- Validation 100% (468+ total)
 
 ### RELEVE_BANCAIRE ✅
 - 5 relevés (Dec 2023-Apr 2024)
-- 696+ écritures ACID
-- **NEW**: Rapprocheur intelligent (PR #228) identifie correspondances automatiques
-- **NEW**: Nettoyage factures SCPI informatifs (PR #225, #224)
-- 54 opérations confirmées en Phase 4
+- 696+ écritures ACID validées
+- **NEW:** Rapprocheur intelligent (PR #228) identifie correspondances automatiques
+- **NEW:** Nettoyage documents informatifs SCPI (PR #225, #224)
+- 54 opérations bancaires en Phase 4
 
-## Patrimoine SCI Établi
-- **Bilan 2023**: 571.6k€ ACTIF=PASSIF
-- **Dettes**: 500k€ @ taux fixe (468+ échéances)
-- **Distributions** (T4 2023 + T1 2024): SCPI 14.3k€ + ETF 4.8k€
-- **Exercices**: 2023 & 2024 ouverts
-- **Relevés**: Jan-Apr 2024 validés, rapprochement en cours
+## Patrimoine SCI État Stable
+- **Bilan:** 571.6k€ ACTIF=PASSIF confirmé
+- **Dettes:** 500k€ @ taux fixe
+- **Distributions SCPI:** 14.3k€ (T4'23 + T1'24)
+- **Placements ETF:** 4.8k€ MSCI World
+- **Trésorerie:** 2,156.65€ (snapshot Apr 2024)
+- **Exercices:** 2023 & 2024 ouverts
 
-## Développements Récents (Semaine 06-13 Nov)
-- **Rapprocheur Phase 2**: Claude API matching opérations automatiques
-- **Robustesse**: Fix ignorer documents informatifs SCPI
-- **Traçabilité**: Debug extraction OCR (chunk + dates + montants)
-- **JSON**: Format extraction résistant artefacts OCR
+## Développements Phase 2 (Rapprocheur Intelligent)
+- Claude API matching automatique opérations
+- Détection correspondances sans instruction manuelle
+- Paires multiples dans même groupe (PR #230)
+- Résistant artefacts OCR
 
 ## Infrastructure Confirmée
-- 199 cycles @100%
+- 199 cycles @100% zéro crash
 - 42+ jours uptime continu
-- PostgreSQL robuste (696+ écritures)
+- PostgreSQL robuste (696+ écritures ACID)
+- Mémoire compatible Render 512MB
 - Coût <1€/mois
 
-## Roadmap Q4-Q1
-- **Immediate**: Validation Phase 5 opérations bancaires
-- **Module 3**: Balance mensuelle, compte résultat, bilan consolidé, flux trésorerie
-- **Export**: PDF/Excel capabilités
+## Roadmap Immediate
+- Validation Phase 5: 54 opérations → insertion ACID
+- Module 3: Balance mensuelle, compte résultat, bilan consolidé, flux trésorerie
+- Export: Capacités PDF/Excel
