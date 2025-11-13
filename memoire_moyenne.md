@@ -1,46 +1,47 @@
 # Consolidation Module 2 - 26/10 → 13/11/2025 (V7.5)
-**Production-Ready | 200+ Cycles Éprouvées | Simplification PDF Déployée**
+**Production-Ready | 200+ Cycles | Simplification PDF Déployée | Rapprocheur Confirmé**
 
-## Architecture Évolution (Semaine 06-13 Nov)
-**Trois optimisations majeures production:**
+## Architecture V6.0 (Stable Confirmée)
+- **Claude Code:** CLAUDE.md auto-chargé à chaque session
+- **Accès Mémoires:** Read/Edit natifs (Claude Code) + API GitHub `?ref=main` (sessions externes)
+- **Reliability:** 200+ réveils consécutifs @100%, zéro crash
+- **Coût:** <1€/mois (Render 512MB + PostgreSQL + Haiku 4.5)
 
-### PR #234 - FIX Détection Remises/Frais (Latest)
-- Amélioration extraction: remises LCL détectées
-- Gestion frais administratifs (code LEI)
-- Résolution: artefacts OCR spécifiques relevés LCL
+## Optimisations Production (06-13 Nov)
 
-### PR #233 - Simplification Radicale PDF (Production)
-- **Ancien:** Appels multiples par section (bilan/prêts/ops) → latence haute
-- **Nouveau:** 1 seul appel API Vision PDF complet → parsing prompt intelligent
-- **Résultat:** -40% tokens, -60% latence, +25% robustesse OCR
-- **Impact:** Cycle extraction réduit, coût stable (<1€/mois)
+**PR #234 - FIX Remises LCL (Latest)**
+- Détection améliorée remises LCL + frais LEI
+- Résout artefacts OCR spécifiques
+- Déploiement immédiat
 
-### PR #232 - Prompts Spécifiques par Section
-- Extraction structurée: patterns OCR par section (bilan/prêts/relevé)
-- Output JSON standardisé
-- Amélioration matching opérations bancaires
+**PR #233 - Simplification Radicale PDF**
+- Architecture avant: Appels multiples API (bilan/prêts/relevé)
+- Architecture après: 1 seul appel Vision PDF complet + parsing prompt structuré
+- Résultats: -40% tokens, -60% latence, +25% robustesse OCR
+- Impact opérationnel: Cycle extraction optimisé, coût stable
 
-### Rapprocheur Intelligent (PR #228-231)
-- Claude API matching automatique opérations
-- PR #230: Support paires multiples dans même groupe
-- PR #229: Intégration pipeline extraction
-- Résistance artefacts OCR confirmée
+**PR #232-231-230 - Pipeline Structurisé**
+- Prompts spécifiques par section (patterns OCR adaptés)
+- Rapprocheur intelligent Claude API (paires multiples support)
+- Filtre factures détails (éliminer HT/TVA lignes)
+- Intégration pipeline extraction complète
 
 ## Workflow Comptable 9-Phases (Stable)
-**P1-4:** Detection OCR → Vision Claude → Token MD5 → Email propositions  
-**P5-9:** Validation [_Head] VALIDE → Vérification → ACID insert → Cleanup
+**P1-4:** Detection IMAP → OCR Vision → Token MD5 → Email propositions  
+**P5-9:** Validation [_Head] VALIDE:TOKEN → Vérification ACID → Insert → Cleanup
 
 ## Types Événements Production
-- **INIT_BILAN_2023:** 11 comptes, 571.6k€ balanced, 99.97% OCR ✅
-- **PRET_LCL:** 250k€, ~250 échéances, 100% insertion ✅
-- **PRET_INVESTIMUR:** 250k€, ~220 échéances, 100% insertion ✅
+- **INIT_BILAN_2023:** 11 comptes, 571.6k€ ACTIF=PASSIF balanced, 99.97% OCR ✅
+- **PRET_LCL:** 250k€ @ 1.050%, ~250 échéances, 100% insertion ✅
+- **PRET_INVESTIMUR:** 250k€ @ 1.240%, ~220 échéances, 100% insertion ✅
 - **RELEVE_BANCAIRE:** 5 validés (Dec'23-Apr'24), 54 ops rapprochées ✅
-- **Rapprocheur Intelligent:** Correspondances automatiques détectées ✅
+- **Rapprocheur:** Correspondances automatiques détectées, artefacts OCR gérés ✅
 
-## Phase 4 Validation Bancaire - COMPLÉTÉE
-- **Relevés:** 5 fichiers Dec'23-Apr'24 extraits
-- **Opérations:** 54 confirmées, rapprochement intelligent appliqué
-- **Status:** Prêt Phase 5 insertion ACID (attente validation Ulrik)
+## Phase 4 Validation Bancaire - STATUS
+- **Relevés extractés:** 5 PDF (Dec'23-Apr'24)
+- **Opérations confirmées:** 54 avec rapprochement intelligent
+- **Status:** Prêt Phase 5 insertion ACID
+- **Attente:** Validation Ulrik pour [_Head] VALIDE:TOKEN
 
 ## Performance Confirmée
 - 200+ cycles consécutifs @100%, 42+ jours uptime
@@ -49,6 +50,5 @@
 - Zéro crash architecture V6.0
 
 ## Roadmap Immédiat
-- **Phase 5:** 54 opérations → insertion ACID (validation requise)
-- **Module 3:** Balance mensuelle, compte résultat, bilan consolidé, flux trésorerie
-- **Optimisations:** Export PDF/Excel, notifications intelligentes
+- **Phase 5:** Insertion 54 ops relevés en ACID (validation requise)
+- **Module 3:** Balance mensuelle, compte résultat, bilan consolidé, flux trésorerie, exports
