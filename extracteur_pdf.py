@@ -370,13 +370,14 @@ RÈGLES:
 - Continue jusqu'à la dernière page, même si tu penses avoir fini
 
 RÈGLE SPÉCIALE FACTURES:
-- Si tu vois une FACTURE détaillée avec lignes HT + TVA + TOTAL TTC:
-  * NE extrais QUE le montant TOTAL TTC (pas les lignes de détail HT)
-  * Utilise la date de la facture
-  * Libellé = description principale de la facture
-  * Exemple: "Facture ORP Comptabilité - Janvier 2024" avec TOTAL 213.60€ TTC
-- IGNORE les lignes de détail HT (provisions, honoraires détaillés, TVA)
-- Raison: les lignes HT ne sont pas des opérations bancaires, seul le paiement TTC compte
+- IGNORE complètement les factures (CRP 2C, ORP Comptabilité, etc.)
+- Ces documents annoncent un FUTUR paiement, ce ne sont PAS des opérations bancaires
+- Exemples à IGNORER:
+  * Factures comptables avec lignes HT + TVA + TOTAL TTC
+  * "Facture ORP Comptabilité - Janvier 2024" (213.60€)
+  * "Facture CRP 2C" avec détails provisions/honoraires
+- Raison: L'opération bancaire réelle apparaîtra dans le relevé bancaire sous forme de SEPA prélèvement
+- N'extrais QUE le prélèvement SEPA effectif (sur le relevé de compte)
 
 RÈGLE SPÉCIALE BULLETINS INFORMATIFS SCPI:
 - IGNORE complètement les bulletins de distribution SCPI (ATLAND VOISIN, etc.)
