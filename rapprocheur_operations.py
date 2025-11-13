@@ -415,21 +415,34 @@ B. **Bulletins SCPI → Virements**
    → Utiliser: Virement SEPA (opération réelle)
    → Justificatif: Bulletin (annonce)
 
-C. **Avis opération → Débit/Crédit relevé**
+C. **Avis opération VM → Débit/Crédit relevé**
    - Même montant
    - Date identique ou ±2 jours
    - Référence/ISIN présent (ex: "AMAZON COM", "AMUNDI MSCI")
    → Utiliser: Avis (détails ISIN, quantité, prix, commissions)
    → Justificatif: Relevé (confirmation bancaire)
 
-D. **Doublons exacts** (même document extrait 2 fois)
+D. **Avis d'écriture → Virement/Débit relevé**
+   - Même montant
+   - Date identique ou ±2 jours
+   - Mots-clés communs (ex: "VIREMENT", "Apport", nom client)
+   - L'avis confirme une opération déjà dans le relevé
+   → Utiliser: Virement relevé (opération bancaire réelle)
+   → Justificatif: Avis (confirmation documentaire)
+
+   EXEMPLE CONCRET:
+   - Index 0: "VIR SEPA MONSIEUR ULRIK BERGSTEN LIBELLE:Apport CC" (relevé)
+   - Index 1: "Apport CC UB VIREMENT MONSIEUR ULRIK BERGSTE" (avis)
+   → Paire liée : principal=0, justifs=[1]
+
+E. **Doublons exacts** (même document extrait 2 fois)
    - Même montant
    - Même date exacte
    - Libellé très similaire (>80% identique)
    → Utiliser: Version relevé bancaire
    → Supprimer: Doublon
 
-E. **Opérations indépendantes**
+F. **Opérations indépendantes**
    - Si aucun critère ne matche
    - Dates trop éloignées
    - Pas de référence commune

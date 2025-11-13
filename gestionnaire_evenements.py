@@ -250,17 +250,12 @@ class GestionnaireEvenements:
         elif 'scpi' in libelle_norm or 'epargne pierre' in libelle_norm:
             type_evt = 'REVENU_SCPI'
 
-        # Achat ETF (nouveau)
-        elif 'am msci' in libelle_norm or 'etf' in libelle_norm:
-            type_evt = 'ACHAT_ETF'
-
-        # Achat Amazon (nouveau)
-        elif 'amazon' in libelle_norm and 'achat' in libelle_norm:
-            type_evt = 'ACHAT_AMAZON'
-
-        # Achat valeurs mobilières (autres)
-        elif 'degiro' in libelle_norm or 'interactive brokers' in libelle_norm:
-            type_evt = 'ACHAT_VALEURS_MOBILIERES'
+        # Achat valeurs mobilières (ETF, actions, etc.) - UN SEUL TYPE
+        elif ('am msci' in libelle_norm or 'amundi' in libelle_norm or
+              'etf' in libelle_norm or 'amazon com' in libelle_norm or
+              'degiro' in libelle_norm or 'interactive brokers' in libelle_norm or
+              ('achat' in libelle_norm and ('action' in libelle_norm or 'titre' in libelle_norm or 'eur' in libelle_norm or 'usd' in libelle_norm))):
+            type_evt = 'ACHAT_VM'
 
         # Mettre à jour le type
         if type_evt:
