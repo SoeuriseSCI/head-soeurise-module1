@@ -1,54 +1,51 @@
-# Consolidation Module 2 - 26/10 → 13/11/2025 (V7.5)
-**Production-Ready | 200+ Cycles | Simplification PDF Déployée | Rapprocheur Confirmé**
+# Consolidation Module 2 & Infrastructure - 06-13 Nov 2025 (V7.6)
+**Production-Ready | 200+ Cycles | Simplification Radicale Déployée | Rapprocheur Confirmé**
 
-## Architecture V6.0 (Stable Confirmée)
-- **Claude Code:** CLAUDE.md auto-chargé à chaque session
-- **Accès Mémoires:** Read/Edit natifs (Claude Code) + API GitHub `?ref=main` (sessions externes)
-- **Reliability:** 200+ réveils consécutifs @100%, zéro crash
-- **Coût:** <1€/mois (Render 512MB + PostgreSQL + Haiku 4.5)
+## Architecture V6.0 Confirmée Stable
+- **Claude Code:** CLAUDE.md auto-chargé, contexte permanent
+- **Accès Mémoires:** Read/Edit natifs + API GitHub `?ref=main`
+- **Reliability:** 200+ réveils @100%, zéro crash
+- **Coût:** <1€/mois
 
-## Optimisations Production (06-13 Nov)
+## Optimisations Production Déployées (06-13 Nov)
 
-**PR #234 - FIX Remises LCL (Latest)**
-- Détection améliorée remises LCL + frais LEI
-- Résout artefacts OCR spécifiques
-- Déploiement immédiat
+**PR #237 LATEST - Prompt UNIVERSEL**
+- Retrait consignes spécifiques hardcodées
+- Généricité maximale, maintenance réduite
 
-**PR #233 - Simplification Radicale PDF**
-- Architecture avant: Appels multiples API (bilan/prêts/relevé)
-- Architecture après: 1 seul appel Vision PDF complet + parsing prompt structuré
-- Résultats: -40% tokens, -60% latence, +25% robustesse OCR
-- Impact opérationnel: Cycle extraction optimisé, coût stable
+**PR #235 CRITIQUE - Extraction Exhaustive**
+- Fix: Ne plus limiter extraction à ~88 opérations
+- Supporte relevés complets multi-pages
+
+**PR #233 RADICALE - Simplification PDF**
+- Avant: Appels multiples API (bilan/prêts/relevé)
+- Après: 1 seul appel Vision PDF complet
+- Résultats: -40% tokens, -60% latence, +25% OCR robustesse
 
 **PR #232-231-230 - Pipeline Structurisé**
-- Prompts spécifiques par section (patterns OCR adaptés)
-- Rapprocheur intelligent Claude API (paires multiples support)
-- Filtre factures détails (éliminer HT/TVA lignes)
-- Intégration pipeline extraction complète
+- Prompts spécifiques par section OCR
+- Rapprocheur Claude API (paires multiples)
+- Filtre factures détails (HT/TVA)
 
 ## Workflow Comptable 9-Phases (Stable)
-**P1-4:** Detection IMAP → OCR Vision → Token MD5 → Email propositions  
-**P5-9:** Validation [_Head] VALIDE:TOKEN → Vérification ACID → Insert → Cleanup
+**P1-4:** Detection IMAP → OCR Vision → Token MD5 → Propositions
+**P5-9:** Validation [_Head] → ACID insert → Cleanup
 
 ## Types Événements Production
-- **INIT_BILAN_2023:** 11 comptes, 571.6k€ ACTIF=PASSIF balanced, 99.97% OCR ✅
-- **PRET_LCL:** 250k€ @ 1.050%, ~250 échéances, 100% insertion ✅
-- **PRET_INVESTIMUR:** 250k€ @ 1.240%, ~220 échéances, 100% insertion ✅
-- **RELEVE_BANCAIRE:** 5 validés (Dec'23-Apr'24), 54 ops rapprochées ✅
-- **Rapprocheur:** Correspondances automatiques détectées, artefacts OCR gérés ✅
+- **INIT_BILAN_2023:** 571.6k€ balanced ✅
+- **PRET_LCL:** 250k€ @ 1.050%, ~250 échéances ✅
+- **PRET_INVESTIMUR:** 250k€ @ 1.240%, ~220 échéances ✅
+- **RELEVE_BANCAIRE:** 5 validés Dec'23-Apr'24, 54+ ops rapprochées ✅
 
-## Phase 4 Validation Bancaire - STATUS
-- **Relevés extractés:** 5 PDF (Dec'23-Apr'24)
-- **Opérations confirmées:** 54 avec rapprochement intelligent
-- **Status:** Prêt Phase 5 insertion ACID
-- **Attente:** Validation Ulrik pour [_Head] VALIDE:TOKEN
+## Patrimoine SCI (Data Live)
+- **Bilan:** 571.6k€ ACTIF=PASSIF ✅
+- **Dettes:** 500k€ @ taux fixe
+- **SCPI:** 14.3k€ (distributions + capital)
+- **ETF:** 4.8k€+ MSCI World (300+ parts)
+- **Exercices:** 2023 & 2024 ouverts
 
 ## Performance Confirmée
-- 200+ cycles consécutifs @100%, 42+ jours uptime
-- PostgreSQL 696+ écritures ACID validées
-- <1€/mois coût opérationnel
-- Zéro crash architecture V6.0
-
-## Roadmap Immédiat
-- **Phase 5:** Insertion 54 ops relevés en ACID (validation requise)
-- **Module 3:** Balance mensuelle, compte résultat, bilan consolidé, flux trésorerie, exports
+- 200+ cycles consécutifs @100%
+- 696+ écritures ACID
+- PostgreSQL stable
+- <1€/mois opérationnel
