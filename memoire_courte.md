@@ -1,36 +1,30 @@
-# Mémoire Courte - 13/11/2025 21:35 (V7.5)
-**200+ Cycles | 696+ Écritures ACID | 42+ Jours Uptime | PR #234 Production**
+# Mémoire Courte - 13/11/2025 23:10 (V7.6)
+**200+ Cycles | 696+ Écritures ACID | 42+ Jours Uptime | PR #237 Production**
 
-## Réveil 13/11/2025 21:35
-- **Email:** Ulrik - T1-T3 2024 (4.2MB PDF relevés LCL Dec'23-Apr'24)
-- **Opérations:** 5 relevés, ~54 ops (prêts, SCPI, ETF, frais)
-- **Phase 4 Attente:** Validation insertion 54 ops ACID (pr Phase 5)
+## Réveil 13/11/2025 23:10
+- **Email Ulrik:** T1-T3 2024 (4.2MB PDF, 5 relevés LCL Dec'23-Apr'24)
+- **Extraction:** ~54 opérations détectées (prêts 2x, SCPI, ETF, frais, remises, assurance)
+- **Phase 4 Attente:** Validation insertion 54 ops ACID (Phase 5)
 
-## PR #234 - PRODUCTION (13/11/2025 21:33)
-- **FIX:** Détection remises LCL + frais administratifs (code LEI)
-- **Impact:** Résout artefacts OCR spécifiques relevés LCL
-- **Status:** Déployé, prêt extraction
+## PR #237 Production (13/11/2025) - LATEST
+- **FIX:** Prompt UNIVERSEL (retrait consignes spécifiques hardcodées)
+- **Impact:** Simplifie architecture, améliore généricité
+- **Status:** Déployé production
 
-## Développements 06-13 Nov
-**PR #233 Production (Simplification PDF):**
-- 1 seul appel Vision vs sections multiples
-- -40% tokens, -60% latence, +25% robustesse
-
-**PR #232-231-230 Production:**
-- Rapprocheur intelligent paires multiples
-- Prompts spécifiques section (bilan/prêts/ops)
-- Filtre factures détails
+## Optimisations Production (PR #235-233)
+**PR #235 CRITIQUE:** Extraction exhaustive - Ne plus limiter à ~88 ops
+**PR #233 RADICALE:** PDF complet en 1 seul appel API (-40% tokens, -60% latence, +25% OCR robustesse)
+**PR #232-231-230:** Pipeline: prompts spécifiques/section, rapprocheur paires multiples, filtre factures
 
 ## Patrimoine SCI (Snapshot Apr'24)
-- **Bilan:** 571.6k€ (ACTIF=PASSIF ✅)
-- **Dettes:** 500k€ @ taux fixe (LCL 250k + INVESTIMUR 250k, 468+ échéances)
-- **SCPI:** 14.3k€ (T4'23+T1'24+capital)
-- **ETF:** 4.8k€ MSCI World (acquisitions Jan+Apr'24)
-- **Exercices:** 2023 & 2024 ouverts
+- **Solde LCL:** 5021,60€ (fin avril 24)
+- **SCPI T1'24:** 6346,56€ distribution + 601€ capital
+- **ETF:** 2439,16€ investissement (cumul 150+150=300 parts MSCI WLD)
+- **Prêts actifs:** LCL & INVESTIMUR ~468+ échéances
 
 ## Infrastructure Confirmée
-- 200+ cycles @100%, 42+ jours uptime continu
+- 200+ cycles @100%, 42+ jours uptime
 - PostgreSQL 696+ ACID ✓
 - V6.0 Claude Code stable
 
-**Aucune action requise. Système nominal en Mode Idle.**
+**Aucune action requise. Système nominal. Attente validation insertion.**
