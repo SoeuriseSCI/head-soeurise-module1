@@ -109,23 +109,36 @@ class RapprocheurOperations:
             rapprochement = self._rapprocher_groupe(ops, idx)
 
             if rapprochement:
-                # Ajouter opération principale
-                operations_finales.append(rapprochement['operation_principale'])
+                # Traiter les sous-groupes identifiés
+                sous_groupes = rapprochement.get('sous_groupes', [])
+                ops_independantes = rapprochement.get('operations_independantes', [])
 
-                # Stocker justificatifs
-                if rapprochement['justificatifs']:
-                    op_id = id(rapprochement['operation_principale'])
-                    justificatifs_map[op_id] = rapprochement['justificatifs']
+                if sous_groupes:
+                    stats['groupes_analyses'] += 1
+                    print(f"   ✅ {len(sous_groupes)} sous-groupe(s) détecté(s)")
 
-                stats['groupes_analyses'] += 1
-                stats['doublons_detectes'] += len(rapprochement['justificatifs'])
+                    for sg in sous_groupes:
+                        # Ajouter opération principale
+                        operations_finales.append(sg['operation_principale'])
 
-                print(f"   ✅ Source choisie: {rapprochement['operation_principale']['libelle'][:60]}...")
-                print(f"   📎 Justificatifs: {len(rapprochement['justificatifs'])}")
+                        # Stocker justificatifs
+                        if sg['justificatifs']:
+                            op_id = id(sg['operation_principale'])
+                            justificatifs_map[op_id] = sg['justificatifs']
+                            stats['doublons_detectes'] += len(sg['justificatifs'])
+
+                        print(f"      → Principale: {sg['operation_principale']['libelle'][:50]}...")
+                        print(f"        Justifs: {len(sg['justificatifs'])}")
+
+                # Ajouter opérations indépendantes
+                if ops_independantes:
+                    operations_finales.extend(ops_independantes)
+                    if len(ops_independantes) > 0:
+                        print(f"   ℹ️  {len(ops_independantes)} opération(s) indépendante(s)")
             else:
-                # Pas de rapprochement trouvé, garder toutes les opérations
+                # Erreur API ou pas de réponse valide, garder toutes les opérations
                 operations_finales.extend(ops)
-                print(f"   ℹ️  Pas de rapprochement détecté, garde toutes les opérations")
+                print(f"   ⚠️  Erreur rapprochement, garde toutes les opérations")
 
         stats['operations_finales'] = len(operations_finales)
 
@@ -169,16 +182,21 @@ class RapprocheurOperations:
         """
         Rapproche un groupe d'opérations avec même montant via Claude API
 
+        Gère PLUSIEURS paires distinctes dans le même groupe (ex: 4 factures + 4 SEPA)
+
         Args:
             operations: Liste d'opérations avec même montant
             groupe_num: Numéro du groupe (pour traçabilité)
 
         Returns:
             Dict {
-                'operation_principale': Dict,
-                'justificatifs': List[Dict],
-                'raison': str
-            } ou None si pas de rapprochement
+                'sous_groupes': List[{
+                    'operation_principale': Dict,
+                    'justificatifs': List[Dict],
+                    'raison': str
+                }],
+                'operations_independantes': List[Dict]
+            } ou None si erreur
         """
         if not self.client:
             print("   ⚠️  ANTHROPIC_API_KEY non définie - pas de rapprochement")
@@ -218,16 +236,28 @@ class RapprocheurOperations:
                     json_text = response_text[start_idx:end_idx]
                     resultat = json.loads(json_text)
 
-                    # Valider le résultat
-                    if 'operation_principale_index' in resultat:
-                        idx_principal = resultat['operation_principale_index']
-                        indices_justificatifs = resultat.get('justificatifs_indices', [])
+                    # Nouveau format avec sous-groupes multiples
+                    sous_groupes_data = []
+                    for sg in resultat.get('sous_groupes', []):
+                        idx_principal = sg.get('operation_principale_index')
+                        indices_justifs = sg.get('justificatifs_indices', [])
 
-                        return {
-                            'operation_principale': operations[idx_principal],
-                            'justificatifs': [operations[i] for i in indices_justificatifs if i < len(operations)],
-                            'raison': resultat.get('raison', '')
-                        }
+                        # Valider les indices
+                        if idx_principal is not None and idx_principal < len(operations):
+                            sous_groupes_data.append({
+                                'operation_principale': operations[idx_principal],
+                                'justificatifs': [operations[i] for i in indices_justifs if i < len(operations)],
+                                'raison': sg.get('raison', '')
+                            })
+
+                    # Opérations indépendantes
+                    indices_independants = resultat.get('operations_independantes_indices', [])
+                    operations_independantes = [operations[i] for i in indices_independants if i < len(operations)]
+
+                    return {
+                        'sous_groupes': sous_groupes_data,
+                        'operations_independantes': operations_independantes
+                    }
                 else:
                     print(f"   ⚠️  Pas de JSON trouvé dans la réponse")
                     return None
@@ -235,6 +265,9 @@ class RapprocheurOperations:
             except json.JSONDecodeError as e:
                 print(f"   ⚠️  Erreur parsing JSON: {e}")
                 print(f"   Réponse: {response_text[:200]}...")
+                return None
+            except (IndexError, KeyError) as e:
+                print(f"   ⚠️  Erreur indices: {e}")
                 return None
 
         except Exception as e:
@@ -272,62 +305,88 @@ Voici {len(operations)} opérations avec le MÊME montant :
 {operations_str}
 
 TA MISSION:
-1. Détermine si ces opérations sont liées (même événement économique) ou indépendantes
-2. Si liées, identifie :
-   - L'opération à utiliser pour l'écriture comptable (la plus complète/précise)
-   - Les autres comme justificatifs (preuves à conserver)
+Identifie TOUS les sous-groupes d'opérations liées dans cet ensemble.
+**ATTENTION** : Il peut y avoir PLUSIEURS paires distinctes dans le même groupe !
+
+Exemple : 4 factures CRP 2C de 213.60€ à différentes dates + 4 SEPA correspondants
+= 4 PAIRES distinctes à identifier (pas un seul groupe)
+
+Pour chaque paire/sous-groupe lié :
+1. Identifie l'opération principale (à utiliser pour l'écriture comptable)
+2. Identifie les justificatifs (documents liés à conserver)
+3. Explique le lien
 
 CRITÈRES DE RAPPROCHEMENT:
+
 A. **Factures → Prélèvements SEPA**
    - Même montant (évident ici)
-   - Dates ±30 jours
-   - N° facture présent dans libellé du prélèvement
+   - Dates facture et SEPA ±30 jours
+   - N° facture présent dans libellé SEPA (ex: "LIBELLE:2024013227")
+   - MÊME client/fournisseur (ex: "CRP Comptabilit Conseil")
    → Utiliser: SEPA (opération bancaire réelle)
    → Justificatif: Facture (détails HT/TVA)
 
+   EXEMPLE CONCRET:
+   - Index 0: date "2024-01-02", libellé "Facture n° 2024013227..."
+   - Index 1: date "2024-01-24", libellé "PRLV SEPA CRP... LIBELLE:2024013227"
+   → Paire liée : principal=1, justifs=[0]
+
 B. **Bulletins SCPI → Virements**
    - Même montant
-   - Dates ±7 jours
-   - Même trimestre/période mentionné
+   - Dates bulletin et virement ±15 jours
+   - Même trimestre/période mentionné (ex: "4EME TRIM 2023", "1ER TRIM 2024")
+   - MÊME SCPI (ex: "SCPI EPARGNE PIERRE")
    → Utiliser: Virement SEPA (opération réelle)
    → Justificatif: Bulletin (annonce)
 
 C. **Avis opération → Débit/Crédit relevé**
    - Même montant
-   - Date identique ou très proche
-   - Référence/n° opération
+   - Date identique ou ±2 jours
+   - Référence/ISIN présent (ex: "AMAZON COM", "AMUNDI MSCI")
    → Utiliser: Avis (détails ISIN, quantité, prix, commissions)
    → Justificatif: Relevé (confirmation bancaire)
 
-D. **Doublons exacts** (même document en 2 formats)
+D. **Doublons exacts** (même document extrait 2 fois)
    - Même montant
-   - Même date
-   - Même libellé
-   → Utiliser: Relevé bancaire
-   → Supprimer: Avis d'écriture (doublon)
+   - Même date exacte
+   - Libellé très similaire (>80% identique)
+   → Utiliser: Version relevé bancaire
+   → Supprimer: Doublon
 
 E. **Opérations indépendantes**
    - Si aucun critère ne matche
-   → Garder TOUTES les opérations séparément
+   - Dates trop éloignées
+   - Pas de référence commune
+   → Garder séparément
 
 FORMAT DE RÉPONSE (JSON UNIQUEMENT):
 {{
-  "sont_liees": true/false,
-  "operation_principale_index": 0,
-  "justificatifs_indices": [1, 2],
-  "raison": "Facture CRP 2C du 02/01 et SEPA du 24/01 avec n° facture 2024013227 dans libellé → même opération, utilise SEPA car opération bancaire réelle"
+  "sous_groupes": [
+    {{
+      "operation_principale_index": 1,
+      "justificatifs_indices": [0],
+      "raison": "Facture CRP 2C du 02/01 (n°2024013227) et SEPA du 24/01 avec même n° → même opération"
+    }},
+    {{
+      "operation_principale_index": 3,
+      "justificatifs_indices": [2],
+      "raison": "Facture CRP 2C du 04/01 (n°2024043519) et SEPA du 24/04 avec même n° → même opération"
+    }}
+  ],
+  "operations_independantes_indices": [4, 5]
 }}
 
-Si opérations NON liées:
+Si AUCUNE opération liée:
 {{
-  "sont_liees": false,
-  "raison": "Pas de lien détecté - dates trop éloignées, pas de référence commune"
+  "sous_groupes": [],
+  "operations_independantes_indices": [0, 1, 2, 3, 4]
 }}
 
 IMPORTANT:
+- Cherche TOUTES les paires possibles, pas juste la première
 - Sois conservateur : en cas de doute, considère les opérations comme indépendantes
-- La "raison" doit expliquer clairement ton choix
 - Retourne UNIQUEMENT le JSON, pas de texte avant/après
+- Les indices doivent référencer le tableau "operations" ci-dessus
 """
 
         return prompt
