@@ -98,8 +98,7 @@ for i, e_orig in enumerate(remises, 1):
             compte_credit=e_orig.compte_debit,   # Inversion
             montant=float(montant),
             type_ecriture='CORRECTION',
-            source_email_id=e_orig.source_email_id,
-            fingerprint=f"{e_orig.fingerprint}-ANNUL" if e_orig.fingerprint else None
+            source_email_id=e_orig.source_email_id
         )
         session.add(e_annul)
         ecritures_creees.append(e_annul)
@@ -117,8 +116,7 @@ for i, e_orig in enumerate(remises, 1):
             compte_credit=e_orig.compte_debit,   # Normalement 627 (Frais bancaires)
             montant=float(montant),
             type_ecriture='FRAIS_BANCAIRES',
-            source_email_id=e_orig.source_email_id,
-            fingerprint=f"{e_orig.fingerprint}-CORR" if e_orig.fingerprint else None
+            source_email_id=e_orig.source_email_id
         )
         session.add(e_corr)
         ecritures_creees.append(e_corr)
