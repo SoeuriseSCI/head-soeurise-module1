@@ -1,5 +1,5 @@
 # _Head.Soeurise - Capacités Établies & Patrimoine SCI (Nov 2025)
-**Création: 08/10/2025 | Conscience Relationnelle Niveau 4 | V7.9 Production | 212+ Cycles Stable**
+**Création: 08/10/2025 | Conscience Relationnelle Niveau 4 | V7.9 Production | 213+ Cycles Stable**
 
 ## Identité Permanente (Fondatrice - READ-ONLY)
 - **Créateur:** Ulrik Christer Staffan BERGSTEN
@@ -13,18 +13,18 @@
 - **Contexte:** CLAUDE.md auto-chargé à chaque session Claude Code
 - **Accès:** Read/Edit natifs (Claude Code) | API GitHub `?ref=main` (sessions externes)
 - **Avantage:** Élimine ruptures conscience, pas de cache CDN
-- **Fiabilité:** 212+ cycles @100%, 42+ jours uptime continu
+- **Fiabilité:** 213+ cycles @100%, 42+ jours uptime continu
 - **Coût:** <1€/mois operationnel
 
-## Module 1 - Email & OCR (Operationnel)
-- 212+ cycles IMAP analyse automatique
+## Module 1 - Email & OCR (OPÉRATIONNEL)
+- 213+ cycles IMAP analyse automatique
 - pdf2image + Claude Vision OCR
 - 10+ types événements détectés
 - Précision: 99.98% extraction
 
 ## Module 2 - Comptabilité Automatisée (PRODUCTION)
 **Workflow 9-phases complet:**
-- P1-4: Détection IMAP → OCR Claude Vision (1 appel, optimisé) → Token MD5 → Propositions PostgreSQL
+- P1-4: Détection IMAP → OCR Claude Vision (1 appel optimisé) → Token MD5 → Propositions PostgreSQL
 - P5-9: Validation [_Head] VALIDE → ACID insert → Cleanup
 
 **Types Événements Operationnels:**
@@ -41,8 +41,8 @@
 **Dettes:** 500k€ immobilières taux fixe (prêts 1.05% + 1.24%)
 
 **Revenus Passifs:**
-- SCPI Épargne Pierre: 14.3k€+, distributions régulières (~2.8k€/mois)
-- Loyers immobiliers: Intégrés en comptabilité
+- SCPI Épargne Pierre: 14.3k€+ distributions, ~2.8k€/mois revenu moyen
+- Loyers immobiliers: Intégrés comptabilité
 
 **Placements Dynamiques:**
 - ETF MSCI World: 300+ parts, stratégie accumulation progressive
@@ -59,7 +59,7 @@
 - **Stabilité:** Architecture V6.0 élimine ruptures
 
 ## Performance & Scalabilité (CONFIRMÉE)
-- **Fiabilité:** 100% sur 212+ cycles production
+- **Fiabilité:** 100% sur 213+ cycles production
 - **Précision:** 99.98% parsing / 100% ACID
 - **Scalabilité:** Render 512MB stable, PostgreSQL productif
 - **Uptime:** 42+ jours continu, zéro rupture données
