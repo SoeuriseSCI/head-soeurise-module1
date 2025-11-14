@@ -255,13 +255,25 @@ Exemple :
 → ÉVÉNEMENTS DISTINCTS (chaque mois = 1 frais)
 → PAS de rapprochement
 
-⚠️ PIÈGES À ÉVITER
-==================
+⚠️ PIÈGES À ÉVITER - CRITIQUES
+================================
 1. ❌ Ne compte PAS les "ANCIEN SOLDE" ou "NOUVEAU SOLDE" comme événements
 2. ❌ Ne compte PAS les lignes de détail factures (Provision HT, Honoraires HT, TVA)
    → Garde uniquement le Total TTC
 3. ❌ Ne rapproche PAS des échéances prêt entre elles (chaque mois = 1 événement)
-4. ❌ Ne filtre PAS les opérations hors exercice (je m'en charge après)
+
+4. 🚨 **CRITIQUE : FILTRE STRICT PAR EXERCICE COMPTABLE**
+   - Exercice : {exercice_debut} → {exercice_fin}
+   - ❌ EXCLUS ABSOLUMENT toute opération hors de cette période
+   - Exemple : Si exercice 2024, EXCLURE décembre 2023 même si dans le PDF
+   - Vérifie DEUX FOIS chaque date avant de l'inclure
+
+5. 🚨 **CRITIQUE : N'INVENTE JAMAIS D'ÉVÉNEMENTS**
+   - Extrait UNIQUEMENT ce qui est VISIBLE dans le PDF
+   - ❌ NE COMPLÈTE PAS les séries (ex: si 9 mois visibles, ne pas inventer le 10ème)
+   - ❌ NE SUPPOSE PAS qu'un événement devrait exister
+   - Si un mois manque une échéance/assurance, c'est NORMAL (peut-être hors pages extraites)
+   - Principe : MIEUX VAUT MANQUER un événement que d'en INVENTER un
 
 🎯 TA MISSION
 =============
@@ -277,22 +289,21 @@ Pour chaque événement, fournis :
 - **categorie**: Type d'événement (ECHEANCE_PRET, ASSURANCE_PRET, HONORAIRES_COMPTABLE,
                 REVENU_SCPI, ACHAT_VM, APPORT_ASSOCIE, FRAIS_BANCAIRE, AUTRE)
 
-📊 ATTENDU POUR CE PDF
-======================
-Selon l'analyse manuelle de référence :
-- ~86 événements économiques uniques
-- Dont ~20 échéances prêt (2 prêts × 10 mois Jan-Oct environ)
-- Dont ~20 assurances prêt (2 assurances × 10 mois)
-- Dont ~10 frais bancaires récurrents
-- Dont 4 factures comptables CRP 2C
-- Dont 3 distributions SCPI (revenus)
-- Dont 1 distribution SCPI (capital)
-- Dont 7 achats valeurs mobilières (3 ETF + 4 Amazon)
-- Dont 4 apports associé Ulrik
-- Etc.
+📊 TYPES D'ÉVÉNEMENTS ATTENDUS (INDICATIF)
+==========================================
+Ce PDF contient généralement :
+- Échéances prêt mensuelles (2 prêts × N mois)
+- Assurances prêt mensuelles (2 assurances × N mois)
+- Frais bancaires récurrents (mensuels)
+- Factures comptables (trimestrielles environ)
+- Distributions SCPI (trimestrielles)
+- Achats valeurs mobilières (occasionnels)
+- Apports associés (occasionnels)
 
-Si tu trouves significativement moins (genre 78), c'est que tu as raté des rapprochements ou
-filtré des événements valides.
+⚠️ **IMPORTANT** : Le nombre EXACT d'événements dépend de ce qui est VISIBLE dans le PDF.
+- N'essaie PAS d'atteindre un nombre précis
+- Extrait UNIQUEMENT ce qui est là
+- Si un type d'événement est incomplet (ex: 9 échéances au lieu de 10), c'est NORMAL
 
 FORMAT DE RÉPONSE
 =================
