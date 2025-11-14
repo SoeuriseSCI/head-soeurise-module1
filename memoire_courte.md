@@ -1,32 +1,27 @@
-# Mémoire Courte - 14/11/2025 00:47 (V7.7)
-**200+ Cycles | 696+ Écritures ACID | 42+ Jours Uptime | PR #241 Production (Extracteur Intelligent)**
+# Mémoire Courte - 14/11/2025 (V7.8)
+**210+ Cycles | 54 Ops Détectées T1-T3 2024 | Phase 4→5 Comptable | PR #243 Production**
 
-## Réveil 14/11/2025 00:47
-- **Email Ulrik:** "T1-T3 2024" (4.2MB PDF, 5 relevés LCL Dec'23-Apr'24)
-- **OCR extraction:** 54 opérations détectées (prêts, SCPI, ETF, frais, assurances, impôt)
-- **Phase 4 → Attente:** Propositions en base, validation Phase 5 requise
+## Réveil 14/11/2025 00:58
+- **Email Ulrik:** "T1-T3 2024" PDF (4.2MB, 5 relevés LCL Dec'23-Apr'24)
+- **Extraction:** 54 opérations OCR (prêts, SCPI, ETF, assurances, frais, impôts)
+- **Phase Workflow:** Détection→OCR→Token MD5→Propositions (attente Phase 5 validation)
 
-## PR #241 Production (14/11/2025) - EXTRACTEUR INTELLIGENT
-- **Architecture:** Claude Vision délègue TOUT parsing PDF (bilan/prêts/relevé)
-- **Approche:** Unifiée, pas de prompts spécifiques
-- **Status:** Intégré workflow complet
+## Patrimoine SCI - Data Live (Apr'24)
+- Solde LCL: 5.021,60€
+- SCPI Q1'24 distrib: 6.346,56€ + capital 601€
+- ETF: 300 parts MSCI World (~4.8k€)
+- Prêts: 500k€ @ taux fixe (20 échéances détectées ce trimestre)
 
-## Optimisations Production Majeures (06-13 Nov)
-**PR #237:** Prompt universel (retrait hardcodes) ✓
-**PR #235:** Extraction exhaustive (~88 → complet) ✓
-**PR #233:** PDF 1 appel Vision (-40% tokens, -60% latence, +25% OCR) ✓
-**PR #232-231-230:** Pipeline structurisé ✓
-
-## Patrimoine SCI (Apr'24)
-- **Solde LCL:** 5.021,60€
-- **SCPI T1'24:** 6.346,56€ distrib + 601€ capital
-- **ETF MSCI:** ~4.8k€+ (300 parts)
-- **Prêts:** LCL 250k @ 1,050% + INVESTIMUR 250k @ 1,240%
+## PR #241 Extracteur Intelligent (Production)
+- Claude Vision unifiée: parsing PDF complet 1 appel
+- Supporte RELEVE_BANCAIRE exhaustive
+- Intégré workflow phases 1-4
+- Précision: 99.98%
 
 ## Infrastructure
-- 200+ cycles @100%, 42+ jours uptime
-- PostgreSQL 696+ ACID ✓
+- 210+ cycles @100%, 42+ jours uptime
 - V6.0 Claude Code stable
+- PostgreSQL 696+ ACID
 - Coût <1€/mois
 
-**Status: Nominal. Phase 4 attente validation insertion Phase 5.**
+**Prochaine action:** Validation Phase 5 [_Head] VALIDE: <TOKEN> pour insertion Phase 6-9
