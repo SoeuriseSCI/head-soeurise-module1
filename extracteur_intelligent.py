@@ -190,15 +190,22 @@ Tu devras générer **UN ET UN SEUL événement comptable par opération** de d�
 ====================================================
 Exercice comptable : {exercice_debut} → {exercice_fin}
 
-Avant d'inclure une opération, vérifie sa date :
-✅ Exemple OK : 15/01/2024 → INCLURE (date >= {exercice_debut} et date <= {exercice_fin})
-❌ Exemple KO : 15/12/2023 → EXCLURE (date < {exercice_debut})
-❌ Exemple KO : 15/01/2025 → EXCLURE (date > {exercice_fin})
+**IMPORTANTE** : Dans les relevés bancaires, chaque ligne d'opération a une DATE (colonne de gauche).
+Cette date N'EST PAS dans le libellé, elle est dans une COLONNE SÉPARÉE.
 
-**MÉTHODE** :
-1. Lire la date de l'opération
-2. Comparer avec {exercice_debut} et {exercice_fin}
-3. Si hors période → NE PAS CRÉER d'événement
+**MÉTHODE OBLIGATOIRE** :
+1. Pour CHAQUE ligne du relevé, LIS la DATE dans la colonne de gauche
+2. VÉRIFIE : cette date est-elle >= {exercice_debut} ET <= {exercice_fin} ?
+3. Si OUI → Crée l'événement avec cette date dans le champ "date"
+4. Si NON → NE CRÉE PAS l'événement
+
+**Exemples** :
+✅ Date colonne : 15/01/2024 → INCLURE (dans exercice 2024)
+❌ Date colonne : 15/12/2023 → EXCLURE (avant {exercice_debut})
+❌ Date colonne : 15/01/2025 → EXCLURE (après {exercice_fin})
+
+⚠️ ATTENTION : Même si le libellé mentionne "2023" (ex: "DISTRIBUTION 4EME TRIM. 2023"),
+vérifie TOUJOURS la date de la COLONNE du relevé, pas le texte du libellé !
 
 🔗 RAPPROCHEMENT DES DOCUMENTS CONNEXES
 ========================================

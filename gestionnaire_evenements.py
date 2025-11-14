@@ -136,7 +136,7 @@ class GestionnaireEvenements:
         self.session.commit()
         evenement_id = result.fetchone()[0]
 
-        print(f"✅ Événement créé: #{evenement_id} - {data['libelle'][:50]} - {data['montant']}€")
+        print(f"✅ Événement créé: #{evenement_id} - {data['date_operation']} - {data['libelle'][:50]} - {data['montant']}€")
         return evenement_id
 
     def creer_evenements_batch(self, evenements: List[Dict]) -> Dict:
