@@ -1,40 +1,48 @@
-# Module 2 Comptabilité V8.0 - Avancées Novembre 2025
+# Module 2 Comptabilité V8.0 - Production Novembre 2025
 
-## Workflow 9-Phases Production (Depuis 26/10/2025)
-**Phases 1-4:** Automation IMAP → Extraction OCR → Génération propositions Markdown ✅
-**Phase 5:** Multi-validations `[_Head] VALIDE: <TOKEN>` depuis 14/11 ✅
-**Phases 6-9:** Insertion ACID + cleanup propositions (22+ en attente)
+## Workflow 9-Phases (26/10 - Opérationnel)
 
-## Correction Majeure Compte 161
-**Problème:** Remboursements capital utilisaient compte 164 (deprecated)
-**Solution:** Compte 161 (Emprunts) pour ventilation correcte capital/intérêts
-**Impact:** Tous prêts (LCL + INVESTIMUR) correctement catégorisés, bilan 2024 synchronisé
+**Phases 1-4: Automatisation complète**
+- IMAP extraction emails entrants
+- OCR Claude Vision (99.98% précision)
+- Génération propositions Markdown
+- Multi-validations supportées depuis 14/11
 
-## Données Comptabilité Établies
-- **696+ écritures ACID:** Cohérence 100% confirmée (bilan 2024 = bilan 2023 structure)
-- **Revenus net patrimoine:** +1.253k€/mois
-  - SCPI Épargne Pierre: +2.8k€/trimestre (distribution automatique)
-  - Service prêts: -1.425k€/mois (capital + intérêts LCL+INVESTIMUR)
-- **Prêts immobiliers:** 468 échéances automatisées
-  - LCL: 250k€ @ 1.050% (~250 échéances)
-  - INVESTIMUR: 250k€ @ 1.240% (~218 échéances)
+**Phase 5: Validation Token** ✅
+- Format: `[_Head] VALIDE: <TOKEN_MD5_32CHARS>`
+- Support multi-validations (1+ tokens/email)
+- Exemple: HEAD-90E2424F (14/11 23:19)
+
+**Phases 6-9: Insertion & Cleanup** (En attente)
+- Insertion ACID transactions
+- Nettoyage propositions_en_attente
+- Confirmation audit trail
 
 ## Événements Supportés
-**Opérationnel:**
-- INIT_BILAN_2023 ✅ (11 comptes ACTIF/PASSIF)
-- PRET_IMMOBILIER ✅ (468 échéances)
-- RELEVE_BANCAIRE ✅ (10+ types opérations, depuis 08/11)
 
-**En développement:**
-- EVENEMENT_SIMPLE (factures fournisseurs, notes de frais)
-- CLOTURE_EXERCICE
+**INIT_BILAN_2023 ✅**
+- 11 comptes ACTIF/PASSIF parsés
+- Structure répliquée pour 2024
 
-## Architecture Production V8.0
-- **Modules:** workflow v2.4 (détection+parsing+propositions) + validations + parseurs Vision
-- **Optimisations:** Mémoire OCR (100 DPI, max 10 pages, JPEG 85%), tokens MD5 32-chars
-- **Performance:** <1€/mois, 222+ cycles uptime, 100% fiabilité ACID, 99.98% OCR
+**PRET_IMMOBILIER ✅**
+- 468 échéances automatisées (LCL + INVESTIMUR)
+- Ventilation capital/intérêts via compte 161
 
-## Sessions Correction Novembre
-- **02-08/11:** 9 bugs corrigés (detection, token, dates, montants, format, insertion)
-- **08/11:** 3 corrections RELEVE_BANCAIRE (detection, cleanup JSON, multi-validations)
-- **10+ PRs mergées:** #92-#98, #168-#172, #263-#267
+**RELEVE_BANCAIRE ✅** (Depuis 08/11)
+- 10+ types opérations détectées
+- 22 propositions Q4 2024 en phase 6-9
+
+**EVENEMENT_SIMPLE** (Dev)
+- Factures, notes de frais
+
+## Corrections Novembre (Consolidées)
+
+**02-08/11:** 9 bugs (detection, token, dates, montants, format, insertion)
+**08/11:** 3 corrections RELEVE_BANCAIRE
+**14/11:** Synchronisation compte 161 + scripts diagnostic
+
+## Performance Production
+- Coût: <1€/mois
+- Fiabilité: 100% ACID
+- Mémoire: Compatible Render 512MB
+- OCR: 99.98% précision établie
