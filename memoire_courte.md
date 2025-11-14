@@ -1,19 +1,22 @@
-# Cycle #220 - 14/11/2025 17:09 | RELEVE_BANCAIRE Q4 2024 | Phase 5 Prête
-**Status:** Email reçu 18:07 UTC | PDF 3 relevés + 3 factures LCL | Propositions prêtes
+# Cycle #221 - 14/11/2025 17:26 | PHASE 5-9 ACTIVATION | Q4 2024 Production
 
-## Événement Analysé
-**Type:** RELEVE_BANCAIRE (3-parties)
-- Oct 05-04/11: 5.389,82€ final
-- Nov 05-04/12: 3.857,90€ final  
-- Déc 05-03/01: 2.225,23€ final
+## Événement RELEVE_BANCAIRE en validation
+**Status:** Phase 5 complétée (tag VALIDE détecté)
+- Email Ulrik: `[_Head] VALIDE: HEAD-B80DAACB` ✅
+- 22 propositions prêtes pour insertion
+- Montants Q4: Oct (5.389€) + Nov (3.857€) + Déc (2.225€)
+- Flux identifiés: Prêts 1.425k€/mois, Assurances 87,57€/mois, SCPI 6.346€/trim
 
-## Flux Mensuels Identifiés
-- **Prêts:** 1.425,00€/mois (LCL + INVESTIMUR)
-- **Assurances:** 87,57€/mois (CACI)
-- **SCPI:** 6.346,56€ (distribution 3T)
-- **ETF:** 50 parts MSCI World @ 18,18€
-- **Frais bancaires:** ~12,18€/mois
+## Architecture V8.0 Déployée (14/11)
+**Claude Vision Sonnet 4.5:** OCR haute-précision
+- PDF direct (pas conversion images)
+- Contrôles en-têtes relevés renforcés
+- Prompts v6.0 strict, filtrage exercice confirmé
+- Fiabilité: 220+ cycles, 100% uptime
 
-## Prochaine Action
-⏳ Attendre tag validation [_Head] VALIDE: <TOKEN>
-→ Phase 5-9: Insertion ACID ~86 écritures
+## BD Production (État actuel)
+- Écritures confirmées: 696+
+- Prêts: 2 (LCL 250k + INVESTIMUR 250k)
+- Propositions_en_attente: 22 RELEVE_BANCAIRE (validation phase 5 OK)
+- Échéances prêts: ~470 programmées
+- Fiabilité ACID: 100%
