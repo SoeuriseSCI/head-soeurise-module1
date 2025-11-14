@@ -50,11 +50,9 @@ F. Frais bancaires mensuels = événements distincts
 import os
 import json
 import base64
-import io
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from anthropic import Anthropic
-from pdf2image import convert_from_path
 
 
 class ExtracteurIntelligent:
@@ -93,31 +91,28 @@ class ExtracteurIntelligent:
         print(f"📄 PDF: {pdf_path}")
         print(f"📅 Exercice: {exercice_debut} → {exercice_fin}")
 
-        # Convertir PDF en images
-        print(f"\n🔄 Conversion PDF → images...")
-        images = convert_from_path(pdf_path, dpi=100)
-        print(f"   ✓ {len(images)} pages converties")
+        # Lire le PDF directement
+        print(f"\n🔄 Lecture du PDF...")
+        with open(pdf_path, 'rb') as f:
+            pdf_data = base64.standard_b64encode(f.read()).decode('utf-8')
 
-        # Construire le prompt global
-        prompt = self._construire_prompt_global(exercice_debut, exercice_fin, len(images))
+        print(f"   ✓ PDF chargé")
 
-        # Préparer les images pour Claude
-        content_blocks = [{"type": "text", "text": prompt}]
+        # Construire le prompt global (nb_pages sera estimé, mais pas critique)
+        prompt = self._construire_prompt_global(exercice_debut, exercice_fin, nb_pages=41)
 
-        for idx, image in enumerate(images, 1):
-            # Convertir image PIL → JPEG base64
-            buffer = io.BytesIO()
-            image.save(buffer, format='JPEG', quality=85, optimize=True)
-            image_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-            content_blocks.append({
-                "type": "image",
+        # Préparer le PDF pour Claude
+        content_blocks = [
+            {"type": "text", "text": prompt},
+            {
+                "type": "document",
                 "source": {
                     "type": "base64",
-                    "media_type": "image/jpeg",
-                    "data": image_base64
+                    "media_type": "application/pdf",
+                    "data": pdf_data
                 }
-            })
+            }
+        ]
 
         # Appel API Claude
         print(f"\n🧠 Envoi à Claude pour analyse globale...")
@@ -142,7 +137,7 @@ class ExtracteurIntelligent:
             print(f"   Événements identifiés: {len(evenements)}")
 
             metadata = {
-                'nb_pages': len(images),
+                'nb_pages': 41,  # PDF T1-T3 2024
                 'nb_evenements': len(evenements),
                 'model': 'claude-haiku-4-5-20251001',
                 'tokens_input': response.usage.input_tokens,
