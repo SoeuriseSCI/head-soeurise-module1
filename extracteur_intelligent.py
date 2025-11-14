@@ -120,7 +120,7 @@ class ExtracteurIntelligent:
 
         try:
             response = self.client.messages.create(
-                model="claude-haiku-4-5-20251001",  # Haiku 4.5 (cohérence avec le reste du projet)
+                model="claude-sonnet-4-5-20250514",  # Sonnet 4.5 pour OCR précis sur PDF scans
                 max_tokens=20000,  # Augmenté pour éviter auto-censure (85-90 événements attendus)
                 messages=[{
                     "role": "user",
@@ -139,7 +139,7 @@ class ExtracteurIntelligent:
             metadata = {
                 'nb_pages': 41,  # PDF T1-T3 2024
                 'nb_evenements': len(evenements),
-                'model': 'claude-haiku-4-5-20251001',
+                'model': 'claude-sonnet-4-5-20250514',
                 'tokens_input': response.usage.input_tokens,
                 'tokens_output': response.usage.output_tokens
             }
