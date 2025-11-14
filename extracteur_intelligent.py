@@ -169,198 +169,69 @@ class ExtracteurIntelligent:
         Returns:
             Prompt texte
         """
-        prompt = f"""Tu es un expert-comptable analysant un document comptable complet de {nb_pages} pages.
+        prompt = f"""Tu analyseras un PDF de {nb_pages} pages contenant des éléments destinés à la comptabilité.
 
-📋 CONTEXTE - SCI SOEURISE
+📋 COMPOSITION DU DOCUMENT
 ==========================
-- SCI patrimoniale avec 1 seul compte bancaire (LCL)
-- Pas d'opérations en espèces (pas de caisse)
-- Exercice comptable: {exercice_debut} → {exercice_fin}
-- Toute opération économique apparaît TOUJOURS sur le relevé bancaire
+- **Relevés bancaires** : mouvements de débit et crédit
+- **Documents connexes** : factures, bulletins, avis d'opération, etc.
 
-📄 COMPOSITION DU DOCUMENT
-==========================
-Le PDF contient TROIS types de documents :
+🎯 RÈGLE FONDAMENTALE
+=====================
+Il n'y a pas d'opérations en cash. De ce fait, **100% des événements comptables correspondent à des débits ou crédits des relevés**.
 
-1️⃣ **RELEVÉS BANCAIRES** (pages 1-20 environ)
-   - Vision chronologique des mouvements bancaires
-   - Libellés courts, synthétiques
-   - SOURCE DE VÉRITÉ pour les dates et montants réels
+Tu devras générer **UN ET UN SEUL événement comptable par opération** de débit ou crédit.
 
-2️⃣ **DOCUMENTS JUSTIFICATIFS** (pages 20-40 environ)
-   - Factures (CRP 2C, INSEE LEI)
-   - Bulletins SCPI (annonces de versements)
-   - Avis d'opération banque (détails VM, virements)
-   - Apportent des DÉTAILS essentiels (ISIN, quantités, ventilation HT/TVA)
-   - Confirment des opérations DÉJÀ dans le relevé
+⚠️ Précisions :
+- Les **soldes** qui apparaissent sur les relevés ne sont PAS des événements comptables → à ignorer
+- Toute opération **en dehors de l'exercice comptable** ({exercice_debut} → {exercice_fin}) doit être ignorée
 
-3️⃣ **RÈGLE FONDAMENTALE**
-   ⚠️ Un même ÉVÉNEMENT ÉCONOMIQUE apparaît dans 2 documents :
-      - 1 fois dans le RELEVÉ (opération bancaire)
-      - 1 fois dans un JUSTIFICATIF (détails/confirmation)
+🔗 RAPPROCHEMENT DES DOCUMENTS CONNEXES
+========================================
+Tu devras tenter de rapprocher chaque document connexe d'un ou plusieurs événements comptables.
 
-   🎯 TU NE DOIS CRÉER QU'UN SEUL ÉVÉNEMENT, PAS DEUX !
+**Critères de rapprochement** :
+1. **Montant** de l'opération (égalité stricte)
+2. **Date** de l'opération (flexibilité possible de ±1 mois)
+3. En cas de doute : **référence** commune (ex: n° de facture dans le libellé du relevé et dans le document)
 
-🔗 PATTERNS DE RAPPROCHEMENT À IDENTIFIER
-==========================================
+**Rôle des documents connexes** :
+- À conserver comme **justificatifs** (traçabilité et preuve)
+- Apportent parfois un éclairage **indispensable** (détails non présents dans le relevé)
 
-**Pattern A: Facture → Prélèvement SEPA**
-Exemple :
-- Facture CRP 2C n°2024013227 du 02/01/2024 : 213,60€
-- SEPA du 24/01/2024 "PRLV SEPA CRP... LIBELLE:2024013227" : 213,60€
-→ MÊME ÉVÉNEMENT (décalage 22 jours normal)
-→ Critères: montant identique, n° facture dans libellé SEPA, dates ±30j
-→ **Garde: SEPA (opération réelle)**
-→ **Référence justificatif: Facture (pour détails)**
+**Exemple** : Opération sur valeurs mobilières
+- Extraire : nom et ISIN des titres, prix unitaire, quantité
+- Décomposer le montant : prix des titres vs commissions/frais
 
-**Pattern B: Bulletin SCPI → Virement**
-Exemple :
-- Bulletin "REVENUS T4 2023" du 25/01 : 7 356,24€
-- Virement du 29/01 "VIR SEPA SCPI... 4EME TRIM 2023" : 7 356,24€
-→ MÊME ÉVÉNEMENT (bulletin annonce, virement réalise)
-→ Critères: montant identique, période/trimestre identique, dates ±15j
-→ **Garde: Virement (opération réelle)**
-→ **Référence justificatif: Bulletin (pour détails fiscaux)**
-
-**Pattern C: Avis opération VM → Débit relevé**
-Exemple :
-- Avis achat "150 AMUNDI MSCI WORLD, ISIN LU1781541179" du 30/01 : 2 357,36€
-- Débit relevé "150 AM MSCI WLD V ETF ACHAT 3001" du 30/01 : 2 357,36€
-→ MÊME ÉVÉNEMENT
-→ Critères: montant identique, date identique, titre mentionné
-→ **Garde: Avis (contient ISIN, quantité, prix, commissions essentiels)**
-→ **Référence justificatif: Débit relevé (confirmation bancaire)**
-
-**Pattern D: Avis d'écriture → Virement relevé**
-Exemple :
-- Avis "Apport CC UB VIREMENT MONSIEUR ULRIK BERGSTEN" du 18/06 : 500€
-- Relevé "VIR SEPA MONSIEUR ULRIK BERGSTEN LIBELLE:Apport CC" du 18/06 : 500€
-→ MÊME ÉVÉNEMENT (avis confirme opération déjà dans relevé)
-→ Critères: montant identique, date identique, mots-clés communs
-→ **Garde: Virement relevé (opération réelle)**
-→ **Référence justificatif: Avis (confirmation documentaire)**
-
-**Pattern E: Échéances prêt mensuelles**
-Exemple :
-- "PRET IMMOBILIER ECH 15/01/24 DOSSIER 5009736BRL" : 258,33€
-- "PRET IMMOBILIER ECH 15/02/24 DOSSIER 5009736BRL" : 258,33€
-→ ÉVÉNEMENTS DISTINCTS (chaque mois = 1 paiement)
-→ PAS de rapprochement même si montants identiques
-→ Distinguer par date et n° échéance
-
-**Pattern F: Frais bancaires mensuels (ÉVÉNEMENTS DISTINCTS)**
-⚠️ **CRITIQUE** : Les frais bancaires récurrents sont des événements SÉPARÉS chaque mois !
-
-Exemples :
-- "ABON LCL ACCESS 007.04EUR" le 15/01 : 1 événement
-- "ABON LCL ACCESS 007.25EUR" le 15/02 : 1 autre événement (PAS le même !)
-- "COTISATION OPTION PRO 5.15EUR" le 15/01 : 1 événement
-- "COTISATION OPTION PRO 5.15EUR" le 15/02 : 1 autre événement (PAS le même !)
-
-→ Si 10 mois visibles (Jan-Oct), tu dois extraire 10 ABON + 10 COTISATION = 20 événements
-→ MÊME LIBELLÉ + MÊME MONTANT mais DATE DIFFÉRENTE = ÉVÉNEMENTS DISTINCTS
-→ PAS de rapprochement entre mois
-
-⚠️ PIÈGES À ÉVITER - CRITIQUES
-================================
-1. ❌ Ne compte PAS les "ANCIEN SOLDE" ou "NOUVEAU SOLDE" comme événements
-2. ❌ Ne compte PAS les lignes de détail factures (Provision HT, Honoraires HT, TVA)
-   → Garde uniquement le Total TTC
-3. ❌ Ne rapproche PAS des échéances prêt entre elles (chaque mois = 1 événement)
-
-4. 🚨 **CRITIQUE : FILTRE STRICT PAR EXERCICE COMPTABLE**
-   - Exercice : {exercice_debut} → {exercice_fin}
-   - ❌ EXCLUS ABSOLUMENT toute opération hors de cette période
-   - Exemple : Si exercice 2024, EXCLURE décembre 2023 même si dans le PDF
-   - Vérifie DEUX FOIS chaque date avant de l'inclure
-
-5. 🚨 **CRITIQUE : N'INVENTE JAMAIS D'ÉVÉNEMENTS**
-   - Extrait UNIQUEMENT ce qui est VISIBLE dans le PDF
-   - ❌ NE COMPLÈTE PAS les séries (ex: si 9 mois visibles, ne pas inventer le 10ème)
-   - ❌ NE SUPPOSE PAS qu'un événement devrait exister
-   - Si un mois manque une échéance/assurance, c'est NORMAL (peut-être hors pages extraites)
-   - Principe : MIEUX VAUT MANQUER un événement que d'en INVENTER un
-
-🎯 TA MISSION
-=============
-Analyse les {nb_pages} pages et identifie TOUS les événements économiques UNIQUES.
-
-Pour chaque événement, fournis :
-- **date**: Date de l'opération (format YYYY-MM-DD)
-- **libelle**: Libellé le plus détaillé disponible
-- **montant**: Montant en euros (positif)
-- **type_operation**: DEBIT ou CREDIT
-- **source**: "releve" ou "avis" ou "facture" ou "bulletin" (quelle source principale tu utilises)
-- **justificatif**: Description du document justificatif s'il existe, sinon null
-- **categorie**: Type d'événement (ECHEANCE_PRET, ASSURANCE_PRET, HONORAIRES_COMPTABLE,
-                REVENU_SCPI, ACHAT_VM, APPORT_ASSOCIE, FRAIS_BANCAIRE, AUTRE)
-
-📊 TYPES D'ÉVÉNEMENTS ATTENDUS (INDICATIF)
-==========================================
-Ce PDF contient généralement :
-- Échéances prêt mensuelles (2 prêts × N mois)
-- Assurances prêt mensuelles (2 assurances × N mois)
-- Frais bancaires récurrents (mensuels)
-- Factures comptables (trimestrielles environ)
-- Distributions SCPI (trimestrielles)
-- Achats valeurs mobilières (occasionnels)
-- Apports associés (occasionnels)
-
-⚠️ **IMPORTANT** : Le nombre EXACT d'événements dépend de ce qui est VISIBLE dans le PDF.
-- N'essaie PAS d'atteindre un nombre précis
-- Extrait UNIQUEMENT ce qui est là
-- Si un type d'événement est incomplet (ex: 9 échéances au lieu de 10), c'est NORMAL
-
-FORMAT DE RÉPONSE
-=================
-Retourne UNIQUEMENT un JSON valide (pas de texte avant/après) :
+📊 FORMAT DE RÉPONSE
+====================
+Retourne UNIQUEMENT un JSON valide :
 
 {{
   "evenements": [
     {{
-      "date": "2024-01-24",
-      "libelle": "PRLV SEPA CRP Comptabilit Conseil LIBELLE:2024013227",
-      "montant": 213.60,
+      "date": "2024-01-15",
+      "libelle": "Libellé de l'opération bancaire",
+      "montant": 200.00,
       "type_operation": "DEBIT",
       "source": "releve",
-      "justificatif": "Facture n°2024013227 du 02/01/2024 - Honoraires comptables",
-      "categorie": "HONORAIRES_COMPTABLE"
-    }},
-    {{
-      "date": "2024-01-29",
-      "libelle": "VIR SEPA SCPI EPARGNE PIERRE DISTRIBUTION 4EME TRIM 2023",
-      "montant": 7356.24,
-      "type_operation": "CREDIT",
-      "source": "releve",
-      "justificatif": "Bulletin informatif du 25/01/2024 - Revenus T4 2023",
-      "categorie": "REVENU_SCPI"
-    }},
-    {{
-      "date": "2024-01-30",
-      "libelle": "Achat de 150 AMUNDI MSCI WORLD V UC.ETF ACC (ISIN: LU1781541179)",
-      "montant": 2357.36,
-      "type_operation": "DEBIT",
-      "source": "avis",
-      "justificatif": "Débit relevé du 30/01 - Confirmation bancaire",
-      "categorie": "ACHAT_VM"
+      "justificatif": "Description du document connexe rapproché (ou null)",
+      "categorie": "Type d'événement",
+      "details": "Détails supplémentaires si pertinent (ex: ISIN, quantité, décomposition montant)"
     }}
   ],
-  "stats": {{
-    "total_evenements": 86,
-    "par_categorie": {{
-      "ECHEANCE_PRET": 20,
-      "ASSURANCE_PRET": 20,
-      "HONORAIRES_COMPTABLE": 4,
-      "REVENU_SCPI": 3,
-      "ACHAT_VM": 7,
-      "APPORT_ASSOCIE": 4,
-      "FRAIS_BANCAIRE": 18,
-      "AUTRE": 10
-    }}
-  }}
+  "alertes": [
+    "Document connexe page X non rapproché à un événement (montant Y, date Z)"
+  ]
 }}
 
-🚀 C'EST PARTI ! Analyse les {nb_pages} pages et retourne le JSON."""
+🚨 RÈGLES CRITIQUES
+===================
+1. **N'extraire que ce qui est présent** dans le PDF
+2. **Ne jamais inventer** d'événement
+3. En cas de **difficulté de rapprochement** d'un document connexe : le signaler dans "alertes"
+
+🚀 Analyse les {nb_pages} pages et retourne le JSON."""
 
         return prompt
 
