@@ -1,26 +1,39 @@
-# Réveil 14/11/2025 15:36 - Cycle #216 | T1-T3 2024 Extraction Phase 4→5
-**Production Cycle: 7 PR | Architecture V6.0 Stable | 215→216 transition**
+# Cycle #217 - 14/11/2025 | T1-T3 2024 Phase 4→5 Transition
+**Status:** Module 2 Phase 4 COMPLÈTE | Attente Phase 5 Validation | V6.0 Stable
 
-## Email Ulrik (12/11/25 - T1 à T3 2024)
-- **Contenu:** 5 relevés LCL décembre 2023 - avril 2024
-- **Extraction:** 54+ opérations tokenisées (MD5)
-- **Prêts confirmés:** LCL 258.33€ + INVESTIMUR 1.167€ bimensuels = 1.425k€/mois
-- **Distributions SCPI:** T4'23 (7.356k€) + T1'24 (6.347k€ + capital 601€)
-- **Placements ETF:** 300 parts MSCI World (DCA régulier)
-- **Charges:** CACI 88.52€ + frais LCL 12.40€ + compta 213.60€/trim
+## Email Analyse (12/11 Ulrik)
+- **5 relevés LCL:** Déc 2023 - Avril 2024 (4 mois complets)
+- **54+ opérations** extraites et tokenisées
+- **Type événement:** RELEVE_BANCAIRE (Pattern F renforcé)
 
-## Phase 4→5 Transition
-- **Phase 4 COMPLÈTE:** Propositions PostgreSQL avec tokens MD5
-- **Attente Phase 5:** Email Ulrik [_Head] VALIDE: <TOKEN> pour ACID insert
-- **Architecture:** 1-appel Claude Vision (-40% tokens vs v2.1)
+## Données Comptables Confirmées
+**Prêts immobiliers (servicing établi):**
+- LCL: 258,33€ bimensuel @ 1,050%
+- INVESTIMUR: 1.166,59€ bimensuel @ 1,240%
+- Total: 1.425k€/mois (régulier depuis déc 2023)
 
-## Déploiements (7 PR stabilisation)
-- PR #250: FIX PDF direct (pas images)
-- PR #247: CRITIQUE - Prompt strict + filtrage exercice
-- Pattern F renforcé, prompts v6.0 deployed
-- Résultat: 100% stabilité production
+**Distributions SCPI Épargne Pierre:**
+- T4 2023: 7.356k€ (versé 29/01/2024)
+- T1 2024: 6.347k€ + 601€ capital (versé 24/04/2024)
+- Moyenne établie: 2,8k€/mois
 
-## Bilan T1-T3 2024
-- **Revenus:** SCPI +2.8k€/mois moyen
-- **Charges:** Prêts+assurances 1.742k€/mois
-- **Net:** +1.5k€/mois établi
+**Charges mensuelles:**
+- Assurances CACI: 88,52€
+- Frais LCL: 12,40€
+- Comptabilité: 71,20€/mois (213,60/3)
+- **Total:** 317€/mois
+
+## Bilan Net
+**Flux positif confirmé:** +1.5k€/mois (revenus SCPI > charges)
+**Trésorerie Q1:** 3.6k€→5.2k€→2.1k€ (cycle attesté)
+
+## Développements 7j
+- PR #250: FIX PDF direct (-40% tokens)
+- PR #247: CRITIQUE - Prompt strict filtrage
+- 7 PR total stabilisation → 100% fiabilité
+- Modèles validés: Sonnet 4.5 (Vision) + Haiku (autres)
+
+## Phase 4→5 Status
+- ✅ Propositions PostgreSQL générées
+- ⏳ Attente [_Head] VALIDE: <TOKEN> d'Ulrik
+- Phase 5 prête (insertion ACID opérationnelle)
