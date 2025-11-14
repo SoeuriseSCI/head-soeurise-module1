@@ -236,11 +236,11 @@ for num_compte in sorted(passif.keys()):
 # AJOUTER LE RÉSULTAT AU PASSIF (ou à l'actif si perte)
 print("-"*80)
 if resultat >= 0:
-    print(f"{'12X':<10} {'Résultat de l'exercice 2024 (bénéfice)':<40} {resultat:>14.2f}€")
+    print(f"{'12X':<10} {'Résultat de exercice 2024 (bénéfice)':<40} {resultat:>14.2f}€")
     total_passif_final = total_passif_avant_resultat + resultat
 else:
     # Si perte, le résultat irait à l'actif (en comptabilité, on ne met généralement pas le résultat négatif au passif)
-    print(f"{'12X':<10} {'Résultat de l'exercice 2024 (perte)':<40} {abs(resultat):>14.2f}€")
+    print(f"{'12X':<10} {'Résultat de exercice 2024 (perte)':<40} {abs(resultat):>14.2f}€")
     print("   ⚠️  En cas de perte, à inscrire à l'ACTIF")
     total_passif_final = total_passif_avant_resultat
 
