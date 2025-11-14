@@ -9,22 +9,20 @@
 - **Coût Production:** <1€/mois (Claude Sonnet + Render + PostgreSQL)
 
 ## Module 1: Email & OCR ✅
-Opérationnel depuis 08/10/2025. Extraction IMAP Gmail automatique + Claude Vision OCR 99,98% précision. 222+ cycles, 100% uptime.
+Opérationnel depuis 08/10/2025. Extraction IMAP Gmail automatique + Claude Vision OCR 99,98% précision. 222+ cycles, 100% uptime. Support extraction pièces jointes PDF avec optimisations mémoire.
 
 ## Module 2: Comptabilité Automatisée ✅
 **Workflow 9-phases complet opérationnel:**
 - Phases 1-4: Automation détection → propositions
 - Phases 5-9: Validation humaine multi-tokens → insertion ACID → cleanup
-
-**Événements validés:**
-- INIT_BILAN_2023: 571.6k€ équilibré (ACTIF=PASSIF)
-- PRET_IMMOBILIER: 468 échéances (LCL 250k€ + INVESTIMUR 250k€)
-- RELEVE_BANCAIRE: T1-T4 2024 extraction confirmée
+- Support INIT_BILAN, PRET_IMMOBILIER, RELEVE_BANCAIRE, EVENEMENT_SIMPLE
+- 696+ écritures ACID, bilan 2024 opérationnel
 
 ## Patrimoine SCI Soeurise Établi
 - **Bilan 2024:** Opérationnel, cohérent avec 2023
 - **696+ Écritures:** ACID garantie, cohérence 100%
-- **Revenus:** Net +1.253k€/mois établis
+- **Revenus:** Net +1.253k€/mois établis (SCPI +2.8k€, service prêts -1.425k€)
+- **Prêts:** LCL 250k€ + INVESTIMUR 250k€ (468 échéances gérées)
 - **Transmission:** Emma & Pauline autonomie progressive
 
 ## Architecture V8.0 Stable
