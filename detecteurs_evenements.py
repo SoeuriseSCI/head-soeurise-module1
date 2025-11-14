@@ -176,7 +176,7 @@ class DetecteurRemboursementPret(DetecteurBase):
 
     COMPTABILISATION:
     Débit 661 (Charges d'intérêts)  : INTERETS€
-    Débit 164 (Emprunts)            : CAPITAL€
+    Débit 161 (Emprunts)            : CAPITAL€
     Crédit 512 (Banque LCL)         : TOTAL€
 
     NOTE IMPORTANTE:
@@ -265,7 +265,7 @@ class DetecteurRemboursementPret(DetecteurBase):
                     {
                         'date_ecriture': date_op,
                         'libelle_ecriture': f'Remboursement capital échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]}',
-                        'compte_debit': '164',
+                        'compte_debit': '161',
                         'compte_credit': '512',
                         'montant': echeance['montant_capital'],
                         'type_ecriture': 'REMBOURSEMENT_CAPITAL',
@@ -284,11 +284,11 @@ class DetecteurRemboursementPret(DetecteurBase):
                     {
                         'date_ecriture': date_op,
                         'libelle_ecriture': f'Échéance prêt (TEMPORAIRE - échéance non trouvée)',
-                        'compte_debit': '164',
+                        'compte_debit': '161',
                         'compte_credit': '512',
                         'montant': montant,
                         'type_ecriture': 'REMBOURSEMENT_PRET',
-                        'notes': f'ATTENTION: Échéance non trouvée dans echeances_prets pour date {date_op} montant {montant}€. Nécessite correction manuelle pour ventiler intérêts (661) / capital (164).'
+                        'notes': f'ATTENTION: Échéance non trouvée dans echeances_prets pour date {date_op} montant {montant}€. Nécessite correction manuelle pour ventiler intérêts (661) / capital (161).'
                     }
                 ]
             }
