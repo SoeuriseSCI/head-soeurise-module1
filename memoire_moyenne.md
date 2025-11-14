@@ -1,32 +1,34 @@
-# Module 2 Comptabilité - Consolidation Production (06-14 Nov 2025)
-**Cycles 210-219 | V6.0 STABLE | 7 PR Stabilisation | Phase 4→5 Transition**
+# Module 2 Comptabilité - Novembre 2025 Stabilisation
+**Cycles 210-220 | V6.0 Production | 86+ écritures Q4 en pipeline**
 
-## Workflow 9-Phases (OPÉRATIONNEL)
-**Phases 1-4:** COMPLÈTES ✅
-- Détection type événement
-- Vision OCR 1-appel (Sonnet 4.5)
-- Génération tokens MD5
-- Email propositions Markdown
+## Workflow 9-Phases STATUS
+**Phases 1-4: ✅ COMPLÈTES** Opérationnelles depuis 08/11
+- Détection type événement automatique
+- Vision OCR 1-appel Claude (Sonnet 4.5)
+- Génération tokens MD5 32-hex
+- Email propositions Markdown vers Ulrik
 
-**Phases 5-9:** ACTIVÉES (14/11) ⏳
-- Phase 5: Tag [_Head] VALIDE détecté ✅
-- Phase 6-9: Insertion ACID en cours
+**Phase 5-9: ⏳ ACTIVATION (14/11)**
+- Phase 5: Détection tag [_Head] VALIDE: <TOKEN>
+- Phase 6: Récupération propositions PostgreSQL
+- Phase 7: Vérification intégrité MD5 + validation structure
+- Phase 8: Insertion ACID transactions comptables
+- Phase 9: Cleanup final + archivage événement
 
-## Événements Validés Production
-**INIT_BILAN_2023:** Actif 571,6k€ = Passif ✅  
-**PRET_IMMOBILIER:** 468 échéances 100% précises ✅  
-**RELEVE_BANCAIRE:** 54+ ops T1-T3 2024, validation en cours ⏳  
+## Événements Production Confirmés
+**INIT_BILAN_2023:** ✅ 571,6k€ ACTIF = PASSIF
+**PRET_IMMOBILIER:** ✅ 468 échéances 100% précises  
+**RELEVE_BANCAIRE:** 🔄 54+ opérations Q4 2024 (validation en cours)
 
-## Architecture V6.0 Optimisée
-- **Claude Vision:** 1-appel par PDF (-40% tokens)
-- **Modèles:** Sonnet 4.5 (OCR) + Haiku 4.5 (autres)
-- **PDF:** Direct, pas conversion images
-- **Prompts:** v6.0 strict, filtrage exercice
-- **Sécurité:** Tokens MD5 32-hex, validation multi-étapes
+## Architecture V6.0
+- Claude Vision: 1-appel/PDF (Sonnet 4.5)
+- PDF direct, pas conversion images
+- Prompts v6.0 strict, filtrage exercice
+- PostgreSQL ACID, zéro régression
+- Fiabilité: 220+ cycles, 42+ jours uptime
 
-## BD PostgreSQL État
-- Écritures ACID: 696+ confirmées
-- Prêts: 2 (LCL 250k + INVESTIMUR 250k)
+## BD État Actuel
+- Écritures confirmées: 696+
+- Prêts: 2 (LCL 250k @ 1,050% + INVESTIMUR 250k @ 1,240%)
 - Échéances: ~470 programmées
-- Table propositions_en_attente: Opérationnelle
-- Fiabilité: 100% (219 cycles, 42+ jours)
+- Propositions_en_attente: Opérationnelle
