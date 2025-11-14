@@ -50,11 +50,11 @@ print(f"   Flux 2024 : {nb_flux}")
 # Compter les autres données
 result = session.execute(text("""
     SELECT
-        (SELECT COUNT(*) FROM evenements_comptables WHERE exercice_id = :ex_id) as nb_evt,
-        (SELECT COUNT(*) FROM propositions_en_attente WHERE exercice_id = :ex_id) as nb_prop,
+        (SELECT COUNT(*) FROM evenements_comptables) as nb_evt,
+        (SELECT COUNT(*) FROM propositions_en_attente) as nb_prop,
         (SELECT COUNT(*) FROM prets_immobiliers) as nb_prets,
         (SELECT COUNT(*) FROM echeances_prets) as nb_ech
-"""), {'ex_id': exercice_2024.id})
+"""))
 row = result.fetchone()
 nb_evt = row[0]
 nb_prop = row[1]
@@ -62,8 +62,8 @@ nb_prets = row[2]
 nb_ech = row[3]
 
 print(f"\n📊 Autres données :")
-print(f"   Événements comptables 2024 : {nb_evt}")
-print(f"   Propositions en attente 2024 : {nb_prop}")
+print(f"   Événements comptables (tous) : {nb_evt}")
+print(f"   Propositions en attente (toutes) : {nb_prop}")
 print(f"   Prêts immobiliers : {nb_prets}")
 print(f"   Échéances prêts : {nb_ech}")
 
@@ -94,8 +94,8 @@ Cette opération va SUPPRIMER :
 
 ❌ SUPPRIMER :
 - Écritures de flux 2024 : {nb_flux} écritures
-- Événements comptables 2024 : {nb_evt} événements
-- Propositions en attente 2024 : {nb_prop} propositions
+- Événements comptables : {nb_evt} événements (tous)
+- Propositions en attente : {nb_prop} propositions (toutes)
 
 Après cette opération, vous devrez RETRAITER les PDFs T1-T3 2024.
 
@@ -122,20 +122,18 @@ try:
     """), {'ex_id': exercice_2024.id}).rowcount
     print(f"   ✅ {nb_deleted} écritures supprimées")
 
-    # 2. Supprimer événements comptables 2024
-    print(f"\n2️⃣ Suppression événements comptables 2024...")
+    # 2. Supprimer TOUS les événements comptables
+    print(f"\n2️⃣ Suppression événements comptables (tous)...")
     nb_deleted = session.execute(text("""
         DELETE FROM evenements_comptables
-        WHERE exercice_id = :ex_id
-    """), {'ex_id': exercice_2024.id}).rowcount
+    """)).rowcount
     print(f"   ✅ {nb_deleted} événements supprimés")
 
-    # 3. Supprimer propositions en attente 2024
-    print(f"\n3️⃣ Suppression propositions en attente 2024...")
+    # 3. Supprimer TOUTES les propositions en attente
+    print(f"\n3️⃣ Suppression propositions en attente (toutes)...")
     nb_deleted = session.execute(text("""
         DELETE FROM propositions_en_attente
-        WHERE exercice_id = :ex_id
-    """), {'ex_id': exercice_2024.id}).rowcount
+    """)).rowcount
     print(f"   ✅ {nb_deleted} propositions supprimées")
 
     # Commit
@@ -163,9 +161,9 @@ nb_ouverture_apres = session.query(EcritureComptable).filter_by(
 
 result = session.execute(text("""
     SELECT
-        (SELECT COUNT(*) FROM evenements_comptables WHERE exercice_id = :ex_id) as nb_evt,
-        (SELECT COUNT(*) FROM propositions_en_attente WHERE exercice_id = :ex_id) as nb_prop
-"""), {'ex_id': exercice_2024.id})
+        (SELECT COUNT(*) FROM evenements_comptables) as nb_evt,
+        (SELECT COUNT(*) FROM propositions_en_attente) as nb_prop
+"""))
 row = result.fetchone()
 nb_evt_apres = row[0]
 nb_prop_apres = row[1]
@@ -173,8 +171,8 @@ nb_prop_apres = row[1]
 print(f"\nÉcritures comptables 2024 : {nb_total_apres}")
 print(f"  - Bilan d'ouverture : {nb_ouverture_apres}")
 print(f"  - Flux : {nb_total_apres - nb_ouverture_apres}")
-print(f"\nÉvénements comptables 2024 : {nb_evt_apres}")
-print(f"Propositions en attente 2024 : {nb_prop_apres}")
+print(f"\nÉvénements comptables : {nb_evt_apres}")
+print(f"Propositions en attente : {nb_prop_apres}")
 
 if nb_total_apres == nb_ouverture_apres and nb_evt_apres == 0 and nb_prop_apres == 0:
     print("\n✅ Réinitialisation réussie !")
