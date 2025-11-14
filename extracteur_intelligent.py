@@ -125,7 +125,7 @@ class ExtracteurIntelligent:
 
         try:
             response = self.client.messages.create(
-                model="claude-sonnet-4-5-20251022",  # Sonnet pour analyse complexe
+                model="claude-3-5-sonnet-20241022",  # Sonnet 3.5 pour analyse complexe
                 max_tokens=16000,  # Besoin de beaucoup de tokens pour 86 événements
                 messages=[{
                     "role": "user",
@@ -144,7 +144,7 @@ class ExtracteurIntelligent:
             metadata = {
                 'nb_pages': len(images),
                 'nb_evenements': len(evenements),
-                'model': 'claude-sonnet-4-5-20251022',
+                'model': 'claude-3-5-sonnet-20241022',
                 'tokens_input': response.usage.input_tokens,
                 'tokens_output': response.usage.output_tokens
             }
