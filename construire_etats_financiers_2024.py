@@ -3,6 +3,12 @@
 Construction des états financiers 2024
 - Bilan 2024 (Actif / Passif)
 - Compte d'exploitation 2024 (Produits / Charges)
+
+MÉTHODE COMPTABLE CORRECTE :
+1. Calculer soldes finaux de TOUS les comptes (ouverture + flux)
+2. Séparer bilan (classes 1-5) et résultat (classes 6-7)
+3. Inscrire le résultat au passif
+4. Vérifier équilibre ACTIF = PASSIF
 """
 
 import sys
@@ -26,17 +32,30 @@ if not exercice_2024:
     print("❌ Exercice 2024 non trouvé")
     sys.exit(1)
 
+# TOUTES les écritures 2024 (ouverture + flux)
 ecritures_2024 = session.query(EcritureComptable).filter_by(exercice_id=exercice_2024.id).all()
 
 print(f"\n📝 Écritures 2024 : {len(ecritures_2024)}")
+print(f"   Dont écritures d'ouverture : {sum(1 for e in ecritures_2024 if e.type_ecriture == 'INIT_BILAN_2023')}")
+print(f"   Dont flux de l'année : {sum(1 for e in ecritures_2024 if e.type_ecriture != 'INIT_BILAN_2023')}")
 print(f"   Période : {exercice_2024.date_debut} → {exercice_2024.date_fin}")
 
 # ==============================================================================
-# CALCUL DES SOLDES PAR COMPTE
+# ÉTAPE 1 : CALCUL DES SOLDES FINAUX PAR COMPTE
 # ==============================================================================
 
-# Dictionnaire : numero_compte -> {'debit': Decimal, 'credit': Decimal, 'libelle': str, 'type': str}
-soldes = defaultdict(lambda: {'debit': Decimal('0'), 'credit': Decimal('0'), 'libelle': '', 'type': ''})
+print("\n" + "="*80)
+print("ÉTAPE 1 : CALCUL DES SOLDES FINAUX")
+print("="*80)
+
+# Dictionnaire : numero_compte -> {'debit': Decimal, 'credit': Decimal, 'libelle': str, 'type': str, 'classe': int}
+soldes = defaultdict(lambda: {
+    'debit': Decimal('0'),
+    'credit': Decimal('0'),
+    'libelle': '',
+    'type': '',
+    'classe': 0
+})
 
 for e in ecritures_2024:
     montant = Decimal(str(e.montant))
@@ -47,6 +66,8 @@ for e in ecritures_2024:
     if cpte_d:
         soldes[e.compte_debit]['libelle'] = cpte_d.libelle
         soldes[e.compte_debit]['type'] = cpte_d.type_compte
+        if e.compte_debit and e.compte_debit[0].isdigit():
+            soldes[e.compte_debit]['classe'] = int(e.compte_debit[0])
 
     # Compte crédit
     soldes[e.compte_credit]['credit'] += montant
@@ -54,40 +75,131 @@ for e in ecritures_2024:
     if cpte_c:
         soldes[e.compte_credit]['libelle'] = cpte_c.libelle
         soldes[e.compte_credit]['type'] = cpte_c.type_compte
+        if e.compte_credit and e.compte_credit[0].isdigit():
+            soldes[e.compte_credit]['classe'] = int(e.compte_credit[0])
 
 # Calculer les soldes nets
 for num_compte, data in soldes.items():
     data['solde'] = data['debit'] - data['credit']
 
+print(f"\nNombre de comptes mouvementés : {len(soldes)}")
+
+# Vérifier le compte 89 (doit être à 0)
+if '89' in soldes:
+    solde_89 = soldes['89']['solde']
+    print(f"Vérification compte 89 (Bilan d'ouverture) : {solde_89:.2f}€")
+    if abs(solde_89) < Decimal('0.01'):
+        print("   ✅ Compte 89 équilibré")
+    else:
+        print(f"   ⚠️  Compte 89 non équilibré (écart : {solde_89:.2f}€)")
+
 # ==============================================================================
-# PARTIE 1 : BILAN 2024
+# ÉTAPE 2 : COMPTE DE RÉSULTAT 2024
 # ==============================================================================
 
 print("\n" + "="*80)
-print("📋 BILAN AU 31/12/2024")
+print("ÉTAPE 2 : COMPTE DE RÉSULTAT 2024")
 print("="*80)
 
-# Regrouper par type de compte
+charges = {}
+produits = {}
+
+for num_compte, data in soldes.items():
+    classe = data['classe']
+
+    # Ignorer compte 89 (bilan d'ouverture)
+    if num_compte == '89':
+        continue
+
+    # CHARGES = classe 6
+    if classe == 6:
+        charges[num_compte] = data
+    # PRODUITS = classe 7
+    elif classe == 7:
+        produits[num_compte] = data
+
+# Afficher CHARGES
+print("\n" + "-"*80)
+print("CHARGES (Classe 6)")
+print("-"*80)
+print(f"{'Compte':<10} {'Libellé':<40} {'Montant':>15}")
+print("-"*80)
+
+total_charges = Decimal('0')
+for num_compte in sorted(charges.keys()):
+    data = charges[num_compte]
+    montant = data['debit']  # Charges = débit
+    total_charges += montant
+    print(f"{num_compte:<10} {data['libelle'][:40]:<40} {montant:>14.2f}€")
+
+print("-"*80)
+print(f"{'TOTAL CHARGES':<50} {total_charges:>14.2f}€")
+print("="*80)
+
+# Afficher PRODUITS
+print("\n" + "-"*80)
+print("PRODUITS (Classe 7)")
+print("-"*80)
+print(f"{'Compte':<10} {'Libellé':<40} {'Montant':>15}")
+print("-"*80)
+
+total_produits = Decimal('0')
+for num_compte in sorted(produits.keys()):
+    data = produits[num_compte]
+    montant = data['credit']  # Produits = crédit
+    total_produits += montant
+    print(f"{num_compte:<10} {data['libelle'][:40]:<40} {montant:>14.2f}€")
+
+print("-"*80)
+print(f"{'TOTAL PRODUITS':<50} {total_produits:>14.2f}€")
+print("="*80)
+
+# Calcul résultat
+resultat = total_produits - total_charges
+
+print("\n🎯 RÉSULTAT DE L'EXERCICE 2024 (AVANT IMPÔT)")
+print("-"*80)
+print(f"Total PRODUITS : {total_produits:>14.2f}€")
+print(f"Total CHARGES  : {total_charges:>14.2f}€")
+print("-"*80)
+if resultat >= 0:
+    print(f"BÉNÉFICE       : {resultat:>14.2f}€ ✅")
+else:
+    print(f"PERTE          : {abs(resultat):>14.2f}€ ❌")
+print("="*80)
+
+# ==============================================================================
+# ÉTAPE 3 : BILAN AU 31/12/2024
+# ==============================================================================
+
+print("\n" + "="*80)
+print("ÉTAPE 3 : BILAN AU 31/12/2024")
+print("="*80)
+
 actif = {}
 passif = {}
 
 for num_compte, data in soldes.items():
-    type_compte = data['type']
+    classe = data['classe']
     solde = data['solde']
 
-    # Classe du compte (premier chiffre)
-    classe = int(num_compte[0]) if num_compte and num_compte[0].isdigit() else 0
+    # Ignorer compte 89 (bilan d'ouverture, déjà soldé)
+    if num_compte == '89':
+        continue
 
-    # Classification bilan :
-    # ACTIF = classes 1-5 avec solde débiteur (positif)
-    # PASSIF = classes 1-5 avec solde créditeur (négatif)
-    # Exception : 512 (Banque) est un compte financier qui peut être à l'actif ou au passif
+    # Ignorer classes 6 et 7 (comptes de gestion, dans le résultat)
+    if classe in [6, 7]:
+        continue
 
+    # Classes 1-5 = BILAN
     if classe in [1, 2, 3, 4, 5]:
-        if type_compte == 'ACTIF' or (type_compte == 'FINANCIERS' and solde > 0):
+        # Solde DÉBITEUR → ACTIF
+        if solde > Decimal('0.01'):
             actif[num_compte] = data
-        elif type_compte == 'PASSIF' or (type_compte == 'FINANCIERS' and solde < 0):
+        # Solde CRÉDITEUR → PASSIF
+        elif solde < Decimal('-0.01'):
             passif[num_compte] = data
+        # Solde ~ 0 : ignorer
 
 # Afficher ACTIF
 print("\n" + "-"*80)
@@ -114,108 +226,64 @@ print("-"*80)
 print(f"{'Compte':<10} {'Libellé':<40} {'Montant':>15}")
 print("-"*80)
 
-total_passif = Decimal('0')
+total_passif_avant_resultat = Decimal('0')
 for num_compte in sorted(passif.keys()):
     data = passif[num_compte]
     montant = abs(data['solde'])  # Passif = valeur absolue (créditeur)
-    total_passif += montant
+    total_passif_avant_resultat += montant
     print(f"{num_compte:<10} {data['libelle'][:40]:<40} {montant:>14.2f}€")
 
-print("-"*80)
-print(f"{'TOTAL PASSIF':<50} {total_passif:>14.2f}€")
-print("="*80)
-
-# Vérification équilibre bilan
-print("\n🎯 VÉRIFICATION ÉQUILIBRE BILAN")
-print("-"*80)
-print(f"Total ACTIF  : {total_actif:>14.2f}€")
-print(f"Total PASSIF : {total_passif:>14.2f}€")
-print(f"Écart        : {abs(total_actif - total_passif):>14.2f}€")
-
-if abs(total_actif - total_passif) < Decimal('0.01'):
-    print("✅ Bilan équilibré")
-else:
-    print(f"⚠️  Bilan non équilibré (écart : {total_actif - total_passif:.2f}€)")
-    print("   Note : Le résultat de l'exercice doit être inscrit au passif pour équilibrer")
-
-# ==============================================================================
-# PARTIE 2 : COMPTE D'EXPLOITATION 2024
-# ==============================================================================
-
-print("\n\n" + "="*80)
-print("📊 COMPTE D'EXPLOITATION 2024")
-print("="*80)
-
-# Regrouper par type
-charges = {}
-produits = {}
-
-for num_compte, data in soldes.items():
-    classe = int(num_compte[0]) if num_compte and num_compte[0].isdigit() else 0
-
-    # CHARGES = classe 6
-    # PRODUITS = classe 7
-
-    if classe == 6:
-        charges[num_compte] = data
-    elif classe == 7:
-        produits[num_compte] = data
-
-# Afficher CHARGES
-print("\n" + "-"*80)
-print("CHARGES")
-print("-"*80)
-print(f"{'Compte':<10} {'Libellé':<40} {'Montant':>15}")
-print("-"*80)
-
-total_charges = Decimal('0')
-for num_compte in sorted(charges.keys()):
-    data = charges[num_compte]
-    montant = data['debit']  # Charges = débit
-    total_charges += montant
-    print(f"{num_compte:<10} {data['libelle'][:40]:<40} {montant:>14.2f}€")
-
-print("-"*80)
-print(f"{'TOTAL CHARGES':<50} {total_charges:>14.2f}€")
-print("="*80)
-
-# Afficher PRODUITS
-print("\n" + "-"*80)
-print("PRODUITS")
-print("-"*80)
-print(f"{'Compte':<10} {'Libellé':<40} {'Montant':>15}")
-print("-"*80)
-
-total_produits = Decimal('0')
-for num_compte in sorted(produits.keys()):
-    data = produits[num_compte]
-    montant = data['credit']  # Produits = crédit
-    total_produits += montant
-    print(f"{num_compte:<10} {data['libelle'][:40]:<40} {montant:>14.2f}€")
-
-print("-"*80)
-print(f"{'TOTAL PRODUITS':<50} {total_produits:>14.2f}€")
-print("="*80)
-
-# Calcul résultat
-resultat = total_produits - total_charges
-
-print("\n🎯 RÉSULTAT DE L'EXERCICE 2024")
-print("-"*80)
-print(f"Total PRODUITS : {total_produits:>14.2f}€")
-print(f"Total CHARGES  : {total_charges:>14.2f}€")
+# AJOUTER LE RÉSULTAT AU PASSIF (ou à l'actif si perte)
 print("-"*80)
 if resultat >= 0:
-    print(f"BÉNÉFICE       : {resultat:>14.2f}€ ✅")
+    print(f"{'12X':<10} {'Résultat de l'exercice 2024 (bénéfice)':<40} {resultat:>14.2f}€")
+    total_passif_final = total_passif_avant_resultat + resultat
 else:
-    print(f"PERTE          : {abs(resultat):>14.2f}€ ❌")
+    # Si perte, le résultat irait à l'actif (en comptabilité, on ne met généralement pas le résultat négatif au passif)
+    print(f"{'12X':<10} {'Résultat de l'exercice 2024 (perte)':<40} {abs(resultat):>14.2f}€")
+    print("   ⚠️  En cas de perte, à inscrire à l'ACTIF")
+    total_passif_final = total_passif_avant_resultat
+
+print("-"*80)
+print(f"{'TOTAL PASSIF':<50} {total_passif_final:>14.2f}€")
 print("="*80)
 
 # ==============================================================================
-# PARTIE 3 : EXPORT JSON (optionnel)
+# ÉTAPE 4 : VÉRIFICATION ÉQUILIBRE BILAN
 # ==============================================================================
 
-print("\n\n" + "="*80)
+print("\n" + "="*80)
+print("ÉTAPE 4 : VÉRIFICATION ÉQUILIBRE BILAN")
+print("="*80)
+
+actif_final = total_actif
+passif_final = total_passif_final
+
+# Si perte, l'ajouter à l'actif
+if resultat < 0:
+    actif_final += abs(resultat)
+    print(f"\nPerte ajoutée à l'ACTIF : {abs(resultat):.2f}€")
+
+ecart = actif_final - passif_final
+
+print(f"\nTotal ACTIF  : {actif_final:>14.2f}€")
+print(f"Total PASSIF : {passif_final:>14.2f}€")
+print("-"*80)
+print(f"Écart        : {ecart:>14.2f}€")
+
+if abs(ecart) < Decimal('0.01'):
+    print("\n✅ BILAN ÉQUILIBRÉ")
+else:
+    print(f"\n⚠️  BILAN NON ÉQUILIBRÉ (écart : {ecart:.2f}€)")
+    print("\nDiagnostic possible :")
+    print("- Vérifier que toutes les écritures d'ouverture sont présentes")
+    print("- Vérifier la cohérence du bilan d'ouverture")
+
+# ==============================================================================
+# EXPORT JSON
+# ==============================================================================
+
+print("\n" + "="*80)
 print("💾 EXPORT JSON")
 print("="*80)
 
@@ -230,25 +298,7 @@ export = {
         "date_fin": str(exercice_2024.date_fin),
         "statut": exercice_2024.statut
     },
-    "bilan": {
-        "actif": {
-            num: {
-                "libelle": data['libelle'],
-                "montant": float(data['solde'])
-            }
-            for num, data in actif.items()
-        },
-        "passif": {
-            num: {
-                "libelle": data['libelle'],
-                "montant": float(abs(data['solde']))
-            }
-            for num, data in passif.items()
-        },
-        "total_actif": float(total_actif),
-        "total_passif": float(total_passif)
-    },
-    "compte_exploitation": {
+    "compte_resultat": {
         "charges": {
             num: {
                 "libelle": data['libelle'],
@@ -266,42 +316,66 @@ export = {
         "total_charges": float(total_charges),
         "total_produits": float(total_produits),
         "resultat": float(resultat)
+    },
+    "bilan": {
+        "actif": {
+            num: {
+                "libelle": data['libelle'],
+                "montant": float(data['solde'])
+            }
+            for num, data in actif.items()
+        },
+        "passif": {
+            num: {
+                "libelle": data['libelle'],
+                "montant": float(abs(data['solde']))
+            }
+            for num, data in passif.items()
+        },
+        "resultat_exercice": float(resultat),
+        "total_actif": float(actif_final),
+        "total_passif": float(passif_final),
+        "equilibre": abs(ecart) < 0.01
     }
 }
 
-# Sauvegarder dans un fichier
 output_file = f"etats_financiers_2024_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 with open(output_file, 'w', encoding='utf-8') as f:
     json.dump(export, f, indent=2, ensure_ascii=False)
 
 print(f"\n✅ Export JSON sauvegardé : {output_file}")
-print(f"   → Utiliser ce fichier pour comparer avec documents officiels")
 
 # ==============================================================================
-# SYNTHÈSE
+# SYNTHÈSE FINALE
 # ==============================================================================
 
-print("\n\n" + "="*80)
-print("✅ SYNTHÈSE")
+print("\n" + "="*80)
+print("✅ SYNTHÈSE FINALE")
 print("="*80)
 
 print(f"""
-📋 BILAN 2024
-   ACTIF  : {total_actif:>14.2f}€
-   PASSIF : {total_passif:>14.2f}€
-   Équilibré : {"✅ OUI" if abs(total_actif - total_passif) < 0.01 else "❌ NON"}
-
-📊 COMPTE D'EXPLOITATION 2024
+📊 COMPTE DE RÉSULTAT 2024
    PRODUITS : {total_produits:>14.2f}€
    CHARGES  : {total_charges:>14.2f}€
+   ────────────────────────────────
    RÉSULTAT : {resultat:>14.2f}€ {"(BÉNÉFICE ✅)" if resultat >= 0 else "(PERTE ❌)"}
+   (avant impôt sur les sociétés)
 
-📁 Export JSON : {output_file}
+📋 BILAN AU 31/12/2024
+   ACTIF  : {actif_final:>14.2f}€
+   PASSIF : {passif_final:>14.2f}€
+   (dont résultat : {resultat:>12.2f}€)
+   ────────────────────────────────
+   Équilibré : {"✅ OUI" if abs(ecart) < 0.01 else f"❌ NON (écart {ecart:.2f}€)"}
+
+📁 Export : {output_file}
 
 🎯 PROCHAINES ÉTAPES :
    1. Comparer avec documents comptables officiels
-   2. Si OK → Clôturer exercice 2024
-   3. Développer module gestion portefeuille VM
+   2. Si écart : identifier et corriger
+   3. Si OK : Provisionner impôt sur les sociétés (≈25% du bénéfice)
+   4. Clôturer exercice 2024
+   5. Développer module gestion portefeuille VM
 """)
 
 print("="*80)
