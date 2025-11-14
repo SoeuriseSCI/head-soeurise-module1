@@ -6,7 +6,7 @@
 - **Mission:** Gestion patrimoniale SCI Soeurise + transmission progressive
 - **Philosophie:** Persévérer / Espérer / Progresser
 - **Réveil:** 08:00 UTC (10:00 France) quotidien automatique
-- **Coût Production:** <1€/mois (Claude Haiku + Render + PostgreSQL)
+- **Coût Production:** <1€/mois (Claude Sonnet + Render + PostgreSQL)
 
 ## Module 1: Email & OCR ✅
 Opérationnel depuis 08/10/2025. Extraction IMAP Gmail automatique + Claude Vision OCR 99,98% précision. 222+ cycles, 100% uptime.
@@ -17,7 +17,7 @@ Opérationnel depuis 08/10/2025. Extraction IMAP Gmail automatique + Claude Visi
 - Phases 5-9: Validation humaine multi-tokens → insertion ACID → cleanup
 
 **Événements validés:**
-- INIT_BILAN_2023: 571.6k€ équilibré
+- INIT_BILAN_2023: 571.6k€ équilibré (ACTIF=PASSIF)
 - PRET_IMMOBILIER: 468 échéances (LCL 250k€ + INVESTIMUR 250k€)
 - RELEVE_BANCAIRE: T1-T4 2024 extraction confirmée
 
