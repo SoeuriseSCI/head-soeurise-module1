@@ -1,26 +1,19 @@
-# Cycle #219 - 14/11/2025 | Phase 5 Activation | V6.0 STABLE
-**Status:** Validation RELEVE_BANCAIRE reçue | Token HEAD-97580BE0 | Prêt Phase 5 ACID
+# Cycle #220 - 14/11/2025 17:09 | RELEVE_BANCAIRE Q4 2024 | Phase 5 Prête
+**Status:** Email reçu 18:07 UTC | PDF 3 relevés + 3 factures LCL | Propositions prêtes
 
-## Email Validation (14/11 17:53)
-- **From:** ulrik.c.s.be@gmail.com
-- **Tag:** [_Head] VALIDE: HEAD-97580BE0
-- **Type:** RELEVE_BANCAIRE (86 propositions)
-- **Timestamp:** 14/11/2025 17:53:07 +0100
-- **Action:** Acceptée ✅
+## Événement Analysé
+**Type:** RELEVE_BANCAIRE (3-parties)
+- Oct 05-04/11: 5.389,82€ final
+- Nov 05-04/12: 3.857,90€ final  
+- Déc 05-03/01: 2.225,23€ final
 
-## Phase 5 Status (Module 2)
-- ✅ Détection validation réussie
-- ⏳ Récupération propositions PostgreSQL
-- ⏳ Vérification MD5 intégrité
-- ⏳ Insertion ACID écritures (Phase 8)
-- ⏳ Cleanup final (Phase 9)
+## Flux Mensuels Identifiés
+- **Prêts:** 1.425,00€/mois (LCL + INVESTIMUR)
+- **Assurances:** 87,57€/mois (CACI)
+- **SCPI:** 6.346,56€ (distribution 3T)
+- **ETF:** 50 parts MSCI World @ 18,18€
+- **Frais bancaires:** ~12,18€/mois
 
-## Git Stabilisation (14/11)
-11 commits: PR #249-254 (PDF direct, Sonnet 4.5, filtrage décembre)
-**Résultat:** V6.0 PRODUCTION 100% fiable
-
-## Flux Financiers Conforme
-- SCPI: 2,8k€/mois ✅
-- Prêts: 1,425k€/mois ✅
-- Net: +1,5k€/mois ✅
-- Comptabilité: 696+ écritures ACID ✅
+## Prochaine Action
+⏳ Attendre tag validation [_Head] VALIDE: <TOKEN>
+→ Phase 5-9: Insertion ACID ~86 écritures
