@@ -128,7 +128,7 @@ print("-"*80)
 total_charges = Decimal('0')
 for num_compte in sorted(charges.keys()):
     data = charges[num_compte]
-    montant = data['debit']  # Charges = débit
+    montant = data['solde']  # Charges = solde (débit - crédit pour tenir compte des remises)
     total_charges += montant
     print(f"{num_compte:<10} {data['libelle'][:40]:<40} {montant:>14.2f}€")
 
@@ -146,7 +146,7 @@ print("-"*80)
 total_produits = Decimal('0')
 for num_compte in sorted(produits.keys()):
     data = produits[num_compte]
-    montant = data['credit']  # Produits = crédit
+    montant = abs(data['solde'])  # Produits = solde (en valeur absolue car créditeur)
     total_produits += montant
     print(f"{num_compte:<10} {data['libelle'][:40]:<40} {montant:>14.2f}€")
 
