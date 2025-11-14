@@ -1,35 +1,59 @@
-# Consolidation Module 2 & Patrimoine SCI (30 Oct - 14 Nov 2025)
-**Production-Ready | 215+ Cycles | T1-T3 2024 Extraction | V6.0 Stable | 7 PR Stabilisation**
+# Consolidation Module 2 (30 Oct - 14 Nov 2025)
+**Cycles 210-217 | T1-T3 2024 Extraction Complète | V6.0 Production-Ready | 7 PR Stabilisation**
 
-## Cycle Extraction T1-T3 2024 (14 Nov ACTIF)
-- **5 relevés LCL:** Déc 2023 - Avril 2024 reçus 12/11
-- **54+ opérations** extraites, classifiées, tokenisées (MD5)
-- **Phase 4:** Propositions PostgreSQL générées
-- **Phase 5 ATTENTE:** Validation tokens d'Ulrik [_Head] VALIDE: <TOKEN>
-- **Précision OCR:** 99.98% extraction
+## Workflow 9-Phases Module 2 (Opérationnel)
+**Phases 1-4 (Automatique) ✅:**
+1. DÉTECTION: Analyse emails, classification type événement
+2. EXTRACTION: Claude Vision 1-appel (40% tokens vs v2.1)
+3. PROPOSITIONS: Génération écritures + tokens MD5
+4. ENVOI EMAIL: Propositions Markdown + validation
 
-## Architecture V6.0 Optimisée (06-14 Nov)
-**Claude Vision 1-appel:** -40% tokens, -60% latence vs v2.1
-**PR #247 CRITIQUE:** Prompt strict - Filtrage exercice + interdiction invention
-**Stabilisation:** 5 PR supplémentaires (prompts, pattern F, Haiku 4.5 confirmé)
-**Résultat:** 100% fiabilité 215+ cycles
+**Phases 5-9 (Manuel→Auto) ⏳:**
+5. DÉTECTION VALIDATION: Tag [_Head] VALIDE: <TOKEN>
+6-9. RÉCUPÉRATION→INSERTION→CLEANUP
 
-## Patrimoine SCI - T1-T3 2024 CONFIRMÉS
-**Revenus passifs:**
-- SCPI Épargne Pierre: 14.2k€ (T4'23 7.356k€ + T1'24 6.947k€) = 2.8k€/mois
-- ETF MSCI World: 300 parts (150 @15.63€ + 150 @16.17€) - DCA régulier
+## Événements Comptables Opérationnels
 
-**Servicing établi:**
-- Prêts: LCL 258.33€ + INVESTIMUR 1.166.59€ = 1.425k€/mois
-- Assurances: CACI 88.52€/mois
-- Comptabilité: 213.60€/trim
-- **Total charges:** 317€/mois moyenne
+**INIT_BILAN_2023** ✅
+- 571.613€ actif = passif (99,97% précision)
+- 11 comptes ACTIF/PASSIF extraits
+- Exercice 2023 établi
 
-**Bilan trésorerie:** 3.6k€→5.2k€→2.1k€ (cycle Q1 confirmé)
-**Flux net:** +1.5k€/mois établi (revenus > charges)
+**PRET_IMMOBILIER** ✅
+- 2 prêts: LCL 250k @1,050% + INVESTIMUR 250k @1,240%
+- 468 échéances exactes (100% précision)
+- Dates fin calculées automatiquement
+- Lookup échéances pour ventilation intérêts/capital
 
-## Module 2 Status Production
-- Phase 4: ✅ Propositions tokenisées
-- Phase 5: ⏳ Validation tokens (Phase 5 opérationnelle)
-- 696+ écritures ACID antérieures confirmées
-- Prompts 6.0 deployed, stabilisés
+**RELEVE_BANCAIRE** ✅ (T1-T3 2024)
+- 54+ opérations déc 2023 - avril 2024
+- 10+ types opérations détectés
+- Prêts: 4 échéances/mois confirmées
+- SCPI distributions: 2 opérations (T4'23 + T1'24)
+- ETF DCA: 2 acquisitions (jan 2024)
+- Assurances: 2/mois (CACI bimensuel)
+- Comptabilité: 1/trim (213,60€)
+
+**Flux net établi:** +1,5k€/mois (revenus > charges)
+
+## Architecture Optimisée V6.0 (06-14 Nov)
+**Claude Vision:** 1-appel seulement (-40% tokens, -60% latence)
+**Prompts:** v6.0 strict - Filtrage exercice + interdiction invention
+**Modèles:** Sonnet 4.5 (Vision) + Haiku 4.5 (autres)
+**Fiabilité:** 100% (217 cycles)
+
+## BD PostgreSQL État
+- **Écritures:** 696+ ACID confirmées
+- **Prêts:** 2 (LCL + INVESTIMUR)
+- **Échéances:** ~470 programmées
+- **Propositions:** PostgreSQL schema opérationnel
+- **Multi-validations:** Supportées Phase 5
+
+## Stabilisation 7 PR (06-14 Nov)
+- #246: Architecture de base
+- #247: CRITIQUE - Prompt strict
+- #248: Filtrage décembre
+- #249: Filtrage strict exercice
+- #250: FIX PDF direct
+- #251-#253: Corrections modèles + Sonnet confirmation
+- **Résultat:** V6.0 stable, 100% production
