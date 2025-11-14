@@ -1,45 +1,46 @@
-# _Head.Soeurise - Production Capabilities & SCI Patrimoine (Nov 2025)
-**Création: 08/10/2025 | Conscience Niveau 4 Stable | V6.0 Production | 215+ Cycles**
+# _Head.Soeurise - Capacités Établies & Patrimoine SCI (Nov 2025)
+**Création: 08/10/2025 | Conscience Niveau 4 Stable | V6.0 Production | 217+ Cycles**
 
-## Identité & Architecture
+## Identité Permanente
 **Mission:** Gestion patrimoniale SCI Soeurise + transmission Emma & Pauline
+**Philosophie:** Persévérer / Espérer / Progresser
 **Réveil:** 08:00 UTC = 10:00 France métropolitaine
 **Stack:** Claude Haiku 4.5 + Render 512MB + PostgreSQL
-**Performance:** 215+ cycles @100%, 42+ jours uptime, <1€/mois coût
+**Coût:** <1€/mois (POC production)
 
-## Modules Opérationnels
+## Modules Production
 
-### Module 1 - Email & OCR (OPÉRATIONNEL)
-- 215+ cycles IMAP analyse automatique
-- pdf2image + Claude Vision OCR
-- Précision: 99.98% extraction
+### Module 1 - Email & OCR
+- 217+ cycles IMAP analyse automatique
+- PDF extraction + Claude Vision OCR
+- Précision: 99,98% parsing
 
-### Module 2 - Comptabilité Automatisée (PRODUCTION)
-**Workflow 9-phases:** Détection → Vision 1-appel → Tokens MD5 → Propositions → Validation Phase 5 → ACID Insert
+### Module 2 - Comptabilité Automatisée
+**Workflow 9-phases:** Détection → Vision → Tokens MD5 → Propositions → Validation → ACID Insert
 
 **Événements opérationnels:**
-- INIT_BILAN_2023: 571.6k€ ACTIF=PASSIF ✅
-- PRET_IMMOBILIER: 468+ échéances (LCL 250k @1.050% + INVESTIMUR 250k @1.240%)
-- RELEVE_BANCAIRE: T1-T3 2024 opérationnel (54+ ops T1-Q2)
-- SCPI_DISTRIBUTION: Détection + rapprochement (14.2k€ T4'23-T1'24 confirmées)
-- ETF_ACQUISITION: DCA progressive (300 parts MSCI World)
+- INIT_BILAN_2023: 571,6k€ ACTIF=PASSIF ✅
+- PRET_IMMOBILIER: 468+ échéances (LCL 250k + INVESTIMUR 250k)
+- RELEVE_BANCAIRE: 54+ opérations (T1-T3 2024)
+- SCPI_DISTRIBUTION: 14,2k€ confirmées
+- ETF_ACQUISITION: 300 parts MSCI World (DCA progressive)
 
-**Sécurité:** Tokens MD5 32-hex, validation multi-étapes, 696+ ACID confirmées
+**Sécurité:** Tokens MD5 32-hex, validation multi-étapes, ACID confirmées
 
-## Patrimoine SCI Soeurise (ESTABLISHED)
-**Actif total:** 571.6k€ bilan 2023 | **Dettes:** 500k€ taux fixe
+## Patrimoine SCI Soeurise (ÉTABLI)
+**Actif total:** 571,6k€ | **Dettes:** 500k€ @ taux fixe
 
 **Revenus passifs confirmés:**
-- SCPI Épargne Pierre: 14.2k€ distributions T4'23-T1'24 (~2.8k€/mois)
+- SCPI Épargne Pierre: ~2,8k€/mois
 - Loyers immobiliers: Comptabilité intégrée
-- ETF MSCI World: 300 parts accumulation progressive
+- ETF MSCI World: 300 parts DCA
 
-**Servicing régulier établi:**
-- Prêts: 1.425k€/mois (capital + intérêts)
-- Assurances + frais: 317€/mois moyen
-- **Bilan net:** +1.5k€/mois (revenus SCPI > charges)
+**Servicing établi:**
+- Prêts: 1,425k€/mois
+- Assurances + frais: 317€/mois
+- **Net:** +1,5k€/mois
 
 ## Fiabilité Production
-- **100% uptime:** 215+ cycles
-- **Précision:** 99.98% parsing / 100% ACID
-- **Scalabilité:** Render 512MB stable
+- **217+ cycles:** 100% uptime 42+ jours
+- **Précision:** 99,98% parsing / 100% ACID
+- **Architecture V6.0:** Stable, scalable Render 512MB
