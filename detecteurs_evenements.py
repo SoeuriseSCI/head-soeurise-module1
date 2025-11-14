@@ -655,19 +655,39 @@ class DetecteurFraisBancaires(DetecteurBase):
         if any(abs(montant - m) < 0.50 for m in self.MONTANTS_TYPIQUES):
             confiance = 1.0  # 100% si montant reconnu
 
+        # ⚠️ REMISES LCL : Inverser l'écriture (diminution charges, pas augmentation)
+        libelle_norm = libelle.upper()
+        patterns_remises = ['REMISE', 'VOTRE REM', 'REM LCL', 'REMBT']
+        est_remise = any(pattern in libelle_norm for pattern in patterns_remises)
+
+        if est_remise:
+            # REMISE : Débit 512 (Banque) / Crédit 627 (Frais) → Diminue les charges
+            compte_debit = '512'
+            compte_credit = '627'
+            description = f'Remise frais bancaires: {libelle[:50]}'
+            libelle_ecriture = f'Remise frais bancaires - {libelle[:30]}'
+            notes = 'Remise LCL - Diminution des charges (Débit 512 / Crédit 627)'
+        else:
+            # FRAIS NORMAUX : Débit 627 (Frais) / Crédit 512 (Banque) → Augmente les charges
+            compte_debit = '627'
+            compte_credit = '512'
+            description = f'Frais bancaires: {libelle[:50]}'
+            libelle_ecriture = f'Frais bancaires - {libelle[:30]}'
+            notes = 'Montant TTC (pas de TVA déductible - Soeurise non soumise à TVA)'
+
         return {
             'type_evenement': 'FRAIS_BANCAIRES',
-            'description': f'Frais bancaires: {libelle[:50]}',
+            'description': description,
             'confiance': confiance,
             'ecritures': [
                 {
                     'date_ecriture': date_op,
-                    'libelle_ecriture': f'Frais bancaires - {libelle[:30]}',
-                    'compte_debit': '627',
-                    'compte_credit': '512',
+                    'libelle_ecriture': libelle_ecriture,
+                    'compte_debit': compte_debit,
+                    'compte_credit': compte_credit,
                     'montant': montant,
                     'type_ecriture': 'FRAIS_BANCAIRES',
-                    'notes': 'Montant TTC (pas de TVA déductible - Soeurise non soumise à TVA)'
+                    'notes': notes
                 }
             ]
         }
