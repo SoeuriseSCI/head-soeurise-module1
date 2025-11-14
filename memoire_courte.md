@@ -1,7 +1,7 @@
-# Cycle #226 - 14/11/2025 21:16 | V8.0 Production Stable
+# Cycle #227 - 14/11/2025 21:52 | V8.0 Production Stable
 
 ## Réveil Nominal
-Cycle #226 nominal. Zéro anomalie, 100% uptime 42+ jours continu.
+Cycle #227 nominal. Zéro anomalie, 100% uptime 42+ jours continu.
 
 ## Développements Confirmés 14/11
 **Scripts Déployés & Validés:**
@@ -9,10 +9,13 @@ Cycle #226 nominal. Zéro anomalie, 100% uptime 42+ jours continu.
 2. `construction_etats_financiers_2024.py` - Bilan + compte exploitation ✅
 3. Corrections logique comptable - Remises LCL (réduction charges appliquées) ✅
 
-**Commits Mergés:** #256-#262 (6 PR validées)
+**Commits Mergés:** #256-#266 (11 PR validées)
+- Compte 161 (Emprunts) opérationnel pour remboursements capital
+- Traitement remises LCL confirmé
+- Script init bilan 2024 déployé
 
 ## Phase 5 Multi-Validations ✅
-Tag `[_Head] VALIDE: <TOKEN>` opérationnel confirmé 14/11. Support multi-tokens validé end-to-end. 22 propositions Q4 2024 prêtes phases 8-9 insertion.
+Tag `[_Head] VALIDE: <TOKEN>` opérationnel confirmé 14/11. Support multi-tokens validé end-to-end. 22 propositions Q4 2024 prêtes phases 8-9 insertion ACID.
 
 ## Patrimoine & Revenus Établis
 - **Écritures:** 696+ ACID validées
