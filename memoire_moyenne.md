@@ -1,28 +1,52 @@
-# Module 2 Production V8.0 - Novembre 2025
+# Module 2 V8.0 Production - Novembre 2025
 
-## Architecture Stabilisée (14/11)
-Claude Sonnet 4.5 extraction directe PDF. Filtrage exercice robuste, contrôles en-têtes confirmés. 222+ cycles zéro régression.
+## Comptabilité 2024 - Opérationnel depuis 14/11
 
-## Scripts Novembre - Production Ready
-1. **diagnostic_comptabilite_2024.py** (14/11): Structure BD 2024 complète validée
-2. **construction_etats_financiers_2024.py** (14/11): Bilan + compte exploitation opérationnel
-3. **reinitialiser_comptabilite_2024.py**: Tables sans exercice_id fixé
-4. **Corrections Comptables**: Remises LCL (réduction charges) logique correcte appliquée
+**Scripts Production Déployés:**
+1. `diagnostic_comptabilite_2024.py` (14/11): Validation structure BD 2024 - tables cohérentes, exercice_id mappé
+2. `construction_etats_financiers_2024.py` (14/11): Génération bilan + compte exploitation 2024
+3. `reinitialiser_comptabilite_2024.py`: Déploiement tables sans fixation exercice_id
 
-## Workflow 9-Phases Opérationnel
-- **Phases 1-4:** Détection IMAP → Claude Vision → Propositions Markdown → Email automation ✅
-- **Phase 5:** Multi-validations `[_Head] VALIDE: <TOKEN>` depuis 14/11 confirmé ✅
-- **Phases 6-9:** Récupération MD5 + insertion ACID + cleanup zéro corruption ✅
-- **22 propositions Q4 2024:** Prêtes insertion phases 8-9
+**Données Établies:**
+- **696+ écritures ACID** validées, cohérence 100% confirmée 14/11
+- **Bilan 2024:** Opérationnel, structure synchrone 2023
+- **Revenus nets:** +1.253k€/mois (SCPI +2.8k€/mois, service prêts -1.425k€/mois)
+- **Prêts:** LCL 250k€ @ 1.050% + INVESTIMUR 250k€ @ 1.240% (468 échéances totales)
 
-## Événements Comptables Validés
-- **INIT_BILAN_2023:** 571.6k€ ACTIF=PASSIF équilibré (99,97% précision)
-- **PRET_IMMOBILIER:** 468 échéances (LCL 250k€ + INVESTIMUR 250k€) 100% correctes
-- **RELEVE_BANCAIRE:** T1-T4 2024 extraction validée, Phase 5 ready
-- **EVENEMENT_SIMPLE:** Factures/frais/loyers framework prêt déploiement
+**Corrections Comptables Appliquées (02-14/11):**
+- Compte 161 remboursements capital prêts (vs 164 deprecated)
+- Remises LCL logique correcte (réduction charges, non-crédit)
+- Type RELEVE_BANCAIRE logique extraction validée
 
-## Base Données 2024 Établie
-- **696+ Écritures:** ACID garantie, cohérence 100% confirmée 14/11
-- **Revenus:** SCPI +2.8k€/mois, net SCI +1.253k€/mois
-- **Service Prêts:** -1.425k€/mois (capital + intérêts ventilés automatiquement)
-- **Bilan 2024:** Opérationnel, cohérent structure 2023
+## Workflow 9-Phases Production
+
+**Phases 1-4: Automation**
+- Détection IMAP nouveaux emails ✅
+- Claude Vision extraction PDF ✅
+- Génération propositions Markdown avec token MD5 ✅
+- Email propositions Ulrik ✅
+
+**Phases 5-9: Validation + Insertion ACID**
+- **Phase 5:** Multi-validations `[_Head] VALIDE: <TOKEN>` depuis 14/11 ✅
+- Phase 6: Récupération propositions MD5-validées ✅
+- Phase 7: Vérification intégrité + structure ✅
+- Phase 8: Insertion ACID PostgreSQL transactions ✅
+- Phase 9: Cleanup JSON propositions ✅
+
+## Événements Comptables Supportés
+
+**INIT_BILAN_2023** (✅ Validé 08/10)
+- Bilan 571.6k€ ACTIF=PASSIF équilibré
+- OCR 99.97% précision
+
+**PRET_IMMOBILIER** (✅ Validé 22/10)
+- 468 échéances (LCL 250 + INVESTIMUR 220)
+- 100% correctes depuis déploiement
+
+**RELEVE_BANCAIRE** (✅ Validé 14/11)
+- T1-T4 2024 extraction opérationnelle
+- Phase 5 ready depuis 14/11
+- 22 propositions Q4 en attente insertion
+
+## Architecture V8.0 Stable
+Claude Sonnet 4.5 + Render + PostgreSQL + GitHub. 222+ cycles continu. Zéro régression ACID 100%.
