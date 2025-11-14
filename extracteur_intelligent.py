@@ -126,7 +126,7 @@ class ExtracteurIntelligent:
         try:
             response = self.client.messages.create(
                 model="claude-haiku-4-5-20251001",  # Haiku 4.5 (cohérence avec le reste du projet)
-                max_tokens=16000,  # Besoin de beaucoup de tokens pour 86 événements
+                max_tokens=20000,  # Augmenté pour éviter auto-censure (85-90 événements attendus)
                 messages=[{
                     "role": "user",
                     "content": content_blocks
@@ -185,6 +185,20 @@ Tu devras générer **UN ET UN SEUL événement comptable par opération** de d�
 ⚠️ Précisions :
 - Les **soldes** qui apparaissent sur les relevés ne sont PAS des événements comptables → à ignorer
 - Toute opération **en dehors de l'exercice comptable** ({exercice_debut} → {exercice_fin}) doit être ignorée
+
+🚨 FILTRAGE PAR EXERCICE - VÉRIFICATION OBLIGATOIRE
+====================================================
+Exercice comptable : {exercice_debut} → {exercice_fin}
+
+Avant d'inclure une opération, vérifie sa date :
+✅ Exemple OK : 15/01/2024 → INCLURE (date >= {exercice_debut} et date <= {exercice_fin})
+❌ Exemple KO : 15/12/2023 → EXCLURE (date < {exercice_debut})
+❌ Exemple KO : 15/01/2025 → EXCLURE (date > {exercice_fin})
+
+**MÉTHODE** :
+1. Lire la date de l'opération
+2. Comparer avec {exercice_debut} et {exercice_fin}
+3. Si hors période → NE PAS CRÉER d'événement
 
 🔗 RAPPROCHEMENT DES DOCUMENTS CONNEXES
 ========================================
