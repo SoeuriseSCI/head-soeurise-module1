@@ -248,12 +248,18 @@ Exemple :
 → PAS de rapprochement même si montants identiques
 → Distinguer par date et n° échéance
 
-**Pattern F: Frais bancaires mensuels**
-Exemple :
-- "ABON LCL ACCESS 007.04EUR" chaque mois
-- "COTISATION OPTION PRO" chaque mois
-→ ÉVÉNEMENTS DISTINCTS (chaque mois = 1 frais)
-→ PAS de rapprochement
+**Pattern F: Frais bancaires mensuels (ÉVÉNEMENTS DISTINCTS)**
+⚠️ **CRITIQUE** : Les frais bancaires récurrents sont des événements SÉPARÉS chaque mois !
+
+Exemples :
+- "ABON LCL ACCESS 007.04EUR" le 15/01 : 1 événement
+- "ABON LCL ACCESS 007.25EUR" le 15/02 : 1 autre événement (PAS le même !)
+- "COTISATION OPTION PRO 5.15EUR" le 15/01 : 1 événement
+- "COTISATION OPTION PRO 5.15EUR" le 15/02 : 1 autre événement (PAS le même !)
+
+→ Si 10 mois visibles (Jan-Oct), tu dois extraire 10 ABON + 10 COTISATION = 20 événements
+→ MÊME LIBELLÉ + MÊME MONTANT mais DATE DIFFÉRENTE = ÉVÉNEMENTS DISTINCTS
+→ PAS de rapprochement entre mois
 
 ⚠️ PIÈGES À ÉVITER - CRITIQUES
 ================================
