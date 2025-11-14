@@ -25,7 +25,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 
-from extracteur_pdf import ExtracteurPDF
+from extracteur_intelligent import ExtracteurIntelligent
 from gestionnaire_evenements import GestionnaireEvenements, afficher_statistiques
 from detecteurs_evenements import FactoryDetecteurs
 from models_module2 import get_session
@@ -85,12 +85,9 @@ class WorkflowEvenements:
         print("=" * 80)
         print()
 
-        # ÉTAPE 0: ANALYSE DU DOCUMENT
-        print("🔍 ÉTAPE 0/4: ANALYSE DU DOCUMENT")
+        # ÉTAPE 0: RÉCUPÉRATION DE L'EXERCICE COMPTABLE
+        print("🔍 ÉTAPE 0/2: RÉCUPÉRATION DE L'EXERCICE COMPTABLE")
         print("-" * 80)
-
-        extracteur = ExtracteurPDF(pdf_path, email_metadata)
-        analyse = extracteur.analyser_document()
 
         # Récupérer l'exercice comptable en cours
         from sqlalchemy import text
@@ -107,59 +104,78 @@ class WorkflowEvenements:
             print("⚠️  Aucun exercice comptable ouvert")
             return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
                     'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
-                    'periode_document': f"{analyse.get('date_debut')} → {analyse.get('date_fin')}",
+                    'periode_document': 'Indéterminée',
                     'exercice_valide': False, 'message_erreur': 'Aucun exercice ouvert'}
 
         exercice_debut = str(exercice[0])
         exercice_fin = str(exercice[1])
 
         print(f"   Exercice: {exercice_debut} → {exercice_fin}")
-        print(f"   Document: {analyse.get('date_debut', '?')} → {analyse.get('date_fin', '?')}")
-
-        doc_debut = analyse.get('date_debut')
-        doc_fin = analyse.get('date_fin')
-
-        if not doc_debut or not doc_fin:
-            print("⚠️  Période indéterminée - Traitement refusé")
-            return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
-                    'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
-                    'periode_document': 'Indéterminée', 'exercice_valide': False,
-                    'message_erreur': 'Période indéterminée'}
-
-        # Vérifier s'il y a un CHEVAUCHEMENT entre document et exercice
-        # Chevauchement existe si: doc_debut <= exercice_fin ET doc_fin >= exercice_debut
-        # Pas de chevauchement si: doc_fin < exercice_debut OU doc_debut > exercice_fin
-        if doc_fin < exercice_debut or doc_debut > exercice_fin:
-            print(f"❌ DOCUMENT HORS EXERCICE - Aucun chevauchement")
-            print(f"   Document: {doc_debut} → {doc_fin}")
-            print(f"   Exercice: {exercice_debut} → {exercice_fin}")
-            return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
-                    'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
-                    'periode_document': f"{doc_debut} → {doc_fin}", 'exercice_valide': False,
-                    'message_erreur': 'Document hors exercice - aucun chevauchement'}
-
-        # Document chevauche l'exercice (au moins partiellement) → OK
-        if doc_debut < exercice_debut or doc_fin > exercice_fin:
-            print(f"⚠️  Document chevauche l'exercice partiellement")
-            print(f"   Les opérations hors exercice seront filtrées automatiquement")
-        else:
-            print(f"✅ Document entièrement dans l'exercice")
         print()
 
-        # ÉTAPE 1: EXTRACTION
-        print("📄 ÉTAPE 1/4: EXTRACTION DU PDF")
+        # ÉTAPE 1: ANALYSE INTELLIGENTE DU PDF PAR CLAUDE
+        print("🧠 ÉTAPE 1/2: ANALYSE INTELLIGENTE DU PDF (CLAUDE)")
         print("-" * 80)
-
-        operations = extracteur.extraire_evenements(
-            date_debut=exercice_debut,
-            date_fin=exercice_fin
-        )
-
-        print(f"✅ {len(operations)} opérations extraites")
+        print("   Claude va analyser le PDF complet et identifier les événements")
+        print("   économiques uniques en rapprochant automatiquement les documents.")
         print()
 
-        # ÉTAPE 2: CRÉATION DES ÉVÉNEMENTS
-        print("💾 ÉTAPE 2/3: CRÉATION DES ÉVÉNEMENTS")
+        extracteur = ExtracteurIntelligent()
+
+        try:
+            evenements, metadata = extracteur.analyser_pdf(
+                pdf_path=pdf_path,
+                exercice_debut=exercice_debut,
+                exercice_fin=exercice_fin
+            )
+
+            print(f"✅ {len(evenements)} événements économiques identifiés par Claude")
+            print(f"   (analyse intelligente avec rapprochement automatique)")
+            print()
+
+            # Convertir le format de l'extracteur intelligent vers le format attendu par le gestionnaire
+            # Format extracteur intelligent: {date, libelle, montant, type_operation, source, justificatif, categorie}
+            # Format gestionnaire: {date_operation, libelle, montant, type_operation, email_metadata, ...}
+
+            operations = []
+            for evt in evenements:
+                operation = {
+                    'date_operation': evt['date'],
+                    'libelle': evt['libelle'],
+                    'montant': evt['montant'],
+                    'type_operation': evt['type_operation'],
+                    'source_document': evt.get('source', 'claude'),
+                    'justificatif': evt.get('justificatif'),
+                    'categorie_suggeree': evt.get('categorie'),
+                    'email_metadata': email_metadata
+                }
+                operations.append(operation)
+
+            # Variables pour compatibilité avec la suite du code
+            doc_debut = None
+            doc_fin = None
+
+            # Extraire les dates min/max des événements
+            if evenements:
+                dates = [evt['date'] for evt in evenements if evt.get('date')]
+                if dates:
+                    doc_debut = min(dates)
+                    doc_fin = max(dates)
+                    print(f"   Période détectée: {doc_debut} → {doc_fin}")
+
+        except Exception as e:
+            print(f"❌ Erreur lors de l'analyse du PDF: {e}")
+            import traceback
+            traceback.print_exc()
+            return {'total_operations': 0, 'evenements_crees': 0, 'doublons_detectes': 0,
+                    'erreurs': 1, 'types_detectes': 0, 'ids_crees': [],
+                    'periode_document': 'Erreur', 'exercice_valide': False,
+                    'message_erreur': f'Erreur extraction: {e}'}
+
+        print()
+
+        # ÉTAPE 2: CRÉATION DES ÉVÉNEMENTS + DÉTECTION DES TYPES
+        print("💾 ÉTAPE 2/2: CRÉATION DES ÉVÉNEMENTS + DÉTECTION")
         print("-" * 80)
 
         stats_creation = self.gestionnaire.creer_evenements_batch(operations)
@@ -170,11 +186,11 @@ class WorkflowEvenements:
         print(f"❌ Erreurs: {stats_creation['erreurs']}")
         print()
 
-        # ÉTAPE 3: DÉTECTION DES TYPES
+        # DÉTECTION DES TYPES
         types_detectes = 0
         if auto_detect and stats_creation['crees'] > 0:
             import sys
-            print("🔍 ÉTAPE 3/3: DÉTECTION DES TYPES D'ÉVÉNEMENTS")
+            print("🔍 Détection des types d'événements...")
             print("-" * 80)
             sys.stdout.flush()
 
@@ -216,9 +232,9 @@ class WorkflowEvenements:
             'erreurs': stats_creation['erreurs'],
             'types_detectes': types_detectes,
             'ids_crees': stats_creation['ids_crees'],
-            'periode_document': f"{doc_debut} → {doc_fin}",
-            'date_debut': str(doc_debut),
-            'date_fin': str(doc_fin)
+            'periode_document': f"{doc_debut} → {doc_fin}" if doc_debut and doc_fin else "Indéterminée",
+            'date_debut': str(doc_debut) if doc_debut else None,
+            'date_fin': str(doc_fin) if doc_fin else None
         }
 
     def generer_propositions(self, evenement_ids: Optional[List[int]] = None) -> List[Dict]:
