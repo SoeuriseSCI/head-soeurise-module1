@@ -202,6 +202,22 @@ Cette date N'EST PAS dans le libellé, elle est dans une COLONNE SÉPARÉE.
 ⚠️ ATTENTION : Même si le libellé mentionne "2023" (ex: "DISTRIBUTION 4EME TRIM. 2023"),
 vérifie TOUJOURS la date de la COLONNE du relevé, pas le texte du libellé !
 
+⚠️ PIÈGE DES EN-TÊTES DE RELEVÉS
+=================================
+Les relevés bancaires ont des en-têtes de période (ex: "Période du X au Y").
+
+**RÈGLE CRITIQUE** :
+❌ NE JAMAIS utiliser l'en-tête du relevé pour filtrer les opérations
+✅ TOUJOURS utiliser la DATE de chaque ligne d'opération (colonne de gauche)
+
+**Exemple piège** :
+- En-tête relevé : "Période : 5 décembre → 4 janvier"
+- Ligne opération datée : 02/01/2024
+→ Vérifier la DATE de la ligne (02/01/2024) ∈ exercice 2024 → INCLURE
+
+L'en-tête indique simplement que le relevé PEUT contenir des opérations de cette période,
+mais chaque ligne a SA PROPRE date qu'il faut vérifier individuellement.
+
 🔗 RAPPROCHEMENT DES DOCUMENTS CONNEXES
 ========================================
 Tu devras tenter de rapprocher chaque document connexe d'un ou plusieurs événements comptables.
