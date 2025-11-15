@@ -13,6 +13,7 @@ Contexte:
 - Date: 01/01/2023 (Bilan d'ouverture)
 - Libellé: "Titres immobilisés" ou "SCPI Epargne Pierre"
 - Montant: 500 032 €
+- Type: Débit 280 (Amortissements) / Crédit 89 → Débit 271
 - Compte correct: 271 "Titres immobilisés (autres que TIAP)"
 """
 
@@ -41,21 +42,26 @@ def identifier_ecritures_scpi():
     conn = get_connection()
     cur = conn.cursor()
 
+    # Dans la comptabilité en partie double :
+    # - Débit 280 (Amortissements) / Crédit 89 (Bilan ouverture)
+    # On cherche donc les écritures où compte_debit = '280'
     query = """
     SELECT
         id,
         exercice_id,
         date_ecriture,
-        compte_id,
-        libelle,
-        debit,
-        credit,
+        numero_ecriture,
+        libelle_ecriture,
+        compte_debit,
+        compte_credit,
+        montant,
         type_ecriture
     FROM ecritures_comptables
-    WHERE compte_id = '280'
+    WHERE compte_debit = '280'
       AND (
-          libelle ILIKE '%SCPI%'
-          OR libelle ILIKE '%Titres immobilisés%'
+          libelle_ecriture ILIKE '%SCPI%'
+          OR libelle_ecriture ILIKE '%Titres immobilisés%'
+          OR libelle_ecriture ILIKE '%Epargne Pierre%'
       )
     ORDER BY date_ecriture;
     """
@@ -82,12 +88,12 @@ def corriger_ecritures(ecritures):
 
     total_montant = 0
     for ecriture in ecritures:
-        id_ecriture, exercice_id, date_ecriture, compte_id, libelle, debit, credit, type_ecriture = ecriture
-        montant = debit if debit > 0 else credit
+        (id_ecriture, exercice_id, date_ecriture, numero_ecriture,
+         libelle_ecriture, compte_debit, compte_credit, montant, type_ecriture) = ecriture
         total_montant += montant
 
-        print(f"  • ID {id_ecriture} | {date_ecriture} | {libelle[:50]}...")
-        print(f"    Compte: {compte_id} | Débit: {debit:.2f}€ | Crédit: {credit:.2f}€")
+        print(f"  • ID {id_ecriture} | {date_ecriture} | {libelle_ecriture[:50]}...")
+        print(f"    Écriture: Débit {compte_debit} / Crédit {compte_credit} | Montant: {montant:.2f}€")
 
     print(f"\n💰 Total concerné: {total_montant:.2f}€")
     print(f"💡 Montant attendu: 500 032.00€")
@@ -98,7 +104,7 @@ def corriger_ecritures(ecritures):
 
     # Confirmation
     print("\n🔧 Correction à effectuer:")
-    print("   Compte 280 (Amortissements) → 271 (Titres immobilisés)")
+    print("   Compte débit 280 (Amortissements) → 271 (Titres immobilisés)")
 
     confirmation = input("\n❓ Confirmer la correction ? (oui/non) : ")
     if confirmation.lower() != 'oui':
@@ -113,10 +119,10 @@ def corriger_ecritures(ecritures):
         for ecriture in ecritures:
             id_ecriture = ecriture[0]
 
-            # UPDATE compte 280 → 271
+            # UPDATE compte_debit 280 → 271
             cur.execute("""
                 UPDATE ecritures_comptables
-                SET compte_id = '271'
+                SET compte_debit = '271'
                 WHERE id = %s
             """, (id_ecriture,))
 
@@ -144,26 +150,27 @@ def verifier_correction():
 
     # Vérifier compte 271
     cur.execute("""
-        SELECT COUNT(*), SUM(debit), SUM(credit)
+        SELECT COUNT(*), SUM(montant)
         FROM ecritures_comptables
-        WHERE compte_id = '271'
+        WHERE compte_debit = '271'
           AND (
-              libelle ILIKE '%SCPI%'
-              OR libelle ILIKE '%Titres immobilisés%'
+              libelle_ecriture ILIKE '%SCPI%'
+              OR libelle_ecriture ILIKE '%Titres immobilisés%'
+              OR libelle_ecriture ILIKE '%Epargne Pierre%'
           )
     """)
 
-    count_271, sum_debit_271, sum_credit_271 = cur.fetchone()
-    total_271 = (sum_debit_271 or 0) + (sum_credit_271 or 0)
+    count_271, sum_271 = cur.fetchone()
 
     # Vérifier compte 280 (ne doit plus contenir ces écritures)
     cur.execute("""
         SELECT COUNT(*)
         FROM ecritures_comptables
-        WHERE compte_id = '280'
+        WHERE compte_debit = '280'
           AND (
-              libelle ILIKE '%SCPI%'
-              OR libelle ILIKE '%Titres immobilisés%'
+              libelle_ecriture ILIKE '%SCPI%'
+              OR libelle_ecriture ILIKE '%Titres immobilisés%'
+              OR libelle_ecriture ILIKE '%Epargne Pierre%'
           )
     """)
 
@@ -173,8 +180,8 @@ def verifier_correction():
     conn.close()
 
     print("\n📋 Vérification post-correction:")
-    print(f"   Compte 271 : {count_271} écriture(s) | {total_271:.2f}€")
-    print(f"   Compte 280 : {count_280} écriture(s)")
+    print(f"   Compte 271 (débit) : {count_271} écriture(s) | {sum_271 or 0:.2f}€")
+    print(f"   Compte 280 (débit) : {count_280} écriture(s)")
     print(f"   ✅ Attendu : 500 032.00€ au compte 271")
 
     if count_280 == 0 and count_271 > 0:
