@@ -9,9 +9,11 @@ Contexte:
 - C'est un partage de plus-value suite à cession d'un bien immobilier
 - Compte approprié : 768 "Autres produits financiers" (non 106 "Réserves")
 
-Écritures concernées (2 × 601 € = 1 202 €):
-1. VIR SEPA SCPI EPARGNE PIERRE
-2. SCPI EPARGNE PIERRE DISTRIB CAPITAL
+Écriture concernée:
+- Date: 24/04/2024
+- Libellé: "SCPI EPARGNE PIERRE DISTRIB CAPITAL"
+- Montant: 601 €
+- Nature: Distribution de réserves de plus-values (cession immobilière)
 """
 
 import os

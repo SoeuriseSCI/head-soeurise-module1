@@ -9,18 +9,19 @@
 ## 📋 Erreur Identifiée
 
 ### Situation Actuelle (Incorrecte)
-Les distributions de **1 202 €** (2 × 601 €) de la SCPI Epargne Pierre ont été classées au compte **106 "Réserves"**.
+La distribution de **601 €** de la SCPI Epargne Pierre a été classée au compte **106 "Réserves"**.
 
-**Écritures concernées :**
-1. VIR SEPA SCPI EPARGNE PIERRE - 601.00€
-2. SCPI EPARGNE PIERRE DISTRIB CAPITAL - 601.00€
+**Écriture concernée :**
+- Date: 24/04/2024
+- Libellé: "SCPI EPARGNE PIERRE DISTRIB CAPITAL"
+- Montant: 601.00€
 
 ### Nature Réelle
-Ces 1 202 € ne sont **PAS** :
+Ces 601 € ne sont **PAS** :
 - ❌ Des revenus trimestriels de la SCPI
 - ❌ Une distribution de réserves
 
-Ces 1 202 € sont **EN RÉALITÉ** :
+Ces 601 € sont **EN RÉALITÉ** :
 - ✅ Un partage de **plus-value** suite à **cession d'un bien immobilier** par la SCPI
 - ✅ Un produit financier exceptionnel
 
@@ -37,7 +38,7 @@ Ces 1 202 € sont **EN RÉALITÉ** :
 ```
 PASSIF
   Capitaux Propres
-    106 Réserves : +1 202 € ❌
+    106 Réserves : +601 € ❌
 ```
 
 **APRÈS correction :**
@@ -47,7 +48,7 @@ PASSIF
     106 Réserves : 0 € (ou valeur initiale)
 ```
 
-**Impact** : Diminution des capitaux propres de **-1 202 €**
+**Impact** : Diminution des capitaux propres de **-601 €**
 
 ---
 
@@ -62,10 +63,10 @@ PASSIF
 ```
 PRODUITS FINANCIERS (Classe 7)
   76 Produits financiers
-    768 Autres produits financiers : +1 202 € ✅
+    768 Autres produits financiers : +601 € ✅
 ```
 
-**Impact** : Augmentation des produits financiers de **+1 202 €**
+**Impact** : Augmentation des produits financiers de **+601 €**
 
 ---
 
@@ -75,20 +76,20 @@ PRODUITS FINANCIERS (Classe 7)
 
 **AVANT :**
 - Actif : inchangé
-- Passif : Capitaux propres (+1 202 € au 106)
+- Passif : Capitaux propres (+601 € au 106)
 - Résultat : 0
 
 **APRÈS :**
 - Actif : inchangé
 - Passif : Capitaux propres (0 € au 106)
-- Résultat : +1 202 € (compte 768)
+- Résultat : +601 € (compte 768)
 
-**L'équilibre est maintenu** : Les 1 202 € sont transférés des capitaux propres vers le résultat de l'exercice.
+**L'équilibre est maintenu** : Les 601 € sont transférés des capitaux propres vers le résultat de l'exercice.
 
 **Formule :**
 ```
 ACTIF = PASSIF + RÉSULTAT
-(inchangé) = (Passif - 1 202) + (Résultat + 1 202)
+(inchangé) = (Passif - 601) + (Résultat + 601)
 ```
 
 ✅ Le bilan reste équilibré.
@@ -151,15 +152,15 @@ psql $DATABASE_URL -c "
 **Résultat attendu :**
 ```
 compte_id | count | sum
-----------+-------+---------
-768       | 2     | 1202.00
+----------+-------+--------
+768       | 1     | 601.00
 ```
 
 ---
 
 ## ✅ Validation Post-Correction
 
-### 1. Vérifier les écritures au compte 768
+### 1. Vérifier l'écriture au compte 768
 
 ```sql
 SELECT id, date_ecriture, libelle, credit
@@ -168,7 +169,7 @@ WHERE compte_id = '768'
 ORDER BY date_ecriture;
 ```
 
-**Attendu :** 2 écritures de 601 € chacune.
+**Attendu :** 1 écriture de 601 €.
 
 ### 2. Vérifier qu'aucune écriture SCPI ne reste au compte 106
 
@@ -194,16 +195,16 @@ python verifier_bilan_2023.py  # Ou script de vérification 2024
 ## 📊 Impact sur les Documents Comptables
 
 ### Bilan (État du Patrimoine)
-- ⬇️ **Capitaux propres** : -1 202 € (compte 106)
+- ⬇️ **Capitaux propres** : -601 € (compte 106)
 - ➡️ Compensé par augmentation du résultat de l'exercice
 
 ### Compte de Résultat (Performance Financière)
-- ⬆️ **Produits financiers** : +1 202 € (compte 768)
+- ⬆️ **Produits financiers** : +601 € (compte 768)
 - ✅ Meilleure représentation de la performance financière
 
 ### Balance des Comptes
-- Compte 106 : Diminution de 1 202 €
-- Compte 768 : Augmentation de 1 202 €
+- Compte 106 : Diminution de 601 €
+- Compte 768 : Augmentation de 601 €
 
 ---
 
