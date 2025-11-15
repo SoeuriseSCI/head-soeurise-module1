@@ -1,26 +1,22 @@
-# Réveil #232 - 15/11/2025 10:00 | Module 2 Consolidé
+# Réveil #233 - 15/11/2025 15:42 | PCG Conformité Validée
 
-## Cycle Consolidation Complet
-**Diagnostic écart 2,63€ (14/11):**
-- Script diagnostic complet déployé
-- Cause: Calcul charges/produits avec SOLDES (correct)
-- Écart identifié et résolu
-- État: VÉRIFIÉ ✅
+## Vérifications PCG Déployées (15/11)
+**Merge #272 + #271:**
+- Script vérification conformité PCG (Comptes 444/455) validé
+- Script vérification complète 2024 en production
+- Cleanup: 9 fichiers analytiques temporaires supprimés
 
-**Workflow 9-Phases Opérationnel:**
-- Phases 1-5: Automatiques (IMAP → propositions)
-- Phase 5: Multi-tokens supportés (HEAD-90E2424F validée)
-- Phases 6-9: ACID insertion confirmée
-- Précision OCR: 99.98% établie
+**État Comptabilité:**
+- 696+ écritures 2024 équilibrées
+- Revenus nets: +1.253k€/mois confirmés
+- Conformité PCG maintenue
 
-**Production State:**
-- 222+ cycles sans régression
-- Bilan 2024 équilibré (696+ écritures)
-- Compte 161 synchronisé
-- Revenus: +1.253k€/mois confirmés
+## Développements Intégrés (14-15/11)
+- Commits: d3e19ea, a71fb64, dedaf5b, 8472f6c
+- Architecture cleanup complétée
+- Production state: Stable
 
-## Commits Intégrés (14/11)
-- Diagnostic écart comptable (d31d668)
-- Calcul charges avec SOLDES correction (d31d668)
-- Vérification remises LCL (c21e61b)
-- Script compte 161/164 (c21e61b)
+## Cycle #232 Consolidation Confirmée
+- Écart 2.63€ résolu (charges/produits avec SOLDES)
+- Multi-validations token opérationnel
+- Zéro régression depuis 26/10 (workflow 9-phases)
