@@ -13,6 +13,7 @@ Contexte:
 - Date: 24/04/2024
 - Libellé: "SCPI EPARGNE PIERRE DISTRIB CAPITAL"
 - Montant: 601 €
+- Type: Débit 512 (Banque) / Crédit 106 (Réserves) → Crédit 768
 - Nature: Distribution de réserves de plus-values (cession immobilière)
 """
 
@@ -41,21 +42,26 @@ def identifier_ecritures_scpi():
     conn = get_connection()
     cur = conn.cursor()
 
+    # Dans la comptabilité en partie double :
+    # - Débit 512 (Banque) / Crédit 106 (Réserves)
+    # On cherche donc les écritures où compte_credit = '106'
     query = """
     SELECT
         id,
         exercice_id,
         date_ecriture,
-        compte_id,
-        libelle,
-        debit,
-        credit,
+        numero_ecriture,
+        libelle_ecriture,
+        compte_debit,
+        compte_credit,
+        montant,
         type_ecriture
     FROM ecritures_comptables
-    WHERE compte_id = '106'
+    WHERE compte_credit = '106'
       AND (
-          libelle ILIKE '%SCPI EPARGNE PIERRE%'
-          OR libelle ILIKE '%VIR SEPA SCPI%'
+          libelle_ecriture ILIKE '%SCPI EPARGNE PIERRE%'
+          OR libelle_ecriture ILIKE '%VIR SEPA SCPI%'
+          OR libelle_ecriture ILIKE '%DISTRIB CAPITAL%'
       )
     ORDER BY date_ecriture;
     """
@@ -82,12 +88,12 @@ def corriger_ecritures(ecritures):
 
     total_montant = 0
     for ecriture in ecritures:
-        id_ecriture, exercice_id, date_ecriture, compte_id, libelle, debit, credit, type_ecriture = ecriture
-        montant = credit if credit > 0 else debit
+        (id_ecriture, exercice_id, date_ecriture, numero_ecriture,
+         libelle_ecriture, compte_debit, compte_credit, montant, type_ecriture) = ecriture
         total_montant += montant
 
-        print(f"  • ID {id_ecriture} | {date_ecriture} | {libelle[:50]}...")
-        print(f"    Compte: {compte_id} | Crédit: {credit:.2f}€")
+        print(f"  • ID {id_ecriture} | {date_ecriture} | {libelle_ecriture[:50]}...")
+        print(f"    Écriture: Débit {compte_debit} / Crédit {compte_credit} | Montant: {montant:.2f}€")
 
     print(f"\n💰 Total concerné: {total_montant:.2f}€")
 
@@ -97,7 +103,7 @@ def corriger_ecritures(ecritures):
 
     # Confirmation
     print("\n🔧 Correction à effectuer:")
-    print("   Compte 106 (Réserves) → 768 (Autres produits financiers)")
+    print("   Compte crédit 106 (Réserves) → 768 (Autres produits financiers)")
 
     confirmation = input("\n❓ Confirmer la correction ? (oui/non) : ")
     if confirmation.lower() != 'oui':
@@ -112,10 +118,10 @@ def corriger_ecritures(ecritures):
         for ecriture in ecritures:
             id_ecriture = ecriture[0]
 
-            # UPDATE compte 106 → 768
+            # UPDATE compte_credit 106 → 768
             cur.execute("""
                 UPDATE ecritures_comptables
-                SET compte_id = '768'
+                SET compte_credit = '768'
                 WHERE id = %s
             """, (id_ecriture,))
 
@@ -143,12 +149,13 @@ def verifier_correction():
 
     # Vérifier compte 768
     cur.execute("""
-        SELECT COUNT(*), SUM(credit)
+        SELECT COUNT(*), SUM(montant)
         FROM ecritures_comptables
-        WHERE compte_id = '768'
+        WHERE compte_credit = '768'
           AND (
-              libelle ILIKE '%SCPI EPARGNE PIERRE%'
-              OR libelle ILIKE '%VIR SEPA SCPI%'
+              libelle_ecriture ILIKE '%SCPI EPARGNE PIERRE%'
+              OR libelle_ecriture ILIKE '%VIR SEPA SCPI%'
+              OR libelle_ecriture ILIKE '%DISTRIB CAPITAL%'
           )
     """)
 
@@ -158,10 +165,11 @@ def verifier_correction():
     cur.execute("""
         SELECT COUNT(*)
         FROM ecritures_comptables
-        WHERE compte_id = '106'
+        WHERE compte_credit = '106'
           AND (
-              libelle ILIKE '%SCPI EPARGNE PIERRE%'
-              OR libelle ILIKE '%VIR SEPA SCPI%'
+              libelle_ecriture ILIKE '%SCPI EPARGNE PIERRE%'
+              OR libelle_ecriture ILIKE '%VIR SEPA SCPI%'
+              OR libelle_ecriture ILIKE '%DISTRIB CAPITAL%'
           )
     """)
 
@@ -171,8 +179,8 @@ def verifier_correction():
     conn.close()
 
     print("\n📋 Vérification post-correction:")
-    print(f"   Compte 768 : {count_768} écriture(s) | {sum_768 or 0:.2f}€")
-    print(f"   Compte 106 : {count_106} écriture(s)")
+    print(f"   Compte 768 (crédit) : {count_768} écriture(s) | {sum_768 or 0:.2f}€")
+    print(f"   Compte 106 (crédit) : {count_106} écriture(s)")
 
     if count_106 == 0 and count_768 > 0:
         print("\n✅ Correction validée avec succès!")
