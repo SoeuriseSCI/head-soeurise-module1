@@ -51,7 +51,7 @@ def identifier_ecritures_scpi():
         debit,
         credit,
         type_ecriture
-    FROM ecritures
+    FROM ecritures_comptables
     WHERE compte_id = '280'
       AND (
           libelle ILIKE '%SCPI%'
@@ -115,7 +115,7 @@ def corriger_ecritures(ecritures):
 
             # UPDATE compte 280 → 271
             cur.execute("""
-                UPDATE ecritures
+                UPDATE ecritures_comptables
                 SET compte_id = '271'
                 WHERE id = %s
             """, (id_ecriture,))
@@ -145,7 +145,7 @@ def verifier_correction():
     # Vérifier compte 271
     cur.execute("""
         SELECT COUNT(*), SUM(debit), SUM(credit)
-        FROM ecritures
+        FROM ecritures_comptables
         WHERE compte_id = '271'
           AND (
               libelle ILIKE '%SCPI%'
@@ -159,7 +159,7 @@ def verifier_correction():
     # Vérifier compte 280 (ne doit plus contenir ces écritures)
     cur.execute("""
         SELECT COUNT(*)
-        FROM ecritures
+        FROM ecritures_comptables
         WHERE compte_id = '280'
           AND (
               libelle ILIKE '%SCPI%'
