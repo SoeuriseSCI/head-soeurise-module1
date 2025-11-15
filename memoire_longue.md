@@ -1,39 +1,25 @@
-# _Head.Soeurise - Capacités Pérennes Établies (15/11/2025)
-**Fondation: 08/10/2025 | Consolidation: 14-15/11/2025 | Production Ready**
+# _Head.Soeurise - État Pérenne (15/11/2025)
 
-## Identité Permanente (READ-ONLY)
-- **Nom:** _Head.Soeurise (Intelligence | Emma & Pauline)
-- **Fondatrice:** Ulrik Christer Staffan BERGSTEN
-- **Mission:** Gestion patrimoniale SCI Soeurise + transmission progressive
+## Identité (READ-ONLY)
+- **Fondatrice:** Ulrik Christer Staffan BERGSTEN (08/10/2025)
+- **Mission:** Gestion patrimoniale SCI Soeurise + transmission progressive Emma & Pauline
 - **Philosophie:** Persévérer / Espérer / Progresser
 - **Réveil:** 08:00 UTC = 10:00 France (quotidien)
-- **Sécurité:** Ulrik (is_authorized=true) uniquement
+- **Sécurité:** Ulrik uniquement (is_authorized=true)
 
-## Module 1: Email & OCR ✅
-- Extraction IMAP: u6334452013@gmail.com
-- OCR Claude Vision: 99.98% précision
-- 233 cycles sans régression
+## Modules Opérationnels
+**Module 1: Email & OCR** - Extraction IMAP, OCR Vision (99.98%), 234+ cycles
+**Module 2: Comptabilité** - 9-phases (INIT_BILAN, PRET_IMMOBILIER, RELEVE_BANCAIRE), 696+ écritures 2024, PCG conforme
+**Module 3: Reporting** - Planification (balance mensuelle, compte résultat, bilan, flux trésorerie)
 
-## Module 2: Comptabilité Automatisée ✅
-**9-phases workflow stable (26/10 - présent)**
-- INIT_BILAN: 11 comptes ACTIF/PASSIF
-- PRET_IMMOBILIER: 468 échéances (LCL 250k€ @ 1.050% + INVESTIMUR 250k€ @ 1.240%)
-- RELEVE_BANCAIRE: 10+ types opérations
-- Validation token (multi-supportée)
-- Phases 1-5 automatiques; 6-9 ACID insertion
-
-**Patrimoine SCI:**
-- Bilan 2024: 696+ écritures, équilibré ✅
-- Revenus nets: +1.253k€/mois
-- Conformité PCG validée
-- Traçabilité 100% auditable
-
-## Architecture V6.0 Production
+## Architecture V6.0
 - **Contexte:** CLAUDE.md auto-chargé
-- **Accès:** Read/Edit natifs Claude Code + API GitHub ?ref=main
-- **Versioning:** Git (zéro cache CDN)
-- **Fiabilité:** 100% continuité
+- **Accès:** Read/Edit Claude Code + API GitHub ?ref=main (zéro cache)
+- **Fiabilité:** 100% continuité, ACID insertion, audit trail complet
 - **Coût:** <1€/mois (Haiku 4.5 + Render + PostgreSQL)
 
-## Module 3: Reporting (Planification)
-Balance mensuelle, compte de résultat, bilan consolidé, flux trésorerie
+## Patrimoine SCI
+- Bilan 2024: 696+ écritures équilibrées
+- Revenus nets: +1.253k€/mois
+- Prêts: 500k€ total (LCL 250k€ 1.050% + INVESTIMUR 250k€ 1.240%)
+- Conformité PCG: 444/455 validée
