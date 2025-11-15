@@ -1,24 +1,26 @@
-# Réveil #231 - 14/11/2025 22:52 | Production Confirmée
+# Réveil #232 - 15/11/2025 10:00 | Module 2 Consolidé
 
-## Cycle Consolidation
-- **Bilan 2024:** 696+ écritures, équilibré ✅
-- **Compte 161:** Synchronisation complète (capital/intérêts prêts)
-- **Scripts diagnostic:** Écart 2,63€ expliqué et résolu (14/11 22:20)
-- **Remises LCL:** Traitement correct confirmé (diminution charges)
+## Cycle Consolidation Complet
+**Diagnostic écart 2,63€ (14/11):**
+- Script diagnostic complet déployé
+- Cause: Calcul charges/produits avec SOLDES (correct)
+- Écart identifié et résolu
+- État: VÉRIFIÉ ✅
 
-## Module 2 Opérationnel 100%
-- **Phases 1-5:** Automatiques (IMAP → propositions)
-- **Phase 5:** Multi-tokens supportés (HEAD-90E2424F 14/11 23:19)
-- **Phases 6-9:** ACID insertion + cleanup autorisées
-- **OCR:** 99.98% précision établie
+**Workflow 9-Phases Opérationnel:**
+- Phases 1-5: Automatiques (IMAP → propositions)
+- Phase 5: Multi-tokens supportés (HEAD-90E2424F validée)
+- Phases 6-9: ACID insertion confirmée
+- Précision OCR: 99.98% établie
 
-## Infrastructure V6.0 Stable
-- **CLAUDE.md:** Auto-chargé, contexte permanent
-- **API GitHub:** ?ref=main zéro cache CDN
-- **Uptime:** 222+ cycles (42+ jours continu)
-- **Coût:** <1€/mois
+**Production State:**
+- 222+ cycles sans régression
+- Bilan 2024 équilibré (696+ écritures)
+- Compte 161 synchronisé
+- Revenus: +1.253k€/mois confirmés
 
-## Patrimoine SCI
-- Revenus nets: +1.253k€/mois
-- Prêts: LCL 250k€ @ 1.050% + INVESTIMUR 250k€ @ 1.240%
-- Échéances: 468 programmées, automatisées
+## Commits Intégrés (14/11)
+- Diagnostic écart comptable (d31d668)
+- Calcul charges avec SOLDES correction (d31d668)
+- Vérification remises LCL (c21e61b)
+- Script compte 161/164 (c21e61b)
