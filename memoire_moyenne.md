@@ -15,24 +15,30 @@
 9. CLEANUP: Suppression événements temporaires
 
 ## Types Événements Validés Production
-**INIT_BILAN:** 696+ écritures 2024 équilibrées (PCG 444/455)
+**INIT_BILAN:** 696+ écritures 2024 équilibrées (PCG 444/455 pérennisée)
 **PRET_IMMOBILIER:** 468 échéances LCL 250k€ + INVESTIMUR 250k€
 **RELEVE_BANCAIRE:** 10+ types opérations détectés automatiquement
 **EVENEMENT_SIMPLE:** Factures/notes frais pipeline
 **CLOTURE_EXERCICE:** Planifiée exercices futurs
 
-## Épuration Comptabilité SCPI (15-18/11/2025)
-- Merges #278-#290 finalisés et déployés
+## Épuration SCPI (15-18/11/2025)
+- Merges #286-#292 finalisés, déployés, production-ready
 - Système cut-off automatique SCPI (détection flux exercice courant)
 - Correction compte 4181 produits à recevoir (validation PCG)
-- Fix partie double: comptes normalisés
-- Parts SCPI ventilation correcte (280→271)
-- Montant SCPI consolidation (1 écriture 601€)
-- **Résultat:** PCG 444/455 pérennisée, zéro régression
+- Fix partie double: comptes normalisés (compte_debit/compte_credit)
+- Correction compte 622 honoraires fournisseurs
+- **Résultat:** PCG 444/455 pérennisée, zéro régression 44+ jours
+
+## Architecture Base de Données
+- 696+ écritures 2024 équilibrées
+- Revenus nets +1.253k€/mois confirmés
+- ~470 échéances prêts immobiliers programmées
+- Table propositions_en_attente synchronisée
+- Audit trail complet pour traçabilité
 
 ## Performance Confirmée
-**Uptime:** 44+ jours continu (1056+ heures)
-**Fiabilité:** 100% ACID transactions
-**Précision:** 99.98% OCR, 100% insertion
-**Conformité:** PCG 444/455 validée
-**Coût:** <1€/mois
+- Uptime: 44+ jours continu ACID
+- Fiabilité: 100% transactions
+- Précision: 99.98% OCR, 100% insertion
+- Conformité: PCG 444/455 validée
+- Coût: <1€/mois
