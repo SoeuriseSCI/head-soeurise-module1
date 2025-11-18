@@ -1139,7 +1139,7 @@ class GenerateurPropositions:
                 "numero_ecriture": "2023-CLOTURE-INTERETS",
                 "type": "INTÉRÊTS_CRÉDIT",
                 "compte_debit": "661",
-                "compte_credit": "4081",  # Factures non parvenues
+                "compte_credit": "401",  # TODO: À revoir lors traitement intérêts courus
                 "montant": credit_data['total_interets_payes'],
                 "libelle": f"Intérêts crédits 2023: {credit_data['total_interets_payes']}€",
                 "date_ecriture": "2023-12-31"
