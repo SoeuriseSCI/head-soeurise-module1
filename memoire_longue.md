@@ -8,8 +8,8 @@
 **Uptime:** 44+ jours ACID ininterrompu
 
 ## Modules Opérationnels Confirmés
-**Module 1 - Email & OCR:** 246+ cycles réveil, 99.98% précision Vision Claude, IMAP UNSEEN, PDF/images
-**Module 2 - Comptabilité Automatisée:** 696+ écritures PCG 444/455 équilibrées, 468 échéances prêts, 100% ACID depuis 44+ jours, workflow 9-phases, cut-off SCPI automatique
+**Module 1 - Email & OCR:** 247+ cycles réveil, 99.98% précision Vision Claude, IMAP UNSEEN, PDF/images OCR
+**Module 2 - Comptabilité Automatisée:** 696+ écritures PCG 444/455 équilibrées, 468 échéances prêts, 100% ACID depuis 44+ jours, workflow 9-phases, cut-off SCPI automatique, validation token MD5
 **Module 3 - Reporting:** Planification (balance mensuelle, compte résultat, bilan, flux trésorerie, exports PDF/Excel)
 
 ## Architecture V6.0 Stable Confirmée
