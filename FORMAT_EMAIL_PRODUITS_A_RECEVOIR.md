@@ -11,126 +11,129 @@
 ### Comptabilité d'Engagement
 Les produits doivent être comptabilisés dans l'exercice où ils sont **acquis**, indépendamment de leur encaissement.
 
-### Workflow Cut-off SCPI
+### Workflow Cut-off SCPI (Réalité SCI Soeurise)
 
 **Situation :**
 - Les revenus SCPI sont trimestriels (T1, T2, T3, T4)
-- Le versement intervient généralement **après la fin du trimestre**
-- En fin d'année, les revenus du **4T sont acquis mais non encore versés**
+- Le versement intervient généralement **fin janvier N+1** pour le T4 de l'année N
+- **Le montant précis du T4 N n'est connu que fin janvier N+1** (quelques jours avant versement)
+- La SCPI n'envoie PAS d'email d'annonce en décembre
+- C'est **Ulrik (gérant SCI)** qui doit informer _Head quand il connaît le montant
 
-**Solution comptable :**
-1. **31/12/N** : Constatation du produit à recevoir
+**Solution comptable (Création rétroactive) :**
+1. **Fin janvier N+1** : Ulrik reçoit notification SCPI avec montant exact T4
+2. **Ulrik envoie email à _Head** : "Distribution T4 année N de X € sera versée le JJ/MM/AAAA"
+3. **_Head crée créance datée 31/12/N** (rétroactive, avant clôture exercice)
    - Écriture : Débit 4181 "Produits à recevoir" / Crédit 761 "Revenus SCPI"
-   - Montant : Estimation ou annonce officielle
+   - Date écriture : **31/12/N** (exercice N, même si créée en janvier N+1)
+   - Montant : Montant exact communiqué par SCPI
 
-2. **Janvier N+1** : Encaissement effectif
+4. **Quelques jours après** : Encaissement effectif
    - Écriture : Débit 512 "Banque" / Crédit 4181 "Produits à recevoir"
-   - Montant : Montant réel encaissé (peut différer légèrement de l'estimation)
+   - Date écriture : Date réelle du paiement (janvier N+1)
+   - Montant : Montant encaissé (normalement identique)
+
+**Avantages de cette approche :**
+- Produit comptabilisé dans le bon exercice (année N)
+- Montant exact dès la première saisie (pas d'estimation)
+- Exercice N encore ouvert en janvier (clôture mars/avril)
+- Workflow compatible avec la réalité de la SCPI
 
 ---
 
-## 📧 Format Email Type 1 : Annonce Officielle SCPI
+## 📧 Format Email Type 1 : Email d'Ulrik (Gérant SCI)
 
-### Exemple Type (SCPI Épargne Pierre)
+### Exemple Type - Email Simple
+
+**IMPORTANT** : Cet email est envoyé par **Ulrik (gérant SCI)** à _Head.Soeurise, PAS par la SCPI.
 
 ```
-De : noreply@epargne-pierre.fr
+De : ulrik.c.s.be@gmail.com
 À : u6334452013@gmail.com
-Objet : SCPI Épargne Pierre - Annonce distribution T4 2024
+Objet : SCPI Épargne Pierre - Distribution T4 2024
 
-Madame, Monsieur,
+Distribution T4 2024 - SCPI Épargne Pierre
 
-La société de gestion vous informe que la distribution des revenus
-du 4ème trimestre 2024 de la SCPI Épargne Pierre interviendra en
-janvier 2025.
+Montant : 7 356,00 €
+Date versement : 29 janvier 2025
 
-Détail de votre distribution prévisionnelle :
-
-- Nombre de parts détenues : 100.064
-- Revenus du 4ème trimestre 2024 : 7 356,00 €
-- Date de versement prévisionnelle : 29 janvier 2025
-
-Cette annonce est donnée à titre indicatif et pourra faire l'objet
-d'ajustements mineurs lors du versement effectif.
-
-Cordialement,
-La société de gestion
+Cette information permet à _Head de créer le cut-off comptable
+pour clôture exercice 2024.
 ```
 
 ### Éléments Clés à Détecter
 
 **Obligatoires :**
-1. **Émetteur** : SCPI identifiable (nom dans objet ou corps)
+1. **Émetteur** : Email d'Ulrik (ulrik.c.s.be@gmail.com) ← **CRITIQUE**
 2. **Période** : Trimestre concerné (T4, 4ème trimestre, Q4, etc.)
 3. **Année** : Année fiscale concernée
-4. **Montant** : Montant des revenus annoncés
-5. **Intention** : Mots-clés comme "distribution", "revenus", "versement", "prévisionnelle"
+4. **Montant** : Montant des revenus annoncés (montant EXACT, pas estimation)
+5. **Mots-clés** : "SCPI", "Distribution", "T4"
 
 **Optionnels (utiles pour validation) :**
-- Nombre de parts
 - Date de versement prévue
-- Nature du revenu (revenus locatifs, revenus financiers, etc.)
+- Mention "cut-off" ou "clôture exercice"
+
+**Note importante :**
+- Le montant est EXACT (connu fin janvier)
+- Pas d'estimation, pas de "prévisionnelle"
+- Email envoyé **quelques jours avant le versement** (fin janvier)
 
 ---
 
-## 📧 Format Email Type 2 : Bulletin Annuel SCPI
+## 📧 Format Email Type 2 : Email d'Ulrik avec Contexte
 
-### Exemple Type
+### Exemple Type - Email Détaillé
 
 ```
-De : scpi@epargne-pierre.fr
+De : ulrik.c.s.be@gmail.com
 À : u6334452013@gmail.com
-Objet : Bulletin annuel 2024 - SCPI Épargne Pierre
-Pièce jointe : bulletin_annuel_2024.pdf
+Objet : Cut-off SCPI T4 2024
 
-Madame, Monsieur,
+Bonjour _Head,
 
-Veuillez trouver ci-joint votre bulletin annuel 2024 pour la
-SCPI Épargne Pierre.
+Je viens de recevoir la notification de la SCPI Épargne Pierre
+concernant la distribution du 4ème trimestre 2024.
 
-Récapitulatif des distributions 2024 :
-- T1 2024 : 7 200,00 € (versé le 30/04/2024)
-- T2 2024 : 7 280,00 € (versé le 31/07/2024)
-- T3 2024 : 7 315,00 € (versé le 31/10/2024)
-- T4 2024 : 7 356,00 € (versement prévu janvier 2025)
+Informations pour le cut-off comptable :
+- SCPI : Épargne Pierre
+- Trimestre : T4 2024
+- Montant : 7 356,00 €
+- Date versement prévu : 29/01/2025
 
-Total annuel 2024 : 29 151,00 €
+Merci de créer l'écriture de produit à recevoir pour la clôture
+de l'exercice 2024.
 
-Cordialement,
-La société de gestion
+Ulrik
 ```
 
 ### Détection Spécifique
 
 **Indicateurs :**
-- Objet contient "bulletin annuel" ou "récapitulatif annuel"
-- Corps mentionne un trimestre "versement prévu" ou "à venir"
-- Distinction claire entre versements effectués et à venir
+- Émetteur : ulrik.c.s.be@gmail.com
+- Mention explicite "cut-off" ou "produit à recevoir"
+- Contexte clair pour clôture exercice
 
 ---
 
-## 📧 Format Email Type 3 : Notification Simple
+## 📧 Format Email Type 3 : Email Minimaliste
 
-### Exemple Minimal
+### Exemple Minimal (Acceptable)
 
 ```
-De : contact@scpi-epargne-pierre.fr
+De : ulrik.c.s.be@gmail.com
 À : u6334452013@gmail.com
-Objet : Distribution T4 2024 - 7 356,00 €
+Objet : SCPI T4 2024
 
-Bonjour,
-
-Votre distribution du 4ème trimestre 2024 de 7 356,00 € sera
-versée fin janvier 2025.
-
-Cordialement
+SCPI Épargne Pierre T4 2024 : 7 356,00 €
+Versement : 29/01/2025
 ```
 
 ### Détection Regex
 
 **Pattern objet :**
 ```regex
-(Distribution|Revenus|Versement)\s+(T4|4T|4ème trimestre|Q4)\s+(\d{4})
+(SCPI|Distribution|Revenus|Cut-off).*\s+(T4|4T|4ème trimestre|Q4)\s+(\d{4})
 ```
 
 **Pattern montant :**
@@ -146,29 +149,35 @@ Cordialement
 
 **Email = Annonce de produit à recevoir SI :**
 
-1. **Émetteur identifié** :
-   - Domaine connu (@epargne-pierre.fr, @scpi-*.fr, etc.)
-   - OU nom SCPI dans l'objet/corps
+1. **Émetteur ULRIK (CRITIQUE)** :
+   - De : ulrik.c.s.be@gmail.com ← **OBLIGATOIRE**
+   - Seul Ulrik peut demander création cut-off
+   - Acte de gestion de la SCI
 
-2. **Période de fin d'année** :
+2. **Période T4 mentionnée** :
    - Mention "T4", "4T", "4ème trimestre", "Q4"
-   - OU Date email entre 15/12 et 31/12 avec mention "distribution"
+   - Année fiscale concernée (ex: 2024)
 
 3. **Montant présent** :
    - Format monétaire détectable (regex)
    - Valeur > 0€
+   - **Montant EXACT** (pas d'estimation)
 
-4. **Intention future** :
-   - Mots-clés : "prévisionnelle", "prévue", "sera versée", "interviendra"
-   - OU Date de versement future mentionnée
-   - OU Bulletin annuel avec ligne "à venir"
+4. **Contexte cut-off** :
+   - Mots-clés : "cut-off", "produit à recevoir", "clôture exercice"
+   - OU Mention SCPI + T4 + montant (suffisant)
+
+5. **Date réception** :
+   - Généralement **fin janvier** (quelques jours avant versement)
+   - Peut être début février si retard
 
 ### Anti-Patterns (Ne PAS Traiter)
 
 ❌ **Ne PAS générer de créance si :**
+- Émetteur ≠ Ulrik (ulrik.c.s.be@gmail.com)
 - Email contient "versement effectué" (déjà payé)
-- Date email en janvier/février et parle de T4 (probablement doublon avec paiement)
-- Email est un simple relevé (pas d'annonce de versement futur)
+- Email est un simple relevé bancaire
+- Créance T4 déjà créée pour cette année (doublon)
 
 ---
 
@@ -176,43 +185,53 @@ Cordialement
 
 ### Détecteur : `DetecteurAnnonceProduitARecevoir`
 
-**Entrée :** Email identifié comme annonce
-**Sortie :** Proposition d'écriture comptable
+**Entrée :** Email d'Ulrik identifié comme demande de cut-off
+**Sortie :** Proposition d'écriture comptable (rétroactive)
 
 **Proposition Générée :**
 
 ```python
 {
     'type_evenement': 'ANNONCE_PRODUIT_A_RECEVOIR_SCPI',
-    'date_evenement': '2024-12-31',  # Toujours 31/12 de l'exercice
-    'description': 'Revenus SCPI T4 2024 à recevoir (annoncés le XX/12/2024)',
+    'date_evenement': '2024-12-31',  # Toujours 31/12 de l'exercice (RÉTROACTIF)
+    'description': 'Revenus SCPI T4 2024 à recevoir (montant connu le 25/01/2025)',
     'montant': 7356.00,
     'ecritures': [
         {
             'compte_debit': '4181',   # Produits à recevoir
             'compte_credit': '761',   # Revenus SCPI
             'montant': 7356.00,
-            'libelle': 'SCPI Épargne Pierre - Revenus T4 2024 à recevoir'
+            'libelle': 'SCPI Épargne Pierre - Revenus T4 2024 à recevoir',
+            'date_ecriture': '2024-12-31'  # RÉTROACTIF !
         }
     ],
     'metadata': {
-        'email_date': '2024-12-20',
+        'email_date': '2025-01-25',  # Date email Ulrik (janvier)
+        'email_emetteur': 'ulrik.c.s.be@gmail.com',
         'scpi_name': 'Épargne Pierre',
         'trimestre': 'T4',
         'annee': 2024,
-        'date_versement_prevue': '2025-01-29'  # Si mentionnée
+        'date_versement_prevue': '2025-01-29',
+        'creation_retroactive': True  # Écriture créée après 31/12 mais datée 31/12
     }
 }
 ```
 
 ### Écriture Comptable Générée
 
-**Date d'écriture : 31/12/2024** (toujours fin d'exercice)
+**Date d'écriture : 31/12/2024** (rétroactive, même si créée en janvier 2025)
 
 ```
 Compte débit  : 4181 Produits à recevoir        7 356,00 €
 Compte crédit : 761  Revenus SCPI                        7 356,00 €
+Libellé       : SCPI Épargne Pierre - Revenus T4 2024 à recevoir
 ```
+
+**Note technique :**
+- Écriture créée en **janvier 2025** (quand montant connu)
+- Mais **datée du 31/12/2024** (exercice où produit acquis)
+- Possible car exercice 2024 encore ouvert (clôture mars/avril)
+- Conforme comptabilité d'engagement
 
 ---
 
@@ -291,46 +310,63 @@ WHERE compte_debit = '4181'
 
 ---
 
-## 📝 Exemple Complet : Workflow 2024
+## 📝 Exemple Complet : Workflow Année N (2024)
 
-### Décembre 2024 : Réception Email
+### Fin Janvier N+1 (25/01/2025) : Email Ulrik
 
-**Email du 20/12/2024 :**
+**Email d'Ulrik :**
 ```
-Objet : Distribution T4 2024 - SCPI Épargne Pierre
-Corps : Votre distribution de 7 356,00 € sera versée le 29/01/2025
+De : ulrik.c.s.be@gmail.com
+À : u6334452013@gmail.com
+Objet : SCPI Épargne Pierre - Distribution T4 2024
+Date : 25/01/2025
+
+Distribution T4 2024 - SCPI Épargne Pierre
+
+Montant : 7 356,00 €
+Date versement : 29 janvier 2025
+
+Cette information permet à _Head de créer le cut-off comptable
+pour clôture exercice 2024.
 ```
 
-**Détection automatique :**
+**Détection automatique (_Head.Soeurise) :**
+- ✅ Émetteur : ulrik.c.s.be@gmail.com
 - ✅ Type : Annonce produit à recevoir
 - ✅ SCPI : Épargne Pierre
 - ✅ Trimestre : T4 2024
-- ✅ Montant : 7 356,00 €
+- ✅ Montant : 7 356,00 € (EXACT)
 - ✅ Date versement : 29/01/2025
 
-**Proposition générée :**
+**Proposition générée (25/01/2025) :**
 ```python
 {
     'type_evenement': 'ANNONCE_PRODUIT_A_RECEVOIR_SCPI',
-    'date_evenement': '2024-12-31',
+    'date_evenement': '2024-12-31',  # RÉTROACTIF !
     'ecritures': [
         {
+            'date_ecriture': '2024-12-31',  # Datée 31/12/2024
             'compte_debit': '4181',
             'compte_credit': '761',
             'montant': 7356.00,
             'libelle': 'SCPI Épargne Pierre - Revenus T4 2024 à recevoir'
         }
-    ]
+    ],
+    'metadata': {
+        'email_date': '2025-01-25',
+        'creation_retroactive': True
+    }
 }
 ```
 
-**Validation → Écriture comptable du 31/12/2024 :**
+**Validation → Écriture comptable créée le 25/01/2025, DATÉE du 31/12/2024 :**
 ```
-Débit 4181 Produits à recevoir   7 356 €
-Crédit 761 Revenus SCPI                  7 356 €
+Date  : 31/12/2024 (exercice 2024, rétroactif)
+Débit : 4181 Produits à recevoir   7 356 €
+Crédit: 761 Revenus SCPI           7 356 €
 ```
 
-### Janvier 2025 : Réception Paiement
+### Quelques Jours Après (29/01/2025) : Paiement SCPI
 
 **Relevé bancaire du 29/01/2025 :**
 ```
@@ -338,40 +374,48 @@ Date       | Libellé                    | Débit | Crédit
 29/01/2025 | VIREMENT SCPI EPARGNE PIE  |       | 7 356,00
 ```
 
-**Détection automatique :**
-- ✅ Type : Revenu SCPI
+**Détection automatique (_Head.Soeurise) :**
+- ✅ Type : Revenu SCPI (DetecteurDistributionSCPI)
 - ✅ Montant : 7 356,00 €
 
 **Rapprocheur cutoff :**
-1. Recherche créance 4181 exercice 2024 ≈ 7 356€ → **TROUVÉE**
+1. Recherche créance 4181 exercice 2024 ≈ 7 356€ → **TROUVÉE** (créée le 25/01)
 2. Génère proposition de soldage (pas nouveau produit)
 
-**Proposition générée :**
+**Proposition générée (29/01/2025) :**
 ```python
 {
     'type_evenement': 'ENCAISSEMENT_PRODUIT_A_RECEVOIR_SCPI',
     'date_evenement': '2025-01-29',
     'ecritures': [
         {
+            'date_ecriture': '2025-01-29',  # Date réelle paiement
             'compte_debit': '512',
             'compte_credit': '4181',
             'montant': 7356.00,
             'libelle': 'Encaissement revenus SCPI T4 2024 (soldage créance)'
         }
-    ]
+    ],
+    'metadata': {
+        'creance_id': 999,
+        'ecart': 0.00
+    }
 }
 ```
 
 **Validation → Écriture comptable du 29/01/2025 :**
 ```
-Débit 512 Banque                 7 356 €
-Crédit 4181 Produits à recevoir          7 356 €
+Date  : 29/01/2025 (exercice 2025)
+Débit : 512 Banque                 7 356 €
+Crédit: 4181 Produits à recevoir   7 356 €
 ```
 
 **Résultat final :**
-- ✅ Compte 4181 : **0€** (créance soldée)
-- ✅ Compte 761 : **7 356€** comptabilisé en **2024** (correct)
+- ✅ Compte 4181 : **0€** (créance créée le 25/01, soldée le 29/01)
+- ✅ Compte 761 : **7 356€** comptabilisé en **2024** (exercice correct)
+- ✅ Compte 512 : +7 356€ en 2025 (encaissement)
 - ✅ Pas de doublon
+- ✅ Conformité comptabilité d'engagement
 
 ---
 
@@ -387,35 +431,46 @@ Crédit 4181 Produits à recevoir          7 356 €
 
 ---
 
-## 🔧 Template Email à Envoyer à Ulrik
+## 🔧 Template Email pour Ulrik
 
-### Pour Automatisation Future
+### Email à Envoyer par le Gérant SCI
 
+**IMPORTANT** : C'est **Ulrik (gérant SCI)** qui doit envoyer cet email à _Head.Soeurise quand il reçoit la notification de la SCPI (fin janvier).
+
+**De :** ulrik.c.s.be@gmail.com
+**À :** u6334452013@gmail.com (email SCI)
 **Objet :** SCPI [Nom SCPI] - Distribution T4 [Année]
 
 **Corps :**
 ```
-SCPI : [Nom de la SCPI]
-Trimestre : T4 [Année]
-Montant distribution : [Montant] €
-Date versement prévue : [Date]
+Distribution T4 [Année] - SCPI [Nom SCPI]
 
-Cette annonce permet la comptabilisation en produit à recevoir
+Montant : [Montant exact] €
+Date versement : [Date prévue]
+
+Cette information permet à _Head de créer le cut-off comptable
 pour clôture exercice [Année].
 ```
 
-**Exemple concret :**
+**Exemple concret (Janvier 2025 pour T4 2024) :**
 ```
+De : ulrik.c.s.be@gmail.com
+À : u6334452013@gmail.com
 Objet : SCPI Épargne Pierre - Distribution T4 2024
 
-SCPI : Épargne Pierre
-Trimestre : T4 2024
-Montant distribution : 7 356,00 €
-Date versement prévue : 29/01/2025
+Distribution T4 2024 - SCPI Épargne Pierre
 
-Cette annonce permet la comptabilisation en produit à recevoir
+Montant : 7 356,00 €
+Date versement : 29 janvier 2025
+
+Cette information permet à _Head de créer le cut-off comptable
 pour clôture exercice 2024.
 ```
+
+**Timing :**
+- Envoyer cet email **dès réception de la notification SCPI** (fin janvier)
+- Quelques jours AVANT le versement effectif
+- Permet à _Head de créer la créance au 31/12 (rétroactif) avant le paiement
 
 ---
 
