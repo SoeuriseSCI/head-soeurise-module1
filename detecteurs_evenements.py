@@ -1086,7 +1086,7 @@ class DetecteurHonorairesComptable(DetecteurBase):
                 {
                     'date_ecriture': date_op,
                     'libelle_ecriture': f'{nature}',
-                    'compte_debit': '622',
+                    'compte_debit': '6226',  # Honoraires
                     'compte_credit': '512',
                     'montant': montant,
                     'type_ecriture': 'HONORAIRES_COMPTABLE',

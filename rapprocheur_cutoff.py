@@ -439,7 +439,7 @@ class RapprocheurCutoff:
                 ecritures.append({
                     'date_ecriture': date_paiement,
                     'libelle_ecriture': f'{libelle_base} - Complément (écart annonce/réel: +{ecart:.2f}€)',
-                    'compte_debit': '622',  # Ou compte charge approprié
+                    'compte_debit': '6226',  # Honoraires (ou autre compte charge selon nature)
                     'compte_credit': '512',
                     'montant': abs(ecart),
                     'type_ecriture': 'AJUSTEMENT_FACTURE_NON_PARVENUE',
