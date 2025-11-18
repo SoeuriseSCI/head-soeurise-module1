@@ -179,7 +179,7 @@ class DetecteurRemboursementPret(DetecteurBase):
 
     COMPTABILISATION:
     Débit 661 (Charges d'intérêts)  : INTERETS€
-    Débit 161 (Emprunts)            : CAPITAL€
+    Débit 164 (Emprunts établissements crédit) : CAPITAL€
     Crédit 512 (Banque LCL)         : TOTAL€
 
     NOTE IMPORTANTE:
@@ -216,6 +216,10 @@ class DetecteurRemboursementPret(DetecteurBase):
 
         Recherche l'échéance correspondante dans echeances_prets pour ventiler
         automatiquement entre compte 661 (intérêts) et 164 (capital).
+
+        FIX 18/11/2025: Utilisation compte 164 au lieu de 161
+        - Compte 161 = Emprunts obligataires (incorrect pour SCI)
+        - Compte 164 = Emprunts établissements de crédit (correct)
         """
         montant = float(evenement.get('montant', 0))
         date_op = evenement.get('date_operation')
@@ -268,7 +272,7 @@ class DetecteurRemboursementPret(DetecteurBase):
                     {
                         'date_ecriture': date_op,
                         'libelle_ecriture': f'Remboursement capital échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]}',
-                        'compte_debit': '161',
+                        'compte_debit': '164',
                         'compte_credit': '512',
                         'montant': echeance['montant_capital'],
                         'type_ecriture': 'REMBOURSEMENT_CAPITAL',
@@ -287,11 +291,11 @@ class DetecteurRemboursementPret(DetecteurBase):
                     {
                         'date_ecriture': date_op,
                         'libelle_ecriture': f'Échéance prêt (TEMPORAIRE - échéance non trouvée)',
-                        'compte_debit': '161',
+                        'compte_debit': '164',
                         'compte_credit': '512',
                         'montant': montant,
                         'type_ecriture': 'REMBOURSEMENT_PRET',
-                        'notes': f'ATTENTION: Échéance non trouvée dans echeances_prets pour date {date_op} montant {montant}€. Nécessite correction manuelle pour ventiler intérêts (661) / capital (161).'
+                        'notes': f'ATTENTION: Échéance non trouvée dans echeances_prets pour date {date_op} montant {montant}€. Nécessite correction manuelle pour ventiler intérêts (661) / capital (164).'
                     }
                 ]
             }
