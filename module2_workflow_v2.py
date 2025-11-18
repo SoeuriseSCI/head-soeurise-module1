@@ -978,7 +978,7 @@ class GenerateurPropositions:
         # Mapper type → comptes
         mapping = {
             'LOYER': {'debit': '511', 'credit': '701', 'libelle': 'Encaissement loyer'},
-            'CHARGE': {'debit': '614', 'credit': '401', 'libelle': 'Charge'},
+            'CHARGE': {'debit': '614', 'credit': '4081', 'libelle': 'Charge'},  # Factures non parvenues
         }
 
         config = mapping.get(type_evt, mapping['CHARGE'])
@@ -1139,7 +1139,7 @@ class GenerateurPropositions:
                 "numero_ecriture": "2023-CLOTURE-INTERETS",
                 "type": "INTÉRÊTS_CRÉDIT",
                 "compte_debit": "661",
-                "compte_credit": "401",
+                "compte_credit": "4081",  # Factures non parvenues
                 "montant": credit_data['total_interets_payes'],
                 "libelle": f"Intérêts crédits 2023: {credit_data['total_interets_payes']}€",
                 "date_ecriture": "2023-12-31"
