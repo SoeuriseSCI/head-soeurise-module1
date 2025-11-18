@@ -74,7 +74,7 @@ comptes_necessaires = [
     ('606', 'Achats non stockés de matières et fournitures', 'CHARGE', 6),
     ('613', 'Locations', 'CHARGE', 6),
     ('616', 'Primes d\'assurance', 'CHARGE', 6),
-    ('622', 'Rémunérations d\'intermédiaires et honoraires', 'CHARGE', 6),
+    ('6226', 'Honoraires', 'CHARGE', 6),
     ('623', 'Publicité, publications, relations publiques', 'CHARGE', 6),
     ('625', 'Déplacements, missions et réceptions', 'CHARGE', 6),
     ('626', 'Frais postaux et de télécommunications', 'CHARGE', 6),
