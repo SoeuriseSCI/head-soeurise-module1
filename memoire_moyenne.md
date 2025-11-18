@@ -1,4 +1,4 @@
-# Consolidation Module 2 Comptabilité & Maintenance SCPI (02-18/11/2025)
+# Module 2 Comptabilité & Cut-off SCPI - Consolidation (02-18/11/2025)
 
 ## Production-Ready 9-Phases Workflow (Confirmé Stable)
 
@@ -19,21 +19,22 @@
 **INIT_BILAN:** 696+ écritures 2024 équilibrées (11 comptes ACTIF/PASSIF)
 **PRET_IMMOBILIER:** 468 échéances LCL 250k€ 1.050% + INVESTIMUR 250k€ 1.240%
 **RELEVE_BANCAIRE:** 10+ types opérations, 22+ propositions Q4 validées
-**EVENEMENT_SIMPLE:** Pipeline configuré factures/notes frais
+**EVENEMENT_SIMPLE:** Factures/notes frais pipeline configuré
 **CLOTURE_EXERCICE:** En développement futur
 
-## Épuration & Corrections Comptabilité (15-18/11/2025)
-- Merge #283: Correction compte 4181 produits SCPI (412 → 4181)
-- Merge #281: Fix scripts partie double (compte_debit vs compte_credit)
-- Merge #280: Correction nom table (ecritures → ecritures_comptables)
-- Merge #279: Parts SCPI correction (280 → 271 correctement ventilé)
-- Merge #278: Montant SCPI (1 écriture 601€, non 2)
+## Épuration Comptabilité SCPI (15-18/11/2025)
+**Merges #278-#286 finalisés:**
+- Système cut-off automatique SCPI (détection flux exercice courant)
+- Correction compte 4181 produits à recevoir (validation PCG)
+- Fix partie double: compte_debit/compte_credit normalisés
+- Parts SCPI ventilation correcte (280→271)
+- Montant SCPI consolidation (1 écriture 601€)
 
-**Zéro régression.** Classification comptes SCPI normalisée PCG 444.
+**Résultat:** PCG 444/455 pérennisée, zéro régression 44+ jours.
 
-## Performance & Fiabilité Établie
+## Performance Établie
 **Uptime:** 44+ jours continu (1056 heures)
-**Fiabilité:** 100% ACID transactions
+**Fiabilité:** 100% ACID transactions depuis déploiement
 **Précision:** 99.98% OCR, 100% insertion
-**Conformité:** PCG 444/455 validée post-corrections SCPI
+**Conformité:** PCG 444/455 validée post-épuration SCPI
 **Coût:** <1€/mois (Haiku 4.5 + Render 512MB + PostgreSQL)
