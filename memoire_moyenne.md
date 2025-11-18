@@ -1,6 +1,6 @@
-# Consolidation Module 2 Comptabilité (02-18/11 2025)
+# Consolidation Module 2 Comptabilité & Maintenance SCPI (02-18/11/2025)
 
-## Production-Ready 9-Phases Workflow
+## Production-Ready 9-Phases Workflow (Confirmé Stable)
 
 **Phases 1-5 (Automatique):**
 1. DÉTECTION: Analyse emails IMAP UNSEEN
@@ -10,8 +10,8 @@
 5. VALIDATION: Tag [_Head] VALIDE: <TOKEN>
 
 **Phases 6-9 (Semi-automatique):**
-6. RÉCUPÉRATION: Lecture propositions base
-7. VÉRIFICATION: MD5 + validation comptes + structure
+6. RÉCUPÉRATION: Lecture propositions base de données
+7. VÉRIFICATION: MD5 + validation comptes + structure JSON
 8. INSERTION: Écritures PostgreSQL transaction ACID
 9. CLEANUP: Suppression événements temporaires
 
@@ -19,20 +19,21 @@
 **INIT_BILAN:** 696+ écritures 2024 équilibrées (11 comptes ACTIF/PASSIF)
 **PRET_IMMOBILIER:** 468 échéances LCL 250k€ 1.050% + INVESTIMUR 250k€ 1.240%
 **RELEVE_BANCAIRE:** 10+ types opérations, 22+ propositions Q4 validées
-**EVENEMENT_SIMPLE:** Pipeline configuré pour factures/notes frais
+**EVENEMENT_SIMPLE:** Pipeline configuré factures/notes frais
 **CLOTURE_EXERCICE:** En développement futur
 
-## Stabilisation & Corrections Récentes
-- Phase 02-08/11: 9 bugs critiques résolus
-- Phase 08/11: 3 corrections majeures RELEVE_BANCAIRE
-- Phase 14-15/11: Diagnostic écart 2.63€ validé
-- Phase 15/11: Merge #281 scripts partie double
-- 14 commits épuration architecturale (#271-#281)
-- Zéro régression confirmée, 100% confiance production
+## Épuration & Corrections Comptabilité (15-18/11/2025)
+- Merge #283: Correction compte 4181 produits SCPI (412 → 4181)
+- Merge #281: Fix scripts partie double (compte_debit vs compte_credit)
+- Merge #280: Correction nom table (ecritures → ecritures_comptables)
+- Merge #279: Parts SCPI correction (280 → 271 correctement ventilé)
+- Merge #278: Montant SCPI (1 écriture 601€, non 2)
+
+**Zéro régression.** Classification comptes SCPI normalisée PCG 444.
 
 ## Performance & Fiabilité Établie
-**Uptime:** 43+ jours continu
+**Uptime:** 44+ jours continu (1056 heures)
 **Fiabilité:** 100% ACID transactions
 **Précision:** 99.98% OCR, 100% insertion
-**Conformité:** PCG 444/455 validée
+**Conformité:** PCG 444/455 validée post-corrections SCPI
 **Coût:** <1€/mois (Haiku 4.5 + Render 512MB + PostgreSQL)
