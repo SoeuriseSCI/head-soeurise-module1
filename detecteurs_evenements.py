@@ -31,6 +31,9 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
+# Import rapprocheur cutoff
+from rapprocheur_cutoff import RapprocheurCutoff
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BASE DÉTECTEUR
@@ -334,7 +337,19 @@ class DetecteurDistributionSCPI(DetecteurBase):
         return (match_libelle and match_type) or match_evt
 
     def generer_proposition(self, evenement: Dict) -> Dict:
-        """Génère la proposition d'écriture selon le type de distribution"""
+        """
+        Génère la proposition d'écriture selon le type de distribution
+
+        WORKFLOW CUT-OFF (depuis 18/11/2025):
+        -------------------------------------
+        1. Vérifier si créance 4181 existe (produit à recevoir)
+        2. Si OUI → Générer écriture de SOLDAGE (Débit 512 / Crédit 4181)
+        3. Si NON → Générer écriture de PRODUIT (Débit 512 / Crédit 761)
+
+        Cela évite le doublon:
+        - Sans rapprochement: Créance 4181 + Produit 761 = revenus comptés 2 fois
+        - Avec rapprochement: Créance 4181 soldée = revenus comptés 1 fois
+        """
         montant = float(evenement.get('montant', 0))
         date_op = evenement.get('date_operation')
         libelle = evenement.get('libelle', '').lower()
@@ -362,6 +377,28 @@ class DetecteurDistributionSCPI(DetecteurBase):
             }
         else:
             # Distribution classique (revenus trimestriels)
+            # ============================================
+
+            # ÉTAPE 1: Tenter rapprochement avec créance existante
+            # -----------------------------------------------------
+            rapprocheur = RapprocheurCutoff(self.session)
+            proposition_rapprochement = rapprocheur.rapprocher_encaissement(
+                montant=montant,
+                date_operation=date_op,
+                libelle="SCPI Épargne Pierre",
+                tolerance_montant=2.0,
+                tolerance_pourcentage=0.02
+            )
+
+            # ÉTAPE 2: Si créance trouvée → Retourner proposition de soldage
+            # ---------------------------------------------------------------
+            if proposition_rapprochement:
+                # Créance trouvée: On solde au lieu de créer nouveau produit
+                return proposition_rapprochement
+
+            # ÉTAPE 3: Sinon → Créer nouveau produit (comportement normal)
+            # ------------------------------------------------------------
+            # Aucune créance trouvée: Comptabilisation normale en produit
             return {
                 'type_evenement': 'REVENU_SCPI',
                 'description': f'Revenus SCPI Épargne Pierre (trimestre) : {montant}€',
@@ -432,6 +469,210 @@ class DetecteurAchatSCPI(DetecteurBase):
                     'notes': 'Titres de participation immobilisés - Détention long terme'
                 }
             ]
+        }
+
+
+class DetecteurAnnonceProduitARecevoir(DetecteurBase):
+    """
+    Détecte les ANNONCES de revenus SCPI à recevoir (cut-off fin d'année)
+
+    CONTEXTE:
+    - En fin d'année, les revenus SCPI du 4T sont acquis mais non encore versés
+    - Le versement intervient généralement en janvier N+1
+    - Principe comptabilité d'engagement: produits comptabilisés dans exercice où acquis
+
+    PATTERN EMAIL:
+    - Objet contient: SCPI + (DISTRIBUTION ou REVENUS) + T4/4T/4ème trimestre/Q4
+    - Corps contient: Montant + Date versement future
+    - Émetteur: SCPI identifiable (domaine ou nom)
+    - Mots-clés intention: "prévisionnelle", "prévue", "sera versée", "interviendra"
+    - OU Bulletin annuel avec ligne "versement prévu" pour T4
+
+    DATE DÉTECTION:
+    - Priorité 1: Email reçu entre 15/12 et 31/12
+    - Priorité 2: Email mentionne "T4" + "prévue"/"versement futur"
+
+    COMPTABILISATION:
+    Date écriture: 31/12/N (toujours fin exercice)
+      Débit 4181 (Produits à recevoir)     : XX.XX€
+      Crédit 761 (Revenus SCPI)            : XX.XX€
+
+    EXEMPLE:
+    Email du 20/12/2024:
+      "Distribution T4 2024 de 7 356,00 € sera versée le 29/01/2025"
+
+    Génère écriture au 31/12/2024:
+      Débit 4181 : 7 356,00 €
+      Crédit 761 : 7 356,00 €
+
+    NOTE IMPORTANTE:
+    - Cette écriture sera SOLDÉE en janvier lors de l'encaissement réel
+    - Le DetecteurDistributionSCPI devra utiliser le rapprocheur_cutoff
+      pour détecter qu'une créance existe et la solder (Débit 512 / Crédit 4181)
+      au lieu de créer un nouveau produit (Débit 512 / Crédit 761)
+
+    Date création: 18/11/2025
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """
+        Détecte une annonce de produit à recevoir SCPI
+
+        Args:
+            evenement: Dictionnaire contenant:
+                - type_source: 'EMAIL' (requis)
+                - objet_email: Objet de l'email
+                - corps_email: Corps de l'email
+                - date_reception: Date réception email
+                - libelle / libelle_normalise: Pour compatibilité
+
+        Returns:
+            True si annonce de produit à recevoir détectée
+        """
+        # Vérifier que c'est un email (pas un relevé bancaire)
+        type_source = evenement.get('type_source', '').upper()
+        if type_source != 'EMAIL':
+            return False
+
+        # Récupérer les champs email
+        objet = evenement.get('objet_email', '').lower()
+        corps = evenement.get('corps_email', '').lower()
+        date_reception_str = evenement.get('date_reception', evenement.get('date_operation', ''))
+
+        # Combiner objet + corps pour analyse
+        texte_complet = f"{objet} {corps}"
+
+        # Vérifier pattern SCPI
+        match_scpi = 'scpi' in texte_complet or 'epargne pierre' in texte_complet
+        if not match_scpi:
+            return False
+
+        # Vérifier pattern T4 / 4ème trimestre / Q4
+        match_t4 = any(pattern in texte_complet for pattern in [
+            't4', '4t', '4ème trimestre', '4eme trimestre',
+            'quatrième trimestre', 'quatrieme trimestre', 'q4'
+        ])
+        if not match_t4:
+            return False
+
+        # Vérifier pattern distribution/revenus
+        match_distribution = any(pattern in texte_complet for pattern in [
+            'distribution', 'distrib', 'revenus', 'versement'
+        ])
+        if not match_distribution:
+            return False
+
+        # Vérifier montant présent (pattern monétaire)
+        import re
+        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*[,\.]\d{2})\s*€'
+        match_montant = re.search(pattern_montant, texte_complet)
+        if not match_montant:
+            return False
+
+        # Vérifier intention future (fort indicateur)
+        match_futur = any(mot in texte_complet for mot in [
+            'prévisionnelle', 'previsionnelle', 'prévue', 'prevue',
+            'sera versée', 'sera verse', 'interviendra',
+            'versement prévu', 'versement prevu', 'à venir', 'a venir'
+        ])
+
+        # Vérifier période de fin d'année (fort indicateur)
+        match_periode = False
+        if date_reception_str:
+            try:
+                if isinstance(date_reception_str, str):
+                    date_reception = datetime.strptime(date_reception_str, '%Y-%m-%d').date()
+                else:
+                    date_reception = date_reception_str
+
+                # Email reçu entre 15/12 et 31/12
+                match_periode = (date_reception.month == 12 and date_reception.day >= 15)
+            except:
+                pass
+
+        # Vérifier anti-patterns (ne PAS traiter)
+        anti_pattern = any(mot in texte_complet for mot in [
+            'versement effectué', 'versement effectue',
+            'a été versée', 'a ete verse'
+        ])
+
+        if anti_pattern:
+            return False
+
+        # Décision finale: Futur OU Période fin d'année
+        return match_futur or match_periode
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """
+        Génère la proposition d'écriture de produit à recevoir
+
+        Returns:
+            Proposition avec écriture au 31/12/N
+        """
+        # Extraire le montant
+        import re
+        corps = evenement.get('corps_email', '')
+        objet = evenement.get('objet_email', '')
+        texte_complet = f"{objet} {corps}"
+
+        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*)[,\.](\d{2})\s*€'
+        match = re.search(pattern_montant, texte_complet)
+
+        if match:
+            montant_str = match.group(1).replace(' ', '') + '.' + match.group(2)
+            montant = float(montant_str)
+        else:
+            montant = 0.0
+
+        # Extraire l'année (chercher 20XX dans le texte)
+        match_annee = re.search(r'20(\d{2})', texte_complet)
+        if match_annee:
+            annee = int(match_annee.group(0))
+        else:
+            # Par défaut: année de réception email
+            date_reception_str = evenement.get('date_reception', evenement.get('date_operation', ''))
+            try:
+                if isinstance(date_reception_str, str):
+                    date_reception = datetime.strptime(date_reception_str, '%Y-%m-%d').date()
+                else:
+                    date_reception = date_reception_str
+                annee = date_reception.year
+            except:
+                annee = datetime.now().year
+
+        # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
+        date_ecriture = f"{annee}-12-31"
+
+        # Extraire date versement prévue (si mentionnée)
+        date_versement_prevue = None
+        pattern_date = r'(\d{1,2})[/-](\d{1,2})[/-](20\d{2})'
+        match_date = re.search(pattern_date, texte_complet)
+        if match_date:
+            jour, mois, annee_versement = match_date.groups()
+            date_versement_prevue = f"{annee_versement}-{mois.zfill(2)}-{jour.zfill(2)}"
+
+        return {
+            'type_evenement': 'ANNONCE_PRODUIT_A_RECEVOIR_SCPI',
+            'description': f'Revenus SCPI T4 {annee} à recevoir (annoncés) : {montant}€',
+            'confiance': 0.90,
+            'ecritures': [
+                {
+                    'date_ecriture': date_ecriture,
+                    'libelle_ecriture': f'SCPI Épargne Pierre - Revenus T4 {annee} à recevoir',
+                    'compte_debit': '4181',
+                    'compte_credit': '761',
+                    'montant': montant,
+                    'type_ecriture': 'PRODUIT_A_RECEVOIR_SCPI',
+                    'notes': f'Cut-off fin exercice {annee} - Versement prévu {date_versement_prevue or "janvier " + str(annee + 1)}'
+                }
+            ],
+            'metadata': {
+                'email_date': evenement.get('date_reception', evenement.get('date_operation', '')),
+                'scpi_name': 'Épargne Pierre',
+                'trimestre': 'T4',
+                'annee': annee,
+                'date_versement_prevue': date_versement_prevue
+            }
         }
 
 
@@ -890,6 +1131,7 @@ class FactoryDetecteurs:
             DetecteurHonorairesComptable(session),
 
             # Détecteurs d'investissements (priorité moyenne - patterns multiples)
+            DetecteurAnnonceProduitARecevoir(session),  # EMAIL: Annonce revenus T4 à recevoir (cut-off)
             DetecteurDistributionSCPI(session),  # CRÉDIT: Revenus 761
             DetecteurAchatSCPI(session),  # DÉBIT: Achats 273
             DetecteurAchatValeursMobilieres(session),  # ETF + Amazon + autres VM
