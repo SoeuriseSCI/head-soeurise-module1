@@ -59,7 +59,7 @@ comptes_necessaires = [
     ('290', 'Provisions pour dépréciation des immobilisations', 'ACTIF', 2),
 
     # CLASSE 4 - COMPTES DE TIERS
-    ('401', 'Fournisseurs', 'PASSIF', 4),
+    ('4081', 'Fournisseurs - Factures non parvenues', 'PASSIF', 4),
     ('444', 'État - Impôts sur les bénéfices', 'PASSIF', 4),
     ('455', 'Associés - Comptes courants', 'PASSIF', 4),
     ('467', 'Autres comptes débiteurs ou créditeurs', 'PASSIF', 4),
