@@ -301,6 +301,122 @@ class DetecteurRemboursementPret(DetecteurBase):
             }
 
 
+class DetecteurAnnonceProduitARecevoir(DetecteurBase):
+    """
+    Détecte emails d'Ulrik annonçant produits SCPI à recevoir (cutoff)
+
+    PRINCIPE DE L'EXTOURNE:
+    1. Email Ulrik janvier N+1: "Distribution T4 année N sera versée le JJ/MM"
+    2. Création écritures DATÉES 31/12/N (rétroactif):
+       - Débit 4181 (Produits à recevoir)
+       - Crédit 761 (Produits SCPI)
+    3. Marquage pour extourne automatique au 01/01/N+1
+
+    SÉCURITÉ CRITIQUE:
+    - Seul Ulrik (ulrik.c.s.be@gmail.com) peut créer des cutoffs
+    - Acte de gestion de la SCI
+
+    Email attendu:
+    - De: ulrik.c.s.be@gmail.com
+    - Objet: SCPI [Nom] - Distribution T4 [année]
+    - Corps: Montant X € sera versé le JJ/MM/AAAA
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Vérifie si l'événement est une annonce de produit à recevoir"""
+
+        # 1. Vérifier que c'est un email
+        if evenement.get('type') != 'email':
+            return False
+
+        # 2. CRITIQUE: Vérifier émetteur = Ulrik (gérant SCI)
+        emetteur = evenement.get('email_emetteur', '').lower().strip()
+        if emetteur != 'ulrik.c.s.be@gmail.com':
+            return False
+
+        # 3. Vérifier objet contient "distribution" et "T4"
+        objet = evenement.get('email_objet', '').lower()
+        if 'distribution' not in objet or 't4' not in objet:
+            return False
+
+        # 4. Vérifier corps contient montant et "sera versé"
+        corps = evenement.get('email_corps', '').lower()
+        if 'sera vers' not in corps:  # "sera versé" ou "sera versée"
+            return False
+
+        return True
+
+    def generer_proposition(self, evenement: Dict) -> Optional[Dict]:
+        """Génère proposition d'écritures de cutoff avec extourne"""
+
+        if not self.detecter(evenement):
+            return None
+
+        objet = evenement.get('email_objet', '')
+        corps = evenement.get('email_corps', '')
+
+        # Extraire l'année (de l'objet ou du corps)
+        match_annee = re.search(r'(?:T4|année)\s+(\d{4})', objet + ' ' + corps, re.IGNORECASE)
+        if not match_annee:
+            return None
+        annee = int(match_annee.group(1))
+
+        # Extraire le montant
+        match_montant = re.search(r'(\d[\d\s,\.]+)\s*(?:€|euros?)', corps, re.IGNORECASE)
+        if not match_montant:
+            return None
+
+        montant_str = match_montant.group(1)
+        montant_str = montant_str.replace(' ', '').replace(',', '.')
+        montant = float(montant_str)
+
+        # Extraire date de paiement (optionnel)
+        from datetime import date
+        date_paiement = None
+        match_date = re.search(r'(\d{1,2})[/\s](\d{1,2})[/\s](\d{4})', corps)
+        if match_date:
+            jour = int(match_date.group(1))
+            mois = int(match_date.group(2))
+            annee_paiement = int(match_date.group(3))
+            try:
+                date_paiement = date(annee_paiement, mois, jour)
+            except:
+                date_paiement = None
+
+        # Extraire nom SCPI de l'objet
+        match_scpi = re.search(r'SCPI\s+([^-]+)', objet, re.IGNORECASE)
+        nom_scpi = match_scpi.group(1).strip() if match_scpi else "SCPI"
+
+        # Date de l'écriture : 31/12 de l'année concernée
+        date_ecriture = date(annee, 12, 31)
+
+        # Libellé
+        libelle = f"Cutoff {annee} - Distribution T4 {nom_scpi}"
+        if date_paiement:
+            libelle += f" (paiement {date_paiement.strftime('%d/%m/%Y')})"
+
+        # Note importante sur l'extourne
+        note_extourne = (f'Créé rétroactivement en {datetime.now().strftime("%m/%Y")} suite email Ulrik. '
+                        f'Extourne automatique au 01/01/{annee+1}.')
+
+        return {
+            'type_evenement': 'CUTOFF_PRODUIT_A_RECEVOIR',
+            'description': f'Cutoff revenus {nom_scpi} T4 {annee}: {montant}€',
+            'confiance': 0.95,  # Haute confiance (email Ulrik)
+            'ecritures': [
+                {
+                    'date_ecriture': date_ecriture,
+                    'libelle_ecriture': libelle,
+                    'compte_debit': '4181',   # Produits à recevoir (ACTIF)
+                    'compte_credit': '761',    # Produits de participations
+                    'montant': montant,
+                    'type_ecriture': 'CUTOFF_PRODUIT_A_RECEVOIR',
+                    'notes': note_extourne
+                }
+            ]
+        }
+
+
 class DetecteurDistributionSCPI(DetecteurBase):
     """
     Détecte les DISTRIBUTIONS SCPI (revenus trimestriels)
