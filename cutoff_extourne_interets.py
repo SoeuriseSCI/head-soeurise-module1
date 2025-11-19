@@ -218,23 +218,36 @@ class CalculateurInteretsCourus:
 if __name__ == '__main__':
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
+    from models_module2 import ExerciceComptable
     import os
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(description='Calcul des intérêts courus et génération des cutoffs')
+    parser.add_argument('--exercice', type=int, required=True, help='Année de l\'exercice')
+    parser.add_argument('--execute', action='store_true', help='Exécuter réellement (sinon dry-run)')
+    args = parser.parse_args()
 
     DATABASE_URL = os.environ.get('DATABASE_URL')
     if not DATABASE_URL:
         print("❌ DATABASE_URL non définie")
-        exit(1)
+        sys.exit(1)
 
     engine = create_engine(DATABASE_URL)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
 
     try:
-        calculateur = CalculateurInteretsCourus(session)
+        # Récupérer l'exercice
+        exercice = session.query(ExerciceComptable).filter_by(annee=args.exercice).first()
+        if not exercice:
+            print(f"❌ Exercice {args.exercice} non trouvé")
+            sys.exit(1)
 
-        # Calculer intérêts courus pour exercice 2024
-        exercice_id = 2  # ID exercice 2024
-        date_cloture = date(2024, 12, 31)
+        exercice_id = exercice.id
+        date_cloture = date(args.exercice, 12, 31)
+
+        calculateur = CalculateurInteretsCourus(session)
 
         print("=" * 80)
         print("🧮 CALCUL INTÉRÊTS COURUS")
@@ -253,17 +266,81 @@ if __name__ == '__main__':
                 print(f"  {prop['description']}")
                 for ec in prop['ecritures']:
                     print(f"    {ec['date_ecriture']} : Débit {ec['compte_debit']} / Crédit {ec['compte_credit']} : {ec['montant']}€")
-                    total_interets += ec['montant']
+                    if ec['date_ecriture'].year == args.exercice:  # Seulement les cutoffs pour le total
+                        total_interets += ec['montant']
                 print()
 
             print("-" * 80)
             print(f"  TOTAL INTÉRÊTS COURUS : {total_interets:,.2f}€")
             print("=" * 80)
+            print()
+
+            # Créer les écritures si --execute
+            if args.execute:
+                from models_module2 import EcritureComptable
+
+                print("💾 CRÉATION DES ÉCRITURES...")
+                print()
+
+                compteur_cutoff = 1
+                compteur_extourne = 1
+
+                for prop in propositions:
+                    for ec in prop['ecritures']:
+                        # Déterminer le type et le numéro
+                        is_cutoff = ec['date_ecriture'].year == args.exercice
+                        type_ecriture = 'CUTOFF_INTERETS_COURUS' if is_cutoff else 'EXTOURNE_CUTOFF'
+
+                        if is_cutoff:
+                            numero = f"{args.exercice}-1231-CUT-{compteur_cutoff:03d}"
+                            compteur_cutoff += 1
+                            exercice_ecriture = exercice.id
+                        else:
+                            numero = f"{args.exercice + 1}-0101-EXT-{compteur_extourne:03d}"
+                            compteur_extourne += 1
+                            # Trouver exercice N+1
+                            exercice_suivant = session.query(ExerciceComptable).filter_by(annee=args.exercice + 1).first()
+                            if not exercice_suivant:
+                                print(f"  ⚠️  Exercice {args.exercice + 1} n'existe pas, création...")
+                                exercice_suivant = ExerciceComptable(
+                                    annee=args.exercice + 1,
+                                    date_debut=date(args.exercice + 1, 1, 1),
+                                    date_fin=date(args.exercice + 1, 12, 31),
+                                    statut='OUVERT'
+                                )
+                                session.add(exercice_suivant)
+                                session.flush()
+                            exercice_ecriture = exercice_suivant.id
+
+                        ecriture = EcritureComptable(
+                            exercice_id=exercice_ecriture,
+                            numero_ecriture=numero,
+                            date_ecriture=ec['date_ecriture'],
+                            libelle_ecriture=ec['libelle_ecriture'],
+                            compte_debit=ec['compte_debit'],
+                            compte_credit=ec['compte_credit'],
+                            montant=ec['montant'],
+                            type_ecriture=type_ecriture,
+                            notes=ec.get('notes', '')
+                        )
+                        session.add(ecriture)
+                        print(f"  ✅ {ec['date_ecriture']} | {numero} | {ec['compte_debit']} → {ec['compte_credit']} | {ec['montant']}€")
+
+                session.commit()
+                print()
+                print("✅ ÉCRITURES CRÉÉES AVEC SUCCÈS")
+                print("=" * 80)
+            else:
+                print()
+                print("🔍 MODE DRY-RUN : Aucune écriture créée")
+                print("   Pour créer réellement, ajouter --execute")
+                print("=" * 80)
 
     except Exception as e:
         print(f"❌ Erreur : {e}")
         import traceback
         traceback.print_exc()
+        sys.exit(1)
 
     finally:
         session.close()
