@@ -26,8 +26,8 @@ L'extourne est une technique comptable qui permet de :
 **Janvier N+1** - Email Ulrik :
 ```
 De: ulrik.c.s.be@gmail.com
-Objet: SCPI Épargne Pierre - Distribution T4 2024
-Corps: Montant: 7 356,00 € sera versé le 29/01/2025
+Objet: SCPI Épargne Pierre - Distribution T4 2023
+Corps: Montant: 7 356,00 € sera versé le 29/01/2024
 ```
 
 **31/12/N** - Cutoff (créé rétroactivement) :
@@ -69,8 +69,8 @@ Type: DISTRIBUTION_SCPI
 **Décembre N** - Email Ulrik ou estimation :
 ```
 De: ulrik.c.s.be@gmail.com
-Objet: Cutoff honoraires comptables 2024
-Corps: Provisionner honoraires 2024: 1 200,00 €
+Objet: Cutoff honoraires comptables 2023
+Corps: Provisionner honoraires 2023: 1 200,00 €
 ```
 
 **31/12/N** - Cutoff :
@@ -108,9 +108,9 @@ Type: HONORAIRES_COMPTABLE
 **Contexte** : Intérêts courent quotidiennement, payés mensuellement
 
 **Exemple** :
-- Dernière échéance 2024 : 12/12/2024 (intérêts 12/11 → 11/12)
-- Fin d'année : 31/12/2024
-- **Intérêts courus non échus** : 12/12 → 31/12 (20 jours)
+- Dernière échéance 2023 : 12/12/2023 (intérêts 12/11 → 11/12)
+- Fin d'année : 31/12/2023
+- **Intérêts courus non échus** : 12/12 → 31/12 (19 jours)
 
 **Workflow** :
 
@@ -125,44 +125,44 @@ Type: HONORAIRES_COMPTABLE
 **31/12/N** - Cutoff (créé rétroactivement en janvier N+1) :
 ```
 Formule: Capital restant × Taux annuel × (Nb jours / 365)
-Exemple Prêt LCL: 250 000€ × 2.5% × (20/365) = 342.47€
-Exemple Prêt INVESTIMUR: 236 000€ × 2.0% × (20/365) = 258.36€
+Exemple Prêt LCL: ~250 000€ × 2.5% × (19/365) = ~325€
+Exemple Prêt INVESTIMUR: ~236 000€ × 2.0% × (19/365) = ~246€
 
-Débit   661 (Charges d'intérêts)    342.47€  (Prêt LCL)
-Crédit 1688 (Intérêts courus)       342.47€
+Débit   661 (Charges d'intérêts)    ~325€  (Prêt LCL)
+Crédit 1688 (Intérêts courus)       ~325€
 Type: CUTOFF_INTERETS_COURUS
 
-Débit   661 (Charges d'intérêts)    258.36€  (Prêt INVESTIMUR)
-Crédit 1688 (Intérêts courus)       258.36€
+Débit   661 (Charges d'intérêts)    ~246€  (Prêt INVESTIMUR)
+Crédit 1688 (Intérêts courus)       ~246€
 Type: CUTOFF_INTERETS_COURUS
 ```
 
 **01/01/N+1** - Extourne automatique (créée en même temps) :
 ```
-Débit  1688  342.47€
-Crédit  661  342.47€
+Débit  1688  ~325€
+Crédit  661  ~325€
 Type: EXTOURNE_CUTOFF
 
-Débit  1688  258.36€
-Crédit  661  258.36€
+Débit  1688  ~246€
+Crédit  661  ~246€
 Type: EXTOURNE_CUTOFF
 ```
 
 **12/01/N+1** - Échéance réelle :
 ```
-Débit   661  500.00€  (intérêts mois complet - LCL)
-Crédit  512  500.00€
+Débit   661  ~500€  (intérêts mois complet - LCL)
+Crédit  512  ~500€
 Type: INTERET_PRET
 
-Débit   661  400.00€  (intérêts mois complet - INVESTIMUR)
-Crédit  512  400.00€
+Débit   661  ~400€  (intérêts mois complet - INVESTIMUR)
+Crédit  512  ~400€
 Type: INTERET_PRET
 ```
 
 **Résultat** :
-- Exercice N : Charge 661 = **600.83€** (20 jours, 2 prêts) ✅
-- Exercice N+1 : Charge 661 = **299.17€** (900 - 600.83)
-- Total mois : **900€** ✅
+- Exercice N : Charge 661 = **~571€** (19 jours, 2 prêts) ✅
+- Exercice N+1 : Charge 661 = **~329€** (~900 - ~571)
+- Total mois : **~900€** ✅
 
 **Déclencheur** : `DetecteurRemboursementPret` (detecteurs_evenements.py)
 **Calculateur** : `CalculateurInteretsCourus` (cutoff_extourne_interets.py)
@@ -195,10 +195,10 @@ Type: INTERET_PRET
 3. **Vérification** : Dry-run pour voir quelles extournes seraient générées
 4. **Cutoffs manuels** : Cutoffs créés manuellement en base (hors système détecteurs)
 
-**Exemple situation actuelle** :
+**Exemple situation actuelle (bilan d'ouverture 2024)** :
 ```
-Situation : Bilan 2024 a déjà des cutoffs (4181: 7356€, 4081: 653€) SANS extournes
-Solution : Utiliser le générateur pour créer les extournes manquantes
+Situation : Bilan d'ouverture 2024 a déjà des cutoffs 31/12/2023 (4181: 7356€, 4081: 653€) SANS extournes
+Solution : Utiliser le générateur pour créer les extournes manquantes (01/01/2024)
 ```
 
 **Supporte** :
@@ -209,10 +209,10 @@ Solution : Utiliser le générateur pour créer les extournes manquantes
 **Utilisation** :
 ```bash
 # Simulation (dry-run) - RECOMMANDÉ pour vérifier d'abord
-python generateur_extournes.py --exercice 2024
+python generateur_extournes.py --exercice 2023
 
 # Exécution réelle
-python generateur_extournes.py --exercice 2024 --execute
+python generateur_extournes.py --exercice 2023 --execute
 
 # Tous les exercices cloturés
 python generateur_extournes.py --tous --execute
