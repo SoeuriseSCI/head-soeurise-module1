@@ -105,17 +105,36 @@ Pour que ce soit **vraiment automatique**, je recommande **l'Approche A** :
 
 ### Pour Intérêts Courus (661/1688)
 
-**Déclencheur** : Script exécuté manuellement ou par tâche planifiée (31/12 ou début janvier)
+**Déclencheur** : AUTOMATIQUE lors de la première échéance de prêt en janvier N+1
 
-**Action** : `CalculateurInteretsCourus.calculer_interets_courus_exercice()`
+**Action** : `DetecteurRemboursementPret._declencher_cutoff_interets_si_necessaire()`
+
+**Workflow automatique** :
+1. Détection échéance de prêt en janvier N+1
+2. Vérification : cutoff intérêts N existe déjà ?
+3. Si NON → Appel automatique `CalculateurInteretsCourus`
+4. Calcul pour les 2 prêts (LCL + INVESTIMUR)
+5. Création cutoff 31/12/N + extourne 01/01/N+1 **← Dans la même proposition**
 
 **Génère** :
-1. Cutoff 31/12/2024 (exercice 2024)
-2. Extourne 01/01/2025 (exercice 2025) **← Dans la foulée**
+1. Écritures remboursement (intérêts + capital)
+2. Cutoff 31/12/2024 (exercice 2024) pour les 2 prêts
+3. Extourne 01/01/2025 (exercice 2025) pour les 2 prêts **← Dans la foulée**
 
-**Timing** : Lors de l'exécution du script
+**Timing** : Lors du traitement de la première échéance de janvier N+1
 
-**Commande** :
+**Exemple** :
+```
+Janvier 2025 : Traitement échéance LCL 12/01/2025
+→ Détecte : janvier 2025
+→ Vérifie : cutoff 2024 existe ? NON
+→ DÉCLENCHE : Calcul intérêts courus 2024
+→ CRÉE : 6 écritures au total
+  - 2 écritures échéance (intérêts + capital)
+  - 4 écritures cutoff intérêts (2 cutoffs + 2 extournes)
+```
+
+**Commande manuelle** (fallback si besoin réparation) :
 ```bash
 python cutoff_extourne_interets.py --exercice 2024 --execute
 ```
@@ -234,11 +253,16 @@ def generer_proposition(self, evenement: Dict) -> Optional[Dict]:
 
 | Cutoff Type | Déclencheur | Quand | Cutoff | Extourne | Automatique ? |
 |-------------|-------------|-------|--------|----------|---------------|
-| **Revenus SCPI** | Email Ulrik | Janvier N+1 | ✅ Dans flux email | ✅ Dans flux email | ✅ OUI |
-| **Honoraires** | Email/Estimation | Décembre N ou janvier N+1 | ✅ Dans flux email | ✅ Dans flux email | ✅ OUI |
-| **Intérêts courus** | Script/Tâche | 31/12 ou janvier N+1 | ✅ Dans script | ✅ Dans script | ⚠️ Semi-auto |
+| **Revenus SCPI** | Email Ulrik | Janvier N+1 | ✅ Dans flux email | ✅ Dans flux email | ✅ OUI (100%) |
+| **Honoraires** | Email/Estimation | Décembre N ou janvier N+1 | ✅ Dans flux email | ✅ Dans flux email | ✅ OUI (100%) |
+| **Intérêts courus** | 1ère échéance janvier | Janvier N+1 | ✅ Dans flux échéance | ✅ Dans flux échéance | ✅ OUI (100%) |
 
 **generateur_extournes.py** : Utilitaire de secours/réparation uniquement
+
+**SYSTÈME 100% AUTOMATIQUE** :
+- Aucune action manuelle requise pour les cutoffs
+- Déclenchement au bon moment (janvier N+1)
+- Cutoff + extourne créés ensemble dans la foulée
 
 ---
 

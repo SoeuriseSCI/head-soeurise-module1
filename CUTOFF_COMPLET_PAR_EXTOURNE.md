@@ -114,38 +114,57 @@ Type: HONORAIRES_COMPTABLE
 
 **Workflow** :
 
-**31/12/N** - Calcul automatique :
+**Janvier N+1** - Première échéance de prêt détectée :
 ```
-Formule: Capital restant × Taux annuel × (Nb jours / 365)
-Exemple: 486 000€ × 2.5% × (20/365) = 666.58€
+→ DetecteurRemboursementPret DÉCLENCHE AUTOMATIQUEMENT :
+  - Vérifie si cutoff intérêts N existe déjà
+  - Si NON : Calcule intérêts courus pour les 2 prêts
+  - Crée cutoff 31/12/N + extourne 01/01/N+1 DANS LA FOULÉE
 ```
 
-**31/12/N** - Cutoff :
+**31/12/N** - Cutoff (créé rétroactivement en janvier N+1) :
 ```
-Débit   661 (Charges d'intérêts)    666.58€
-Crédit 1688 (Intérêts courus)       666.58€
+Formule: Capital restant × Taux annuel × (Nb jours / 365)
+Exemple Prêt LCL: 250 000€ × 2.5% × (20/365) = 342.47€
+Exemple Prêt INVESTIMUR: 236 000€ × 2.0% × (20/365) = 258.36€
+
+Débit   661 (Charges d'intérêts)    342.47€  (Prêt LCL)
+Crédit 1688 (Intérêts courus)       342.47€
+Type: CUTOFF_INTERETS_COURUS
+
+Débit   661 (Charges d'intérêts)    258.36€  (Prêt INVESTIMUR)
+Crédit 1688 (Intérêts courus)       258.36€
 Type: CUTOFF_INTERETS_COURUS
 ```
 
-**01/01/N+1** - Extourne automatique :
+**01/01/N+1** - Extourne automatique (créée en même temps) :
 ```
-Débit  1688  666.58€
-Crédit  661  666.58€
+Débit  1688  342.47€
+Crédit  661  342.47€
+Type: EXTOURNE_CUTOFF
+
+Débit  1688  258.36€
+Crédit  661  258.36€
 Type: EXTOURNE_CUTOFF
 ```
 
 **12/01/N+1** - Échéance réelle :
 ```
-Débit   661  1 020.00€  (intérêts mois complet)
-Crédit  512  1 020.00€
+Débit   661  500.00€  (intérêts mois complet - LCL)
+Crédit  512  500.00€
+Type: INTERET_PRET
+
+Débit   661  400.00€  (intérêts mois complet - INVESTIMUR)
+Crédit  512  400.00€
 Type: INTERET_PRET
 ```
 
 **Résultat** :
-- Exercice N : Charge 661 = **666.58€** (20 jours)
-- Exercice N+1 : Charge 661 = **353.42€** (1020 - 666.58)
-- Total mois : **1 020€** ✅
+- Exercice N : Charge 661 = **600.83€** (20 jours, 2 prêts) ✅
+- Exercice N+1 : Charge 661 = **299.17€** (900 - 600.83)
+- Total mois : **900€** ✅
 
+**Déclencheur** : `DetecteurRemboursementPret` (detecteurs_evenements.py)
 **Calculateur** : `CalculateurInteretsCourus` (cutoff_extourne_interets.py)
 
 ---
@@ -156,9 +175,11 @@ Type: INTERET_PRET
 
 | Type | Classe | Fichier | Déclencheur |
 |------|--------|---------|-------------|
-| Revenus SCPI | `DetecteurAnnonceProduitARecevoir` | detecteurs_evenements.py | Email Ulrik |
-| Honoraires | `DetecteurAnnonceHonorairesARegler` | cutoff_extourne_honoraires.py | Email Ulrik/estimation |
-| Intérêts | `CalculateurInteretsCourus` | cutoff_extourne_interets.py | Calcul automatique |
+| Revenus SCPI | `DetecteurAnnonceProduitARecevoir` | detecteurs_evenements.py | Email Ulrik (janvier N+1) |
+| Honoraires | `DetecteurAnnonceHonorairesARegler` | cutoff_extourne_honoraires.py | Email Ulrik/estimation (décembre N) |
+| Intérêts | `DetecteurRemboursementPret` | detecteurs_evenements.py | 1ère échéance janvier N+1 (automatique) |
+
+**Note** : Tous les détecteurs créent **automatiquement** cutoff + extourne ensemble dans la foulée.
 
 ### Générateur d'Extournes (Utilitaire de Secours)
 
@@ -199,19 +220,20 @@ python generateur_extournes.py --tous --execute
 
 ---
 
-## 📅 Timeline Annuelle Type (Avec Extourne Automatique)
+## 📅 Timeline Annuelle Type (Système 100% Automatique)
 
 **Décembre N** :
 1. ✅ Email Ulrik honoraires → Crée cutoff 31/12/N + extourne 01/01/N+1 **automatiquement**
-2. ✅ Script intérêts courus → Crée cutoff 31/12/N + extourne 01/01/N+1 **automatiquement**
 
 **Janvier N+1** :
 1. ✅ Email Ulrik SCPI T4 → Crée cutoff 31/12/N + extourne 01/01/N+1 **automatiquement** (rétroactif)
+2. ✅ Première échéance prêt → Détecte janvier → Crée cutoff intérêts 31/12/N + extourne 01/01/N+1 **automatiquement**
 
 **Année N+1** :
 - Paiements réels arrivent normalement
 - Charges/produits N+1 = écarts avec estimations
 - **Aucune action manuelle requise** pour les extournes (déjà créées)
+- **Aucune action manuelle requise** pour les cutoffs intérêts (créés automatiquement)
 
 ---
 
@@ -247,47 +269,47 @@ python generateur_extournes.py --tous --execute
 
 ---
 
-## 🔄 Flux Technique Complet
+## 🔄 Flux Technique Complet (100% Automatique)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ FIN DÉCEMBRE N - Préparation Cutoffs                    │
-│ - Email Ulrik honoraires (estimation)                   │
-│ - Calcul automatique intérêts courus                    │
+│ FIN DÉCEMBRE N - Email Ulrik Honoraires                │
+│ → DetecteurAnnonceHonorairesARegler                     │
+│ → Crée AUTOMATIQUEMENT :                                │
+│   - Cutoff 31/12/N : 6226 → 4081                       │
+│   - Extourne 01/01/N+1 : 4081 → 6226                   │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 31/12/N - Écritures Cutoff (datées 31/12/N)            │
-│ - CUTOFF_HONORAIRES : 6226 → 4081                      │
-│ - CUTOFF_INTERETS_COURUS : 661 → 1688                  │
+│ JANVIER N+1 - Email Ulrik Revenus SCPI T4              │
+│ → DetecteurAnnonceProduitARecevoir                      │
+│ → Crée AUTOMATIQUEMENT (rétroactif) :                  │
+│   - Cutoff 31/12/N : 4181 → 761                        │
+│   - Extourne 01/01/N+1 : 761 → 4181                    │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
-│ JANVIER N+1 - Email Ulrik Revenus SCPI                 │
-│ → Création RÉTROACTIVE CUTOFF_PRODUIT_A_RECEVOIR       │
-│   Daté 31/12/N : 4181 → 761                            │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│ DÉBUT JANVIER N+1 - Génération Extournes               │
-│ python generateur_extournes.py --exercice N --execute  │
-│                                                          │
-│ → Crée 3 écritures datées 01/01/N+1 :                  │
-│   - EXTOURNE revenus : 761 → 4181                      │
-│   - EXTOURNE honoraires : 4081 → 6226                  │
-│   - EXTOURNE intérêts : 1688 → 661                     │
+│ JANVIER N+1 - Première Échéance Prêt (ex: 12/01)       │
+│ → DetecteurRemboursementPret                            │
+│ → Détecte mois = janvier → Vérifie cutoff intérêts     │
+│ → Si NON trouvé : Appelle CalculateurInteretsCourus    │
+│ → Crée AUTOMATIQUEMENT (rétroactif) :                  │
+│   - Écritures échéance : 661 → 512 + 164 → 512         │
+│   - Cutoff intérêts 31/12/N : 661 → 1688 (2 prêts)     │
+│   - Extourne 01/01/N+1 : 1688 → 661 (2 prêts)          │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │ ANNÉE N+1 - Paiements Réels                            │
 │ - Janvier : Distribution SCPI (512 → 761)              │
-│ - Janvier : Échéance prêt (661 → 512)                  │
+│ - Reste année : Échéances prêts (661 → 512 + 164 → 512)│
 │ - Mars : Facture honoraires (6226 → 512)               │
 └─────────────────────────────────────────────────────────┘
+
+NOTE : Aucune action manuelle requise, tout est 100% automatique !
 ```
 
 ---
@@ -295,19 +317,29 @@ python generateur_extournes.py --tous --execute
 ## 📝 Notes Importantes
 
 1. **Ordre d'exécution** :
-   - Cutoffs honoraires/intérêts : Avant clôture exercice N
-   - Cutoff revenus SCPI : Janvier N+1 (rétroactif)
-   - Extournes : Début janvier N+1 (après cutoff revenus)
+   - Cutoff honoraires : Décembre N (via email Ulrik)
+   - Cutoff revenus SCPI : Janvier N+1 (via email Ulrik, rétroactif)
+   - Cutoff intérêts : Janvier N+1 (via première échéance, rétroactif, automatique)
+   - Extournes : Créées ENSEMBLE avec les cutoffs (dans la foulée)
 
 2. **Sécurité** :
-   - Seul Ulrik peut créer cutoffs (email ulrik.c.s.be@gmail.com)
-   - Générateur extournes : dry-run par défaut
+   - Cutoffs honoraires/revenus : Seul Ulrik peut créer (email ulrik.c.s.be@gmail.com)
+   - Cutoff intérêts : Créé automatiquement (calcul mathématique, pas d'intervention humaine)
+   - Générateur extournes : dry-run par défaut (utilitaire de secours uniquement)
 
 3. **Écarts** :
    - Montant réel ≠ estimation → Écart comptabilisé en N+1
    - Acceptable comptablement (principe de prudence)
 
+4. **Automatisation** :
+   - Système 100% automatique pour tous les types de cutoffs
+   - Aucune action manuelle requise
+   - Détection intelligente (vérifie si cutoff existe déjà)
+
 ---
 
-**Version** : 1.0 - 18 novembre 2025
+**Version** : 1.1 - 19 novembre 2025
 **Auteur** : _Head.Soeurise avec Claude Code
+**Changelog** :
+- v1.1 (19/11/2025) : Ajout déclenchement automatique cutoff intérêts lors 1ère échéance janvier
+- v1.0 (18/11/2025) : Version initiale système cutoff par extourne
