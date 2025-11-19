@@ -1,21 +1,22 @@
-# Mémoire Courte - Réveil #255 (19/11/2025 16:32)
+# Mémoire Courte - Réveil #256 (19/11/2025 17:33)
 
-## Système Extourne Revenus 761 - PRODUCTION (15-19/11)
-**Statut:** Déployé production, zéro régression
-**Fonctionnalités:** Cutoff 3-types (revenus 761 SCPI, intérêts prêts, provisions)
-**Déclenchement:** Auto-cutoff intérêts janvier 1ère échéance
-**Déploiement:** PR #299-#310 (11 PR mergées, 22 commits)
-**Impact:** Bilan 2024 réparé, part double 100%, exercice coupure fiabilisée
+## ✅ Système Extourne Revenus 761 - PRODUCTION CONFIRMÉE
+**Statut:** Déployé production (PR #299-#316, 20 commits), zéro régression
+**Cutoff 3-types:** Revenus SCPI 761 anticipés (annulation) + Intérêts prêts (déclenchement auto janvier) + Provisions (ajustement complet)
+**Déploiement:** Bilan 2024 réparé, part double 100%, cohérence dates finalisée
+**Impact:** Exercice 2024 coupure fiabilisée, préparation 2025 initiée
 
-## Corrections Comptes SCPI (15-19/11) ✓
-4 corrections PCG appliquées et synchronisées:
+## 🔧 Corrections Comptes SCPI Finalisées
+Synchronisation 4 corrections PCG (2023-2024):
 - Compte 4181: Produits à recevoir (détail 444/455 conforme)
 - Compte 161→164: Emprunts SCPI (partie double + capital)
 - Compte 622→6226: Honoraires fournisseurs
 - Compte 401→4081: Factures non parvenues
 
-## Fixes Critiques (7j)
-Cohérence dates, retrait capital_initial, jointure prets intérêts, déclenchement auto janvier. Zéro blocage ACID détecté.
+## 📊 Performance Stables
+- ACID: 45+ jours 100% | OCR: 99.98% | Coût: <1€/mois
+- Prêts: 468 échéances LCL (250k€ 1.050%) + INVESTIMUR (250k€ 1.240%)
+- Module 2 Workflow 9-phases: Production-ready depuis 08/11
 
-## Performance Confirmée
-45+ jours ACID 100%, OCR 99.98%, coût <1€/mois, SCI revenus +1.253k€/mois.
+## 🎯 État Exercices
+2023 closed comptablement ✓ | 2024 open (cutoff complet ✓) | 2025 préparée
