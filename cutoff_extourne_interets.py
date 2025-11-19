@@ -126,7 +126,7 @@ class CalculateurInteretsCourus:
             query_derniere = text("""
                 SELECT
                     date_echeance,
-                    capital_restant_apres,
+                    capital_restant_du,
                     montant_interet
                 FROM echeances_prets
                 WHERE pret_id = :pret_id
