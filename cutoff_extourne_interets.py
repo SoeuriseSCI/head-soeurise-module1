@@ -91,13 +91,15 @@ class CalculateurInteretsCourus:
         # 2. Récupérer tous les prêts actifs
         query_prets = text("""
             SELECT DISTINCT
-                numero_pret,
-                banque,
-                taux_annuel,
-                capital_initial
-            FROM echeances_prets
-            WHERE date_echeance <= :date_cloture
-            ORDER BY banque
+                pi.id,
+                pi.numero_pret,
+                pi.banque,
+                pi.taux_annuel,
+                pi.capital_initial
+            FROM echeances_prets ep
+            JOIN prets_immobiliers pi ON ep.pret_id = pi.id
+            WHERE ep.date_echeance <= :date_cloture
+            ORDER BY pi.banque
         """)
 
         prets = self.session.execute(query_prets, {'date_cloture': date_cloture}).fetchall()
@@ -113,10 +115,11 @@ class CalculateurInteretsCourus:
 
         # 3. Pour chaque prêt, calculer intérêts courus
         for pret in prets:
-            numero_pret = pret[0]
-            banque = pret[1]
-            taux_annuel = float(pret[2])
-            capital_initial = float(pret[3])
+            pret_id = pret[0]
+            numero_pret = pret[1]
+            banque = pret[2]
+            taux_annuel = float(pret[3])
+            capital_initial = float(pret[4])
 
             print(f"  💰 Prêt {banque} ({numero_pret[:15]}...)")
             print(f"     Taux annuel : {taux_annuel:.4f}%")
@@ -128,14 +131,14 @@ class CalculateurInteretsCourus:
                     capital_restant_apres,
                     montant_interet
                 FROM echeances_prets
-                WHERE numero_pret = :numero_pret
+                WHERE pret_id = :pret_id
                   AND date_echeance <= :date_cloture
                 ORDER BY date_echeance DESC
                 LIMIT 1
             """)
 
             derniere = self.session.execute(query_derniere, {
-                'numero_pret': numero_pret,
+                'pret_id': pret_id,
                 'date_cloture': date_cloture
             }).fetchone()
 
