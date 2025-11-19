@@ -91,7 +91,7 @@ Cette PR contient des corrections majeures de classification comptable et l'impl
 
 ---
 
-## 🔄 Système Cutoff par Extourne (NOUVEAU)
+## 🔄 Système Cutoff par Extourne (NOUVEAU - 100% Automatique)
 
 ### Principe de l'Extourne
 
@@ -106,6 +106,7 @@ Technique comptable standard qui remplace le système complexe de rapprochement 
 - ✅ Standard : Pratique comptable courante
 - ✅ Robuste : Fonctionne même si montants différents
 - ✅ Audit trail clair : Estimation → Annulation → Réel
+- ✅ **100% automatique** : Aucune action manuelle requise
 
 ---
 
@@ -148,16 +149,22 @@ Email/Estimation (déc N) : "Honoraires 2024 : 1 200€"
 
 **Contexte** : Intérêts courent quotidiennement, payés mensuellement
 
-**Workflow** :
+**Workflow automatique** :
 ```
-Calcul auto (31/12) : Capital × Taux × (Jours/365)
-→ Cutoff 31/12/2024 : Débit 661 / Crédit 1688
-→ Extourne 01/01/2025 : Débit 1688 / Crédit 661
-→ Échéance réelle : Débit 661 / Crédit 512
+Janvier N+1 : Première échéance prêt détectée
+→ DetecteurRemboursementPret vérifie : cutoff intérêts N existe ?
+→ Si NON : Déclenche CalculateurInteretsCourus automatiquement
+→ Calcule pour les 2 prêts : Capital × Taux × (Jours/365)
+→ Crée cutoff 31/12/N + extourne 01/01/N+1 DANS LA FOULÉE
+→ Ajoute 4 écritures cutoff aux 2 écritures échéance
+→ Total : 6 écritures créées ensemble (2 échéance + 4 cutoff)
 ```
 
 **Fichiers** :
-- `cutoff_extourne_interets.py` : CalculateurInteretsCourus
+- `detecteurs_evenements.py` : DetecteurRemboursementPret (déclencheur automatique)
+- `cutoff_extourne_interets.py` : CalculateurInteretsCourus (calcul)
+
+**Nouveau (19/11/2025)** : Déclenchement 100% automatique lors première échéance janvier
 
 ---
 
@@ -198,6 +205,12 @@ python generateur_extournes.py --tous --execute
 - `corriger_compte_161_vers_164.py` : 161 → 164
 - `corriger_compte_622_vers_6226.py` : 622 → 6226
 - `corriger_compte_401_vers_4081.py` : 401 → 4081
+
+### Réparation Bilan 2024
+- `REPARATION_BILAN_2024.md` : Procédure complète réparation bilan 2024
+  - Étape 1 : Créer cutoff intérêts (570.94€ pour 2 prêts)
+  - Étape 2 : Générer extournes manquantes (4181 + 4081)
+  - Vérifications SQL et checklist complète
 
 ---
 
@@ -277,6 +290,10 @@ python generateur_extournes.py --tous --execute
 
 ## 📝 Commits Principaux
 
+- `d82ae09` : 📋 Procédure réparation bilan 2024 - Cutoffs + Extournes
+- `4386f91` : ✨ Déclenchement automatique cutoff intérêts lors 1ère échéance janvier
+- `76aa550` : 📖 Précisions timing et déclenchement extournes
+- `5ecf0d8` : ✨ Extourne immédiate : cutoff + extourne créés ensemble
 - `62898a0` : ✨ Système cutoff complet par extourne (3 types)
 - `1388f24` : ✨ Intégration complète système extourne revenus 761
 - `467a957` : ✨ Système cutoff par extourne pour revenus 761 (SCPI)
@@ -287,7 +304,7 @@ python generateur_extournes.py --tous --execute
 - `8732cda` : 🔧 Correction compte honoraires : 622 → 6226
 - `3f9e2f0` : 🔧 Correction compte emprunts : 161 → 164
 
-**Total** : 20+ commits sur la branche
+**Total** : 25+ commits sur la branche
 
 ---
 
