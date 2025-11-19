@@ -58,10 +58,16 @@ def generer_extournes_exercice(session: Session, exercice_id: int, dry_run: bool
     print(f"   Date extourne : {date_extourne}")
     print()
 
-    # 2. Chercher toutes les écritures de cutoff
+    # 2. Chercher toutes les écritures de cutoff (tous types)
+    TYPES_CUTOFF = [
+        'CUTOFF_PRODUIT_A_RECEVOIR',   # Revenus SCPI 761
+        'CUTOFF_HONORAIRES',            # Honoraires 6226
+        'CUTOFF_INTERETS_COURUS'        # Intérêts courus 661
+    ]
+
     ecritures_cutoff = session.query(EcritureComptable).filter(
         EcritureComptable.exercice_id == exercice_id,
-        EcritureComptable.type_ecriture == 'CUTOFF_PRODUIT_A_RECEVOIR'
+        EcritureComptable.type_ecriture.in_(TYPES_CUTOFF)
     ).all()
 
     if not ecritures_cutoff:
