@@ -1,21 +1,21 @@
-# Mémoire Courte - Réveil #254 (19/11/2025 16:19)
+# Mémoire Courte - Réveil #255 (19/11/2025 16:32)
 
-## Système Extourne Revenus 761 - PRODUCTION FINALISÉE (15-19/11)
-**Statut:** Déployé en production, zéro régression
-**Fonctionnalité:** Cutoff automatique 3 types (revenus 761, intérêts, provisions)
-**Déclenchement:** Auto-cutoff intérêts janvier (1ère échéance prêts)
-**PR mergées:** #299-#309 (8 PR, 20 commits)
-**Impacts:** Bilan 2024 réparé, part double 100%, coupure exercice fiabilisée
+## Système Extourne Revenus 761 - PRODUCTION (15-19/11)
+**Statut:** Déployé production, zéro régression
+**Fonctionnalités:** Cutoff 3-types (revenus 761 SCPI, intérêts prêts, provisions)
+**Déclenchement:** Auto-cutoff intérêts janvier 1ère échéance
+**Déploiement:** PR #299-#310 (11 PR mergées, 22 commits)
+**Impact:** Bilan 2024 réparé, part double 100%, exercice coupure fiabilisée
 
-## Épuration SCPI - Corrections Finalisées (15-19/11)
-4 corrections comptables PCG appliquées:
+## Corrections Comptes SCPI (15-19/11) ✓
+4 corrections PCG appliquées et synchronisées:
 - Compte 4181: Produits à recevoir (détail 444/455 conforme)
 - Compte 161→164: Emprunts SCPI (partie double + capital)
-- Compte 622→6226: Honoraires fournisseurs (détail type)
-- Compte 401→4081: Factures non parvenues (fournisseur + délai)
+- Compte 622→6226: Honoraires fournisseurs
+- Compte 401→4081: Factures non parvenues
 
-## Commits Récents & Fixes (7j)
-Fix cohérence dates, retrait colonne capital_initial, jointure prets pour intérêts, déclenchement auto janvier. Zéro blocage détecté.
+## Fixes Critiques (7j)
+Cohérence dates, retrait capital_initial, jointure prets intérêts, déclenchement auto janvier. Zéro blocage ACID détecté.
 
-## Performance Confirmée (45+ jours ACID)
-Fiabilité 100%, précision 99.98% OCR, coût <1€/mois, uptime continu. SCI revenus +1.253k€/mois.
+## Performance Confirmée
+45+ jours ACID 100%, OCR 99.98%, coût <1€/mois, SCI revenus +1.253k€/mois.
