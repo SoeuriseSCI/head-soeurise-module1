@@ -34,6 +34,9 @@ from sqlalchemy import text
 # Import rapprocheur cutoff
 from rapprocheur_cutoff import RapprocheurCutoff
 
+# Import calculateur intérêts courus (pour déclenchement automatique cutoff)
+from cutoff_extourne_interets import CalculateurInteretsCourus
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BASE DÉTECTEUR
@@ -210,6 +213,92 @@ class DetecteurRemboursementPret(DetecteurBase):
 
         return (match_libelle or match_type) and match_debit
 
+    def _declencher_cutoff_interets_si_necessaire(self, date_operation) -> List[Dict]:
+        """
+        Déclenche automatiquement le calcul des intérêts courus de l'année N-1
+        lors du traitement de la première échéance de janvier N.
+
+        Args:
+            date_operation: Date de l'opération (datetime.date ou str)
+
+        Returns:
+            Liste d'écritures de cutoff + extourne (vide si déjà existant ou pas janvier)
+        """
+        from datetime import date
+
+        # Convertir en date si nécessaire
+        if isinstance(date_operation, str):
+            date_op = datetime.strptime(date_operation, '%Y-%m-%d').date()
+        else:
+            date_op = date_operation
+
+        # Vérifier si on est en janvier
+        if date_op.month != 1:
+            return []
+
+        annee_precedente = date_op.year - 1
+
+        # Vérifier si cutoff intérêts existe déjà pour l'année précédente
+        try:
+            result = self.session.execute(
+                text("""
+                    SELECT COUNT(*)
+                    FROM ecritures_comptables
+                    WHERE type_ecriture = 'CUTOFF_INTERETS_COURUS'
+                      AND EXTRACT(YEAR FROM date_ecriture) = :annee
+                """),
+                {'annee': annee_precedente}
+            )
+            count = result.scalar()
+            if count > 0:
+                print(f"  ℹ️  Cutoff intérêts {annee_precedente} déjà existant, pas de création automatique")
+                return []
+        except Exception as e:
+            print(f"  ⚠️  Erreur vérification cutoff existant: {e}")
+            return []
+
+        # Trouver l'exercice de l'année précédente
+        try:
+            result = self.session.execute(
+                text("SELECT id FROM exercices_comptables WHERE annee = :annee"),
+                {'annee': annee_precedente}
+            )
+            row = result.fetchone()
+            if not row:
+                print(f"  ⚠️  Exercice {annee_precedente} non trouvé, impossible de créer cutoff intérêts")
+                return []
+            exercice_id = row[0]
+        except Exception as e:
+            print(f"  ⚠️  Erreur recherche exercice {annee_precedente}: {e}")
+            return []
+
+        # Calculer les intérêts courus
+        print(f"\n  🔔 DÉCLENCHEMENT AUTOMATIQUE: Calcul intérêts courus {annee_precedente}")
+        print(f"     (Première échéance de janvier {date_op.year} détectée)")
+        print()
+
+        try:
+            calculateur = CalculateurInteretsCourus(self.session)
+            date_cloture = date(annee_precedente, 12, 31)
+            propositions = calculateur.calculer_interets_courus_exercice(exercice_id, date_cloture)
+
+            # Extraire toutes les écritures de toutes les propositions
+            ecritures_cutoff = []
+            for prop in propositions:
+                ecritures_cutoff.extend(prop['ecritures'])
+
+            if ecritures_cutoff:
+                print(f"  ✅ {len(ecritures_cutoff)} écritures de cutoff intérêts créées automatiquement")
+                print()
+
+            return ecritures_cutoff
+
+        except Exception as e:
+            print(f"  ⚠️  Erreur calcul intérêts courus: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
     def generer_proposition(self, evenement: Dict) -> Dict:
         """
         Génère la proposition d'écriture avec décomposition intérêts/capital
@@ -220,6 +309,11 @@ class DetecteurRemboursementPret(DetecteurBase):
         FIX 18/11/2025: Utilisation compte 164 au lieu de 161
         - Compte 161 = Emprunts obligataires (incorrect pour SCI)
         - Compte 164 = Emprunts établissements de crédit (correct)
+
+        FIX 19/11/2025: Déclenchement automatique cutoff intérêts
+        - Si première échéance de janvier N détectée
+        - Calcule automatiquement intérêts courus de l'année N-1
+        - Crée cutoff 31/12/(N-1) + extourne 01/01/N pour les 2 prêts
         """
         montant = float(evenement.get('montant', 0))
         date_op = evenement.get('date_operation')
@@ -255,30 +349,41 @@ class DetecteurRemboursementPret(DetecteurBase):
 
         # CAS 1: Échéance trouvée → Décomposition intérêts/capital
         if echeance:
+            # Écritures de base (intérêts + capital)
+            ecritures = [
+                {
+                    'date_ecriture': date_op,
+                    'libelle_ecriture': f'Intérêts échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]}',
+                    'compte_debit': '661',
+                    'compte_credit': '512',
+                    'montant': echeance['montant_interet'],
+                    'type_ecriture': 'INTERET_PRET',
+                    'notes': f'Prêt {echeance["numero_pret"]} - Échéance {echeance["numero_echeance"]}'
+                },
+                {
+                    'date_ecriture': date_op,
+                    'libelle_ecriture': f'Remboursement capital échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]}',
+                    'compte_debit': '164',
+                    'compte_credit': '512',
+                    'montant': echeance['montant_capital'],
+                    'type_ecriture': 'REMBOURSEMENT_CAPITAL',
+                    'notes': f'Prêt {echeance["numero_pret"]} - Échéance {echeance["numero_echeance"]}'
+                }
+            ]
+
+            # Déclenchement automatique cutoff intérêts si première échéance janvier
+            ecritures_cutoff = self._declencher_cutoff_interets_si_necessaire(date_op)
+            if ecritures_cutoff:
+                ecritures.extend(ecritures_cutoff)
+                description = f'Échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]} + cutoff intérêts courus automatique'
+            else:
+                description = f'Échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]} ({echeance["numero_pret"][:10]}...)'
+
             return {
                 'type_evenement': 'REMBOURSEMENT_PRET',
-                'description': f'Échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]} ({echeance["numero_pret"][:10]}...)',
+                'description': description,
                 'confiance': 1.0,  # Confiance maximale car données vérifiées
-                'ecritures': [
-                    {
-                        'date_ecriture': date_op,
-                        'libelle_ecriture': f'Intérêts échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]}',
-                        'compte_debit': '661',
-                        'compte_credit': '512',
-                        'montant': echeance['montant_interet'],
-                        'type_ecriture': 'INTERET_PRET',
-                        'notes': f'Prêt {echeance["numero_pret"]} - Échéance {echeance["numero_echeance"]}'
-                    },
-                    {
-                        'date_ecriture': date_op,
-                        'libelle_ecriture': f'Remboursement capital échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]}',
-                        'compte_debit': '164',
-                        'compte_credit': '512',
-                        'montant': echeance['montant_capital'],
-                        'type_ecriture': 'REMBOURSEMENT_CAPITAL',
-                        'notes': f'Prêt {echeance["numero_pret"]} - Échéance {echeance["numero_echeance"]}'
-                    }
-                ]
+                'ecritures': ecritures
             }
 
         # CAS 2: Échéance NON trouvée → Écriture temporaire (fallback)
