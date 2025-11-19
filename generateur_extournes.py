@@ -125,8 +125,10 @@ def generer_extournes_exercice(session: Session, exercice_id: int, dry_run: bool
             session.flush()
             print(f"  ✅ Exercice {annee + 1} créé (ID {exercice_suivant.id})")
 
-        for ext in extournes:
+        for idx, ext in enumerate(extournes, start=1):
             ext['exercice_id'] = exercice_suivant.id
+            # Générer le numéro d'écriture : AAAA-MMJJ-EXT-XXX
+            ext['numero_ecriture'] = f"{annee + 1}-0101-EXT-{idx:03d}"
 
             ecriture_ext = EcritureComptable(**ext)
             session.add(ecriture_ext)
