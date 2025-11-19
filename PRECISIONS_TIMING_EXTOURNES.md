@@ -14,15 +14,15 @@ Le document parle d'"extourne automatique" mais n'est pas assez précis. Clarifi
 
 **Exemple revenus SCPI** :
 ```
-Janvier 2025 - Email Ulrik reçu : "Distribution T4 2024 : 7 356€"
+Janvier 2024 - Email Ulrik reçu : "Distribution T4 2023 : 7 356€"
 
 → DetecteurAnnonceProduitARecevoir génère DEUX écritures :
 
-   1. Cutoff (datée 31/12/2024, exercice 2024) :
+   1. Cutoff (datée 31/12/2023, exercice 2023) :
       Débit 4181 / Crédit 761 : 7 356€
       Type: CUTOFF_PRODUIT_A_RECEVOIR
 
-   2. Extourne (datée 01/01/2025, exercice 2025) :
+   2. Extourne (datée 01/01/2024, exercice 2024) :
       Débit 761 / Crédit 4181 : 7 356€
       Type: EXTOURNE_CUTOFF
 
@@ -47,16 +47,16 @@ Résultat : Cutoff + extourne créés ensemble dans le même flux
 
 **Exemple revenus SCPI** :
 ```
-Janvier 2025 - Email Ulrik reçu : "Distribution T4 2024 : 7 356€"
+Janvier 2024 - Email Ulrik reçu : "Distribution T4 2023 : 7 356€"
 
 → DetecteurAnnonceProduitARecevoir génère UNE écriture :
-   Cutoff (datée 31/12/2024, exercice 2024) :
+   Cutoff (datée 31/12/2023, exercice 2023) :
    Débit 4181 / Crédit 761 : 7 356€
    Type: CUTOFF_PRODUIT_A_RECEVOIR
 
 Puis MANUELLEMENT :
-→ python generateur_extournes.py --exercice 2024 --execute
-   Crée extourne 01/01/2025
+→ python generateur_extournes.py --exercice 2023 --execute
+   Crée extourne 01/01/2024
 ```
 
 **Avantages** :
@@ -82,8 +82,8 @@ Pour que ce soit **vraiment automatique**, je recommande **l'Approche A** :
 **Action** : `DetecteurAnnonceProduitARecevoir.generer_proposition()`
 
 **Génère** :
-1. Cutoff 31/12/2024 (exercice 2024)
-2. Extourne 01/01/2025 (exercice 2025) **← Dans la foulée**
+1. Cutoff 31/12/2023 (exercice 2023)
+2. Extourne 01/01/2024 (exercice 2024) **← Dans la foulée**
 
 **Timing** : Immédiat lors du traitement de l'email
 
@@ -96,8 +96,8 @@ Pour que ce soit **vraiment automatique**, je recommande **l'Approche A** :
 **Action** : `DetecteurAnnonceHonorairesARegler.generer_proposition()`
 
 **Génère** :
-1. Cutoff 31/12/2024 (exercice 2024)
-2. Extourne 01/01/2025 (exercice 2025) **← Dans la foulée**
+1. Cutoff 31/12/2023 (exercice 2023)
+2. Extourne 01/01/2024 (exercice 2024) **← Dans la foulée**
 
 **Timing** : Immédiat lors du traitement de l'email
 
@@ -118,17 +118,17 @@ Pour que ce soit **vraiment automatique**, je recommande **l'Approche A** :
 
 **Génère** :
 1. Écritures remboursement (intérêts + capital)
-2. Cutoff 31/12/2024 (exercice 2024) pour les 2 prêts
-3. Extourne 01/01/2025 (exercice 2025) pour les 2 prêts **← Dans la foulée**
+2. Cutoff 31/12/2023 (exercice 2023) pour les 2 prêts
+3. Extourne 01/01/2024 (exercice 2024) pour les 2 prêts **← Dans la foulée**
 
 **Timing** : Lors du traitement de la première échéance de janvier N+1
 
 **Exemple** :
 ```
-Janvier 2025 : Traitement échéance LCL 12/01/2025
-→ Détecte : janvier 2025
-→ Vérifie : cutoff 2024 existe ? NON
-→ DÉCLENCHE : Calcul intérêts courus 2024
+Janvier 2024 : Traitement échéance LCL 12/01/2024
+→ Détecte : janvier 2024
+→ Vérifie : cutoff 2023 existe ? NON
+→ DÉCLENCHE : Calcul intérêts courus 2023
 → CRÉE : 6 écritures au total
   - 2 écritures échéance (intérêts + capital)
   - 4 écritures cutoff intérêts (2 cutoffs + 2 extournes)
@@ -136,7 +136,7 @@ Janvier 2025 : Traitement échéance LCL 12/01/2025
 
 **Commande manuelle** (fallback si besoin réparation) :
 ```bash
-python cutoff_extourne_interets.py --exercice 2024 --execute
+python cutoff_extourne_interets.py --exercice 2023 --execute
 ```
 
 ---
@@ -151,10 +151,10 @@ Avec l'Approche A, `generateur_extournes.py` devient un **utilitaire de secours*
 
 **Solution** :
 ```bash
-python generateur_extournes.py --exercice 2024 --execute
+python generateur_extournes.py --exercice 2023 --execute
 ```
 
-→ Génère les extournes manquantes pour l'exercice 2024
+→ Génère les extournes manquantes pour l'exercice 2023
 
 ---
 
@@ -177,7 +177,7 @@ python generateur_extournes.py --tous --execute
 
 **Solution** :
 ```bash
-python generateur_extournes.py --exercice 2024
+python generateur_extournes.py --exercice 2023
 ```
 
 → Simule sans créer (affiche ce qui serait fait)
@@ -190,7 +190,7 @@ python generateur_extournes.py --exercice 2024
 
 **Solution** :
 ```bash
-python generateur_extournes.py --exercice 2024 --execute
+python generateur_extournes.py --exercice 2023 --execute
 ```
 
 → Génère l'extourne correspondante
@@ -207,7 +207,7 @@ def generer_proposition(self, evenement: Dict) -> Optional[Dict]:
 
     # ... extraction données ...
 
-    annee = 2024
+    annee = 2023
     montant = 7356.00
 
     # Date cutoff : 31/12/N
@@ -224,7 +224,7 @@ def generer_proposition(self, evenement: Dict) -> Optional[Dict]:
             # Écriture 1 : Cutoff 31/12/N
             {
                 'date_ecriture': date_cutoff,
-                'exercice_id': exercice_N,  # Exercice 2024
+                'exercice_id': exercice_N,  # Exercice 2023
                 'libelle_ecriture': f'Cutoff {annee} - Distribution T4',
                 'compte_debit': '4181',
                 'compte_credit': '761',
@@ -234,7 +234,7 @@ def generer_proposition(self, evenement: Dict) -> Optional[Dict]:
             # Écriture 2 : Extourne 01/01/N+1
             {
                 'date_ecriture': date_extourne,
-                'exercice_id': exercice_N_plus_1,  # Exercice 2025
+                'exercice_id': exercice_N_plus_1,  # Exercice 2024
                 'libelle_ecriture': f'Extourne - Cutoff {annee} - Distribution T4',
                 'compte_debit': '761',      # INVERSION
                 'compte_credit': '4181',    # INVERSION
