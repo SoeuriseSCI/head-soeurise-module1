@@ -160,9 +160,25 @@ Type: INTERET_PRET
 | Honoraires | `DetecteurAnnonceHonorairesARegler` | cutoff_extourne_honoraires.py | Email Ulrik/estimation |
 | Intérêts | `CalculateurInteretsCourus` | cutoff_extourne_interets.py | Calcul automatique |
 
-### Générateur d'Extournes (Unique pour tous)
+### Générateur d'Extournes (Utilitaire de Secours)
 
 **Fichier** : `generateur_extournes.py`
+
+**⚠️ Important** : Depuis la mise à jour, les détecteurs créent **automatiquement** cutoff + extourne ensemble dans la foulée de l'email/script.
+
+**Ce script est un utilitaire de secours** pour :
+
+**Cas d'Usage** :
+1. **Réparation** : Générer extournes pour cutoffs créés SANS extourne (ancien code, migration)
+2. **Migration** : Passage ancien système → nouveau système
+3. **Vérification** : Dry-run pour voir quelles extournes seraient générées
+4. **Cutoffs manuels** : Cutoffs créés manuellement en base (hors système détecteurs)
+
+**Exemple situation actuelle** :
+```
+Situation : Bilan 2024 a déjà des cutoffs (4181: 7356€, 4081: 653€) SANS extournes
+Solution : Utiliser le générateur pour créer les extournes manquantes
+```
 
 **Supporte** :
 - `CUTOFF_PRODUIT_A_RECEVOIR`
@@ -171,7 +187,7 @@ Type: INTERET_PRET
 
 **Utilisation** :
 ```bash
-# Simulation (dry-run)
+# Simulation (dry-run) - RECOMMANDÉ pour vérifier d'abord
 python generateur_extournes.py --exercice 2024
 
 # Exécution réelle
@@ -183,22 +199,19 @@ python generateur_extournes.py --tous --execute
 
 ---
 
-## 📅 Timeline Annuelle Type
+## 📅 Timeline Annuelle Type (Avec Extourne Automatique)
 
 **Décembre N** :
-1. ✅ Créer cutoff honoraires (estimation)
-2. ✅ Calculer intérêts courus au 31/12
-
-**31/12/N** :
-- Écritures de cutoff datées 31/12/N enregistrées
+1. ✅ Email Ulrik honoraires → Crée cutoff 31/12/N + extourne 01/01/N+1 **automatiquement**
+2. ✅ Script intérêts courus → Crée cutoff 31/12/N + extourne 01/01/N+1 **automatiquement**
 
 **Janvier N+1** :
-1. ✅ Email Ulrik annonce distribution SCPI T4 → Cutoff créé rétroactivement
-2. ✅ Générer extournes au 01/01/N+1 : `python generateur_extournes.py --exercice N --execute`
+1. ✅ Email Ulrik SCPI T4 → Crée cutoff 31/12/N + extourne 01/01/N+1 **automatiquement** (rétroactif)
 
 **Année N+1** :
 - Paiements réels arrivent normalement
 - Charges/produits N+1 = écarts avec estimations
+- **Aucune action manuelle requise** pour les extournes (déjà créées)
 
 ---
 

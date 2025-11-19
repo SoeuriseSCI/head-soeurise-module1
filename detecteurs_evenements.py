@@ -387,30 +387,48 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
         match_scpi = re.search(r'SCPI\s+([^-]+)', objet, re.IGNORECASE)
         nom_scpi = match_scpi.group(1).strip() if match_scpi else "SCPI"
 
-        # Date de l'écriture : 31/12 de l'année concernée
-        date_ecriture = date(annee, 12, 31)
+        # Date cutoff : 31/12 de l'année concernée
+        date_cutoff = date(annee, 12, 31)
 
-        # Libellé
-        libelle = f"Cutoff {annee} - Distribution T4 {nom_scpi}"
+        # Date extourne : 01/01 de l'année suivante
+        date_extourne = date(annee + 1, 1, 1)
+
+        # Libellé cutoff
+        libelle_cutoff = f"Cutoff {annee} - Distribution T4 {nom_scpi}"
         if date_paiement:
-            libelle += f" (paiement {date_paiement.strftime('%d/%m/%Y')})"
+            libelle_cutoff += f" (paiement {date_paiement.strftime('%d/%m/%Y')})"
 
-        # Note importante sur l'extourne
-        note_extourne = (f'Créé rétroactivement en {datetime.now().strftime("%m/%Y")} suite email Ulrik. '
-                        f'Extourne automatique au 01/01/{annee+1}.')
+        # Libellé extourne
+        libelle_extourne = f"Extourne - Cutoff {annee} - Distribution T4 {nom_scpi}"
+
+        # Notes
+        note_cutoff = (f'Créé rétroactivement en {datetime.now().strftime("%m/%Y")} suite email Ulrik. '
+                      f'Extourne créée automatiquement au 01/01/{annee+1}.')
+        note_extourne = f'Contre-passation automatique du cutoff {annee}. Annule produit pour ré-enregistrement lors paiement réel.'
 
         return {
             'type_evenement': 'CUTOFF_PRODUIT_A_RECEVOIR',
-            'description': f'Cutoff revenus {nom_scpi} T4 {annee}: {montant}€',
+            'description': f'Cutoff revenus {nom_scpi} T4 {annee}: {montant}€ + extourne',
             'confiance': 0.95,  # Haute confiance (email Ulrik)
             'ecritures': [
+                # Écriture 1: Cutoff 31/12/N (exercice N)
                 {
-                    'date_ecriture': date_ecriture,
-                    'libelle_ecriture': libelle,
+                    'date_ecriture': date_cutoff,
+                    'libelle_ecriture': libelle_cutoff,
                     'compte_debit': '4181',   # Produits à recevoir (ACTIF)
                     'compte_credit': '761',    # Produits de participations
                     'montant': montant,
                     'type_ecriture': 'CUTOFF_PRODUIT_A_RECEVOIR',
+                    'notes': note_cutoff
+                },
+                # Écriture 2: Extourne 01/01/N+1 (exercice N+1)
+                {
+                    'date_ecriture': date_extourne,
+                    'libelle_ecriture': libelle_extourne,
+                    'compte_debit': '761',      # INVERSION
+                    'compte_credit': '4181',    # INVERSION
+                    'montant': montant,
+                    'type_ecriture': 'EXTOURNE_CUTOFF',
                     'notes': note_extourne
                 }
             ]

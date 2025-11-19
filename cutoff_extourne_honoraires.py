@@ -107,27 +107,44 @@ class DetecteurAnnonceHonorairesARegler:
         montant_str = montant_str.replace(' ', '').replace(',', '.')
         montant = float(montant_str)
 
-        # Date de l'écriture : 31/12 de l'année concernée
-        date_ecriture = date(annee, 12, 31)
+        # Date cutoff : 31/12 de l'année concernée
+        date_cutoff = date(annee, 12, 31)
 
-        # Libellé
-        libelle = f"Cutoff {annee} - Honoraires comptables (estimation)"
+        # Date extourne : 01/01 de l'année suivante
+        date_extourne = date(annee + 1, 1, 1)
 
-        note_extourne = (f'Créé en {datetime.now().strftime("%m/%Y")} suite email. '
-                        f'Extourne automatique au 01/01/{annee+1}.')
+        # Libellés
+        libelle_cutoff = f"Cutoff {annee} - Honoraires comptables (estimation)"
+        libelle_extourne = f"Extourne - Cutoff {annee} - Honoraires comptables"
+
+        # Notes
+        note_cutoff = (f'Créé en {datetime.now().strftime("%m/%Y")} suite email. '
+                      f'Extourne créée automatiquement au 01/01/{annee+1}.')
+        note_extourne = f'Contre-passation automatique du cutoff {annee}. Annule charge pour ré-enregistrement lors facture réelle.'
 
         return {
             'type_evenement': 'CUTOFF_HONORAIRES',
-            'description': f'Cutoff honoraires comptables {annee}: {montant}€',
+            'description': f'Cutoff honoraires comptables {annee}: {montant}€ + extourne',
             'confiance': 0.95,
             'ecritures': [
+                # Écriture 1: Cutoff 31/12/N (exercice N)
                 {
-                    'date_ecriture': date_ecriture,
-                    'libelle_ecriture': libelle,
+                    'date_ecriture': date_cutoff,
+                    'libelle_ecriture': libelle_cutoff,
                     'compte_debit': '6226',   # Honoraires
                     'compte_credit': '4081',   # Factures non parvenues
                     'montant': montant,
                     'type_ecriture': 'CUTOFF_HONORAIRES',
+                    'notes': note_cutoff
+                },
+                # Écriture 2: Extourne 01/01/N+1 (exercice N+1)
+                {
+                    'date_ecriture': date_extourne,
+                    'libelle_ecriture': libelle_extourne,
+                    'compte_debit': '4081',    # INVERSION
+                    'compte_credit': '6226',   # INVERSION
+                    'montant': montant,
+                    'type_ecriture': 'EXTOURNE_CUTOFF',
                     'notes': note_extourne
                 }
             ]

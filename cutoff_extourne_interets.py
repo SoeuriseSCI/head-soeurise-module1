@@ -164,24 +164,46 @@ class CalculateurInteretsCourus:
             print(f"     ✅ Intérêts courus : {interets_courus:,.2f}€")
             print()
 
-            # Générer proposition de cutoff
-            libelle = f"Cutoff {annee} - Intérêts courus prêt {banque} ({jours_courus} jours)"
+            # Date cutoff : 31/12 de l'année
+            date_cutoff = date_cloture
+
+            # Date extourne : 01/01 de l'année suivante
+            date_extourne = date(annee + 1, 1, 1)
+
+            # Libellés
+            libelle_cutoff = f"Cutoff {annee} - Intérêts courus prêt {banque} ({jours_courus} jours)"
+            libelle_extourne = f"Extourne - Cutoff {annee} - Intérêts courus prêt {banque}"
+
+            # Notes
+            note_cutoff = (f'Calcul automatique: {capital_restant:,.2f}€ × {taux_annuel}% × ({jours_courus}/365). '
+                          f'Période: {date_derniere_echeance + timedelta(days=1)} → {date_cloture}. '
+                          f'Extourne créée automatiquement au 01/01/{annee+1}.')
+            note_extourne = f'Contre-passation automatique du cutoff {annee}. Annule charge pour ré-enregistrement lors échéance réelle.'
 
             proposition = {
                 'type_evenement': 'CUTOFF_INTERETS_COURUS',
-                'description': f'Intérêts courus prêt {banque}: {interets_courus}€',
+                'description': f'Intérêts courus prêt {banque}: {interets_courus}€ + extourne',
                 'confiance': 1.0,  # Calcul automatique précis
                 'ecritures': [
+                    # Écriture 1: Cutoff 31/12/N (exercice N)
                     {
-                        'date_ecriture': date_cloture,
-                        'libelle_ecriture': libelle,
+                        'date_ecriture': date_cutoff,
+                        'libelle_ecriture': libelle_cutoff,
                         'compte_debit': '661',    # Charges d'intérêts
                         'compte_credit': '1688',   # Intérêts courus
                         'montant': interets_courus,
                         'type_ecriture': 'CUTOFF_INTERETS_COURUS',
-                        'notes': (f'Calcul automatique: {capital_restant:,.2f}€ × {taux_annuel}% × ({jours_courus}/365). '
-                                 f'Période: {date_derniere_echeance + timedelta(days=1)} → {date_cloture}. '
-                                 f'Extourne automatique au 01/01/{annee+1}.')
+                        'notes': note_cutoff
+                    },
+                    # Écriture 2: Extourne 01/01/N+1 (exercice N+1)
+                    {
+                        'date_ecriture': date_extourne,
+                        'libelle_ecriture': libelle_extourne,
+                        'compte_debit': '1688',    # INVERSION
+                        'compte_credit': '661',    # INVERSION
+                        'montant': interets_courus,
+                        'type_ecriture': 'EXTOURNE_CUTOFF',
+                        'notes': note_extourne
                     }
                 ]
             }
