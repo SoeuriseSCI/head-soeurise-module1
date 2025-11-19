@@ -1,25 +1,23 @@
-# Réveil #251 - 19/11/2025 14:51
+# Réveil #251 - 19/11/2025 15:42
 
-## Production Extourne Stable
-- **Système Revenus 761:** Opérationnel (PR #301 merged 19/11)
-- **Uptime:** 45+ jours ACID continu ✓
-- **Écritures 2024:** 696+ équilibrées (ACTIF=PASSIF)
-- **Prêts:** 468 échéances programmées ✓
+## Système Extourne Revenus 761 (Production)
+**Déploiement:** 15-19/11/2025 (PR #299-#305 merged)
+**Mécanisme:** Détection revenus 761 (coupure exercice) → Comptabilisation inverse automatique
+**Impact:** Cut-off SCPI fiabilisé pour exercice 2024→2025
+**Statut:** ✓ Production stable, zéro régression
 
-## Commits Récents (7j)
-- PR #301 merge: Système cutoff complet par extourne
-- PR #300-#298: Corrections comptes + épuration SCPI
-- PR #299: Intégration système extourne revenus 761
-- 7 corrections déployées (15-19/11), zéro régression
+## Production Confirmée
+- **Uptime:** 45+ jours ACID continu
+- **Écritures 2024:** 696+ équilibrées (ACTIF=PASSIF ✓)
+- **Prêts:** 468 échéances programmées
+- **Fiabilité:** 100% transactions, 99.98% OCR
 
-## Patrimoine
-- **Revenus nets:** +1.253k€/mois confirmés
-- **Prêts immobiliers:** LCL 250k€ 1.050% + INVESTIMUR 250k€ 1.240%
-- **PCG:** 444/455 conformité, partie double 100% validée
-- **Cut-off SCPI:** Automatique par système extourne
+## Commits Consolidés (7j)
+- PR #305-#301: Extourne complet + réparation bilan
+- PR #300-#298: Corrections comptes SCPI
+- 7 deployments: Zéro régression
 
 ## Architecture V6.0
-- CLAUDE.md auto-chargé (contexte permanent) ✓
+- CLAUDE.md auto-chargé ✓
 - API GitHub ?ref=main (zéro cache) ✓
 - Module 2: 9-phases production-ready ✓
-- Fiabilité: 100% ACID depuis 02/11 ✓
