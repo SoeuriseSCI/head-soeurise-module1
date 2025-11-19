@@ -1,70 +1,72 @@
-# Réparation Bilan 2024 - Cutoffs + Extournes
+# Réparation Bilan d'Ouverture 2024 - Cutoffs + Extournes
 
-**Objectif** : Compléter le bilan 2024 avec les cutoffs intérêts manquants et générer toutes les extournes
+**Objectif** : Compléter le bilan d'ouverture 2024 avec les cutoffs intérêts manquants et générer toutes les extournes
+
+**Transition** : 31/12/2023 → 01/01/2024
 
 **Date** : 19 novembre 2025
 
 ---
 
-## 📊 État Actuel du Bilan 2024
+## 📊 État Actuel du Bilan d'Ouverture 2024
 
 ### Cutoffs Existants (SANS extournes)
 
-| Compte | Type | Montant | Extourne ? |
-|--------|------|---------|------------|
-| 4181 | Produits à recevoir SCPI T4 | 7 356€ | ❌ NON |
-| 4081 | Factures non parvenues (honoraires) | 653€ | ❌ NON |
-| 1688 | Intérêts courus | **MANQUANT** | ❌ N/A |
+| Compte | Type | Montant | Date Cutoff | Extourne ? |
+|--------|------|---------|-------------|------------|
+| 4181 | Produits à recevoir SCPI T4 | 7 356€ | 31/12/2023 | ❌ NON |
+| 4081 | Factures non parvenues (honoraires) | 653€ | 31/12/2023 | ❌ NON |
+| 1688 | Intérêts courus | **MANQUANT** | 31/12/2023 | ❌ N/A |
 
 ### Problèmes Identifiés
 
-1. ✅ Cutoffs 4181 et 4081 créés mais **pas d'extournes**
-2. ❌ Cutoff intérêts 1688 **complètement manquant**
-3. ❌ Bilan 2024 incomplet pour clôture exercice
+1. ✅ Cutoffs 4181 et 4081 créés (31/12/2023) mais **pas d'extournes (01/01/2024)**
+2. ❌ Cutoff intérêts 1688 **complètement manquant** (31/12/2023)
+3. ❌ Bilan d'ouverture 2024 incomplet
 
 ---
 
 ## 🔧 Procédure de Réparation (2 Étapes)
 
-### Étape 1 : Créer Cutoff Intérêts 2024
+### Étape 1 : Créer Cutoff Intérêts 2023
 
 **Script** : `cutoff_extourne_interets.py`
 
-**Action** : Calcule les intérêts courus du 12/12/2024 au 31/12/2024 pour les 2 prêts et crée cutoff + extourne
+**Action** : Calcule les intérêts courus du 12/12/2023 au 31/12/2023 pour les 2 prêts et crée cutoff + extourne
 
 **Commande** :
 ```bash
-python cutoff_extourne_interets.py --exercice 2024 --execute
+python cutoff_extourne_interets.py --exercice 2023 --execute
 ```
 
 **Résultat attendu** :
 ```
-📅 Calcul intérêts courus au 2024-12-31
+📅 Calcul intérêts courus au 2023-12-31
 
   💰 Prêt LCL (BRM0911AH...)
      Taux annuel : 2.5000%
-     Dernière échéance : 2024-12-12
-     Capital restant : 250 000,00€
+     Dernière échéance : 2023-12-12
+     Capital restant : ~250 000,00€
      Jours courus : 19
-     ✅ Intérêts courus : 325,34€
+     ✅ Intérêts courus : ~325€
 
   💰 Prêt INVESTIMUR (BRLZE11AQ...)
      Taux annuel : 2.0000%
-     Dernière échéance : 2024-12-12
-     Capital restant : 236 000,00€
+     Dernière échéance : 2023-12-12
+     Capital restant : ~236 000,00€
      Jours courus : 19
-     ✅ Intérêts courus : 245,60€
+     ✅ Intérêts courus : ~246€
 
 📋 PROPOSITIONS DE CUTOFF
-  Intérêts courus prêt LCL: 325.34€ + extourne
-    2024-12-31 : Débit 661 / Crédit 1688 : 325.34€
-    2025-01-01 : Débit 1688 / Crédit 661 : 325.34€
+  Intérêts courus prêt LCL: ~325€ + extourne
+    2023-12-31 : Débit 661 / Crédit 1688 : ~325€
+    2024-01-01 : Débit 1688 / Crédit 661 : ~325€
 
-  Intérêts courus prêt INVESTIMUR: 245.60€ + extourne
-    2024-12-31 : Débit 661 / Crédit 1688 : 245.60€
-    2025-01-01 : Débit 1688 / Crédit 661 : 245.60€
+  Intérêts courus prêt INVESTIMUR: ~246€ + extourne
+    2023-12-31 : Débit 661 / Crédit 1688 : ~246€
+    2024-01-01 : Débit 1688 / Crédit 661 : ~246€
 
-  TOTAL INTÉRÊTS COURUS : 570,94€
+  TOTAL INTÉRÊTS COURUS : ~571€
 ```
 
 **Vérification** :
@@ -77,7 +79,7 @@ SELECT
     montant
 FROM ecritures_comptables
 WHERE type_ecriture IN ('CUTOFF_INTERETS_COURUS', 'EXTOURNE_CUTOFF')
-  AND EXTRACT(YEAR FROM date_ecriture) IN (2024, 2025)
+  AND EXTRACT(YEAR FROM date_ecriture) IN (2023, 2024)
 ORDER BY date_ecriture;
 ```
 
@@ -87,32 +89,32 @@ ORDER BY date_ecriture;
 
 **Script** : `generateur_extournes.py`
 
-**Action** : Génère les extournes 01/01/2025 pour les cutoffs 4181 et 4081 existants
+**Action** : Génère les extournes 01/01/2024 pour les cutoffs 4181 et 4081 existants (31/12/2023)
 
 **Commande** :
 ```bash
 # D'abord dry-run pour vérifier
-python generateur_extournes.py --exercice 2024
+python generateur_extournes.py --exercice 2023
 
 # Puis exécution réelle
-python generateur_extournes.py --exercice 2024 --execute
+python generateur_extournes.py --exercice 2023 --execute
 ```
 
 **Résultat attendu** :
 ```
 ═══════════════════════════════════════════════════════════════
-🔄 GÉNÉRATEUR D'EXTOURNES - Exercice 2024
+🔄 GÉNÉRATEUR D'EXTOURNES - Exercice 2023
 ═══════════════════════════════════════════════════════════════
 
 📊 Cutoffs trouvés (SANS extourne) :
 
-  1. CUTOFF_PRODUIT_A_RECEVOIR (31/12/2024)
+  1. CUTOFF_PRODUIT_A_RECEVOIR (31/12/2023)
      Débit 4181 / Crédit 761 : 7 356,00€
-     → Extourne à créer : 01/01/2025
+     → Extourne à créer : 01/01/2024
 
-  2. CUTOFF_HONORAIRES (31/12/2024)
+  2. CUTOFF_HONORAIRES (31/12/2023)
      Débit 6226 / Crédit 4081 : 653,00€
-     → Extourne à créer : 01/01/2025
+     → Extourne à créer : 01/01/2024
 
 ─────────────────────────────────────────────────────────────
 TOTAL : 2 extournes à créer
@@ -132,7 +134,7 @@ SELECT
     type_ecriture
 FROM ecritures_comptables
 WHERE type_ecriture = 'EXTOURNE_CUTOFF'
-  AND date_ecriture = '2025-01-01'
+  AND date_ecriture = '2024-01-01'
 ORDER BY id;
 ```
 
@@ -140,7 +142,7 @@ ORDER BY id;
 
 ## ✅ Résultat Final Attendu
 
-### Bilan au 31/12/2024 (Exercice 2024)
+### Bilan au 31/12/2023 (Exercice 2023)
 
 **Comptes d'attente (ACTIF)** :
 ```
@@ -150,7 +152,7 @@ ORDER BY id;
 **Comptes d'attente (PASSIF)** :
 ```
 4081 (Factures non parvenues) :   653,00€  (CRÉDIT)
-1688 (Intérêts courus)         :   570,94€  (CRÉDIT)
+1688 (Intérêts courus)         :   ~571€   (CRÉDIT)
 ```
 
 **Produits** :
@@ -161,17 +163,17 @@ ORDER BY id;
 **Charges** :
 ```
 6226 (Honoraires)              :   653,00€  (DÉBIT)
-661 (Intérêts)                 :   570,94€  (DÉBIT)
+661 (Intérêts)                 :   ~571€   (DÉBIT)
 ```
 
-### Écritures 01/01/2025 (Exercice 2025)
+### Écritures 01/01/2024 (Exercice 2024)
 
 **Extournes automatiques** :
 ```
 Type EXTOURNE_CUTOFF :
   - Débit 761 / Crédit 4181  : 7 356,00€  (annule produit à recevoir)
   - Débit 4081 / Crédit 6226 :   653,00€  (annule honoraires à payer)
-  - Débit 1688 / Crédit 661  :   570,94€  (annule intérêts courus - 2 écritures)
+  - Débit 1688 / Crédit 661  :   ~571€    (annule intérêts courus - 2 écritures)
 ```
 
 ---
@@ -180,11 +182,11 @@ Type EXTOURNE_CUTOFF :
 
 Après exécution des 2 scripts :
 
-- [ ] 4 cutoffs au 31/12/2024 (2 intérêts + 1 revenus + 1 honoraires)
-- [ ] 4 extournes au 01/01/2025 (correspondant aux 4 cutoffs)
-- [ ] Compte 1688 présent au bilan 2024 (intérêts courus)
-- [ ] Bilan 2024 équilibré
-- [ ] Compte de résultat 2024 incluant intérêts courus
+- [ ] 4 cutoffs au 31/12/2023 (2 intérêts + 1 revenus + 1 honoraires)
+- [ ] 4 extournes au 01/01/2024 (correspondant aux 4 cutoffs)
+- [ ] Compte 1688 présent au bilan 31/12/2023 (intérêts courus)
+- [ ] Bilan 31/12/2023 équilibré
+- [ ] Compte de résultat 2023 incluant intérêts courus
 
 ---
 
@@ -209,8 +211,8 @@ Après exécution des 2 scripts :
 ### Script 1 : cutoff_extourne_interets.py
 ```
 [SUCCESS] 4 écritures créées (2 cutoffs + 2 extournes)
-[INFO] Exercice 2024 : +570.94€ de charges intérêts
-[INFO] Exercice 2025 : -570.94€ de charges intérêts (extourne)
+[INFO] Exercice 2023 : +~571€ de charges intérêts
+[INFO] Exercice 2024 : -~571€ de charges intérêts (extourne)
 ```
 
 ### Script 2 : generateur_extournes.py
