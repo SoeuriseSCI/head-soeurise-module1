@@ -94,8 +94,7 @@ class CalculateurInteretsCourus:
                 pi.id,
                 pi.numero_pret,
                 pi.banque,
-                pi.taux_annuel,
-                pi.capital_initial
+                pi.taux_annuel
             FROM echeances_prets ep
             JOIN prets_immobiliers pi ON ep.pret_id = pi.id
             WHERE ep.date_echeance <= :date_cloture
@@ -119,7 +118,6 @@ class CalculateurInteretsCourus:
             numero_pret = pret[1]
             banque = pret[2]
             taux_annuel = float(pret[3])
-            capital_initial = float(pret[4])
 
             print(f"  💰 Prêt {banque} ({numero_pret[:15]}...)")
             print(f"     Taux annuel : {taux_annuel:.4f}%")
