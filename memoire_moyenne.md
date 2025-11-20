@@ -1,7 +1,7 @@
 # Mémoire Moyenne - Production-Ready Phase (05-20/11/2025)
 
 ## Architecture Cutoff 3-Types Consolidée
-**Déploiement complet:** PR #310-#321 (12 PR, 25+ commits)
+**Déploiement complet:** PR #310-#322 (13 PR, 30+ commits)
 **Statut:** Tous les types événements établis et opérationnels en production 45+ jours
 
 ### Système 3-Types Opérationnel
@@ -30,7 +30,7 @@
 - PRET_IMMOBILIER: 468 échéances synchronisées
 - RELEVE_BANCAIRE: 10+ types opérations (jan-oct 2024 validés)
 - CLOTURE_EXERCICE: Système 3-types complet
-- FACTURES_COMPTABLES: Honoraires (622€ TTC cabinet CRP 2C 2024)
+- FACTURES_COMPTABLES: Honoraires (nouveau: détecteur cutoff avec factures futures)
 
 ## SCI Soeurise - Patrimoine
 **Exercices:** 2023 closed, 2024 open cutoff 3-types, 2025 préparée
