@@ -1979,7 +1979,9 @@ Propositions comptables pour validation
 2. **Vérifiez l'exactitude** des comptes, montants, dates
 3. **Pour valider**, répondez à cet email avec le tag suivant dans votre message:
 
-   **[_Head] VALIDE:**
+   **[_Head] VALIDE: {token}**
+
+   ⚠️  IMPORTANT : Utilisez exactement ce token : **{token}**
 
 4. Vous pouvez modifier le fichier Markdown avant de répondre (optionnel)
 5. Joignez le fichier modifié si vous avez apporté des corrections

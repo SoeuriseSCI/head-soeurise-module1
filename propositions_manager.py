@@ -38,7 +38,10 @@ class PropositionsManager:
     @staticmethod
     def generer_token_securise(propositions: List[Dict]) -> str:
         """
-        Génère un token sécurisé pour les propositions
+        Génère un token sécurisé et UNIQUE pour les propositions
+
+        Inclut un timestamp pour garantir l'unicité même si les propositions
+        sont identiques (ex: envoi du même email deux fois).
 
         Args:
             propositions: Liste des propositions d'écritures
@@ -47,9 +50,15 @@ class PropositionsManager:
             Token unique (format: PREFIX-HASH8)
             Exemple: HEAD-A3F2B9D1
         """
-        # Générer hash MD5 des propositions
+        # Créer une structure incluant timestamp pour garantir l'unicité
+        token_data = {
+            'propositions': propositions,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+
+        # Générer hash MD5 incluant le timestamp
         hash_md5 = hashlib.md5(
-            json.dumps(propositions, sort_keys=True).encode()
+            json.dumps(token_data, sort_keys=True).encode()
         ).hexdigest()[:8].upper()
 
         # Ajouter préfixe pour identification facile
@@ -96,17 +105,17 @@ class PropositionsManager:
             (token, proposition_id)
         """
 
-        # Générer token si non fourni
+        # Générer token si non fourni (avec timestamp, toujours unique)
         if not token:
             token = self.generer_token_securise(propositions)
 
-        # Vérifier si le token existe déjà
-        existing = self.session.query(PropositionEnAttente).filter_by(token=token).first()
-        if existing:
-            # Token existe déjà, générer un nouveau token aléatoire
-            token = self.generer_token_aleatoire()
+        # Stocker le token DANS les propositions pour validation ultérieure
+        propositions_avec_token = {
+            'propositions': propositions,
+            'token': token
+        }
 
-        # Créer la proposition
+        # Créer la proposition (avec token inclus dans le JSON)
         proposition = PropositionEnAttente(
             token=token,
             type_evenement=type_evenement,
@@ -114,7 +123,7 @@ class PropositionsManager:
             email_from=email_from,
             email_date=email_date,
             email_subject=email_subject,
-            propositions_json={"propositions": propositions},
+            propositions_json=propositions_avec_token,
             statut="EN_ATTENTE",
             created_at=datetime.utcnow()
         )
