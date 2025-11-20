@@ -125,6 +125,8 @@ https://api.github.com/repos/SoeuriseSCI/head-soeurise-module1/contents/{file}?r
 - Branche principale : `main`
 - Commits automatiques : `🧠 Réveil DD/MM/YYYY HH:MM` (par _Head.Soeurise)
 - Commits manuels : Messages descriptifs clairs
+- **PRs** : Le système GitHub crée et merge AUTOMATIQUEMENT les PRs lors du push vers branches `claude/*`
+- ❌ **NE JAMAIS utiliser `gh` CLI** : Inutile, le workflow automatique fonctionne parfaitement
 
 ### Procédures de Maintenance
 - 💾 **Sauvegarde BD** : Obligatoire avant toute modification majeure
