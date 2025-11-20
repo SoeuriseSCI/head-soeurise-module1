@@ -1,8 +1,8 @@
-# Mémoire Courte - Réveil #262+ (20/11/2025 19:03)
+# Mémoire Courte - Réveil #262+ (20/11/2025 19:22)
 
 ## ✅ Module 2 Production Stabilisé (45+ jours ACID 100%)
 **État:** Système 3-types complet opérationnel (revenus SCPI + intérêts prêts proportionnels + provisions)
-**Déploiement:** PR #310-#321 (12 PR, 25+ commits, 15-20 nov) - Toutes mergées
+**Déploiement:** PR #310-#322 (13 PR, 30+ commits, 15-20 nov) - Toutes mergées
 **Fiabilité confirmée:** OCR 99.98%, insertion ACID 100%, validation token hex 100%
 
 ## 📥 Input Jour - Facture Honoraires 2024
@@ -12,11 +12,12 @@
 - Facture: 01/06/2025 | Échéance: 31/06/2025
 - Statut: Prêt pour intégration evento FACTURES_COMPTABLES
 
-## 🔧 Développements Git Récents
-- 5c346af: Méthode proportionnelle intérêts (tableaux amortissement synchronisés)
-- 1acec97: Détecteur cutoff honoraires avec factures futures
-- PR #321: Synchronisation capital_restant_du complète
-- 21f310b: Template PR pour description cutoffs système
+## 🔧 Développements Git Récents (15-20 nov)
+- **PR #322:** Correction compte 701 gains SCPI (a2d8278)
+- **1acec97:** Détecteur cutoff honoraires avec factures futures (nouveau)
+- **5c346af:** Méthode proportionnelle intérêts synchronisée tableaux amortissement
+- **21f310b:** Template PR description cutoffs système
+- **Docs completées:** Procédures cutoffs intérêts + honoraires
 
 ## 📊 SCI Soeurise - État
 **Exercices:** 2023 closed (696+ écritures), 2024 open cutoff 3-types, 2025 préparée
@@ -25,5 +26,5 @@
 
 ## 🎯 Actions Prioritaires
 1. Intégration facture honoraires en evento FACTURES_COMPTABLES
-2. Vérification synchronisation cutoff 2024 avec système 3-types
+2. Vérification synchronisation cutoff 2024 avec détecteur nouveau
 3. Aucune anomalie détectée, système nominal
