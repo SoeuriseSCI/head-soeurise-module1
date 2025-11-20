@@ -787,9 +787,9 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
         if not match_scpi:
             return False
 
-        # Vérifier montant présent
+        # Vérifier montant présent (avec ou sans décimales)
         import re
-        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*[,\.]\d{2})\s*€'
+        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*(?:[,\.]\d{2})?)\s*€'
         match_montant = re.search(pattern_montant, texte_complet)
         if not match_montant:
             return False
@@ -815,12 +815,13 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
         corps = evenement.get('email_body', '')
         texte_complet = f"{objet} {corps}"
 
-        # Extraire montant
-        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*)[,\.](\d{2})\s*€'
+        # Extraire montant (avec ou sans décimales)
+        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*)(?:[,\.](\d{2}))?\s*€'
         match = re.search(pattern_montant, texte_complet)
         if match:
-            montant_str = match.group(1).replace(' ', '') + '.' + match.group(2)
-            montant = float(montant_str)
+            montant_str = match.group(1).replace(' ', '')
+            decimales = match.group(2) if match.group(2) else '00'
+            montant = float(montant_str + '.' + decimales)
         else:
             montant = 0.0
 
@@ -929,9 +930,9 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         if not match_honoraires:
             return False
 
-        # Vérifier montant présent
+        # Vérifier montant présent (avec ou sans décimales)
         import re
-        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*[,\.]\d{2})\s*€'
+        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*(?:[,\.]\d{2})?)\s*€'
         match_montant = re.search(pattern_montant, texte_complet)
         if not match_montant:
             return False
@@ -956,12 +957,13 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         corps = evenement.get('email_body', '')
         texte_complet = f"{objet} {corps}"
 
-        # Extraire montant
-        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*)[,\.](\d{2})\s*€'
+        # Extraire montant (avec ou sans décimales)
+        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*)(?:[,\.](\d{2}))?\s*€'
         match = re.search(pattern_montant, texte_complet)
         if match:
-            montant_str = match.group(1).replace(' ', '') + '.' + match.group(2)
-            montant = float(montant_str)
+            montant_str = match.group(1).replace(' ', '')
+            decimales = match.group(2) if match.group(2) else '00'
+            montant = float(montant_str + '.' + decimales)
         else:
             montant = 0.0
 
