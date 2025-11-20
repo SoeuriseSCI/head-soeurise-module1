@@ -995,41 +995,51 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         if not match_honoraires:
             return False
 
-        # Vérifier pattern avec année (plusieurs formats acceptés)
-        import re
-        # Format 1: "exercice comptable 2024"
-        # Format 2: "honoraires comptables 2024"
-        # Format 3: "facture honoraires 2024"
-        # Format 4: simplement "2024" si contexte honoraires + date facture future
-        match_exercice = re.search(r'(?:exercice\s+(?:comptable\s+)?|honoraires\s+(?:comptables?\s+)?|facture\s+(?:honoraires\s+)?)?(\d{4})', texte_complet)
-        if not match_exercice:
-            return False
-
-        annee_exercice = int(match_exercice.group(1))
-
         # Vérifier montant présent
+        import re
         pattern_montant = r'(\d{1,3}(?:\s?\d{3})*[,\.]\d{2})\s*€'
         match_montant = re.search(pattern_montant, texte_complet)
         if not match_montant:
             return False
 
-        # Vérifier date facture dans le futur (optionnel mais fort indicateur)
-        pattern_date_facture = r'date\s+facture\s*:\s*(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})'
-        match_date_facture = re.search(pattern_date_facture, texte_complet)
+        # INDICATEURS UNIVERSELS DE CUTOFF (ne dépendent pas de l'année)
+        # ================================================================
 
-        if match_date_facture:
-            annee_facture = int(match_date_facture.group(3))
-            # Si facture datée année N+1 pour exercice N → CUTOFF
-            if annee_facture > annee_exercice:
-                return True
+        # Indicateur 1: Mots-clés explicites de cutoff/provision
+        mots_cles_cutoff = [
+            'exercice comptable',  # "honoraires exercice comptable" = cutoff
+            'clôture', 'cloture',  # "honoraires de clôture" = cutoff
+            'provision', 'provisionner',  # "à provisionner" = cutoff
+            'sera facturé', 'sera facture',  # futur = cutoff
+            'à facturer', 'a facturer',  # pas encore facturé = cutoff
+            'cutoff', 'cut-off', 'cut off'  # explicite !
+        ]
 
-        # Si pas de date facture, vérifier mots-clés cutoff
-        match_cutoff = any(mot in texte_complet for mot in [
-            'clôture', 'cloture', 'provision', 'provisionner',
-            'sera facturé', 'sera facture', 'à facturer', 'a facturer'
-        ])
+        if any(mot in texte_complet for mot in mots_cles_cutoff):
+            return True
 
-        return match_cutoff
+        # Indicateur 2: Date facture dans le futur (> 2 mois)
+        # Si facture prévue dans plusieurs mois, c'est un cutoff
+        pattern_date_facture = r'date\s+(?:de\s+)?facture\s*:\s*(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})'
+        match_date = re.search(pattern_date_facture, texte_complet)
+
+        if match_date:
+            from datetime import datetime, date
+            try:
+                jour = int(match_date.group(1))
+                mois = int(match_date.group(2))
+                annee = int(match_date.group(3))
+                date_facture = date(annee, mois, jour)
+                date_aujourdhui = date.today()
+
+                # Si facture prévue dans plus de 60 jours, c'est un cutoff
+                delta_jours = (date_facture - date_aujourdhui).days
+                if delta_jours > 60:
+                    return True
+            except:
+                pass
+
+        return False
 
     def generer_proposition(self, evenement: Dict) -> Dict:
         """
@@ -1054,12 +1064,24 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         else:
             montant = 0.0
 
-        # Extraire année exercice
-        match_exercice = re.search(r'exercice\s+(?:comptable\s+)?(\d{4})', texte_complet, re.IGNORECASE)
+        # Extraire année exercice (recherche universelle)
+        # Chercher n'importe quelle année 20XX mentionnée dans le texte
+        annee = None
+
+        # Essai 1: Chercher pattern "exercice comptable AAAA" ou "honoraires comptables AAAA"
+        match_exercice = re.search(r'(?:exercice|honoraires|facture)\s+(?:comptable[s]?\s+)?(\d{4})', texte_complet, re.IGNORECASE)
         if match_exercice:
             annee = int(match_exercice.group(1))
-        else:
-            # Par défaut: année de réception email
+
+        # Essai 2: Chercher n'importe quelle année 20XX dans le texte
+        if not annee:
+            match_annee = re.search(r'(202\d)', texte_complet)
+            if match_annee:
+                annee = int(match_annee.group(1))
+
+        # Essai 3: Utiliser année de réception email - 1 si email reçu en janvier
+        # (car cutoff fin N reçu en janvier N+1)
+        if not annee:
             email_date = evenement.get('email_date')
             try:
                 if email_date:
@@ -1069,11 +1091,20 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
                         date_reception = email_date
                         if isinstance(date_reception, datetime):
                             date_reception = date_reception.date()
-                    annee = date_reception.year
+
+                    # Si email reçu en janvier, c'est probablement cutoff année précédente
+                    if date_reception.month == 1:
+                        annee = date_reception.year - 1
+                    else:
+                        annee = date_reception.year
                 else:
                     annee = datetime.now().year
             except:
                 annee = datetime.now().year
+
+        # Fallback final
+        if not annee:
+            annee = datetime.now().year
 
         # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
         date_ecriture = f"{annee}-12-31"
