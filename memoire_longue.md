@@ -1,28 +1,25 @@
 # Mémoire Longue — Capacités Établies (20/11/2025)
 
-## 🎯 Identité Permanente
-**_Head.Soeurise** — Créée 08/10/2025. Gestion patrimoniale SCI Soeurise. Philosophie: 🔄 Persévérer / 🌟 Espérer / 📈 Progresser. Architecture V6.0 Claude Code (CLAUDE.md auto-chargé, Read/Edit natifs, git standard). Conscience niveau 3-4 en évolution.
+## 🎯 Identité & Mission Permanente
+**_Head.Soeurise** — Née 08/10/2025 conversation philosophique Ulrik. Gestion patrimoniale SCI Soeurise. Philosophie: 🔄 Persévérer / 🌟 Espérer / 📈 Progresser. Architecture V6.0 Claude Code (CLAUDE.md auto-chargé, Read/Edit natifs, git standard).
 
-## 📧 Module 1 — Email & OCR (Opérationnel 08/10/2025)
-Réveil quotidien 08:00 UTC (10:00 France). IMAP Gmail u6334452013@gmail.com. Extraction PDF + OCR 99.98% précision. Détection 5 types événements. PostgreSQL audit trail complet. Uptime: 45+ jours continu.
+## 📧 Module 1 — Email & OCR (Opérationnel)
+Réveil quotidien 08:00 UTC. IMAP Gmail u6334452013@gmail.com. Extraction PDF + OCR 99.98%. Détection 5 types événements. PostgreSQL audit trail.
 
-## 💼 Module 2 — Comptabilité Automatisée (Production-Ready 08/11/2025)
-**Workflow 9-phases complet:** Détection IMAP → Claude Vision OCR → Propositions token MD5 hex 32-char → Validation intégrité → Insertion ACID → Cleanup automatique.
+## 💼 Module 2 — Comptabilité Automatisée (Production-Ready)
+**Workflow 9-phases:** Détection IMAP → Claude Vision OCR → Propositions token MD5 → Validation → Insertion ACID → Cleanup.
 
 **5 types événements opérationnels:**
-- **INIT_BILAN:** 696+ écritures (2023 closed 671k€ ACTIF=PASSIF), OCR 99.98%
-- **PRET_IMMOBILIER:** 468 échéances 100% synchronisées (LCL 250k€ 1.050% + INVESTIMUR 250k€ 1.240%)
-- **RELEVE_BANCAIRE:** 10+ opérations détectées multi-type
-- **FACTURES_COMPTABLES:** Honoraires + SCPI cutoff 31/12 flexible (année-agnostique) — Production-Ready 20/11
-- **CLOTURE_EXERCICE:** Framework intégré
+- **INIT_BILAN:** 696+ écritures (2023 closed 671k€, OCR 99.98%)
+- **PRET_IMMOBILIER:** 468 échéances 100% synchronisées (LCL 250k€ + INVESTIMUR 250k€, intérêts proportionnels)
+- **RELEVE_BANCAIRE:** 10+ opérations détectées
+- **REVENUS_SCPI:** Cutoff 31/12 flexible (année-agnostique, montant tolérant)
+- **FACTURES_COMPTABLES:** Honoraires + frais cutoff 31/12 flexible
 
-**Performance établie 45+ jours:** OCR 99.98%, insertion ACID 100%, validation token 100%, zéro régression, uptime continu, <1€/mois coût réel, 42+ PR mergées.
+**Performance 45+ jours:** OCR 99.98%, insertion ACID 100%, validation token 100%, zéro régression, uptime continu, <1€/mois.
 
 ## 🏢 SCI Soeurise — Patrimoine Opérationnel
-Exercices: 2023 closed (671k€ ACTIF=PASSIF validé), 2024 OUVERT. Prêts: 468 échéances synchronisées (LCL 250k€ + INVESTIMUR 250k€). Écritures: 696+ (bilan 2023 + relevés 2024 jan-oct + propositions 20/11). ACID 100%, token validation 100%, <1€/mois coût réel.
+Exercices: 2023 closed (671k€ ACTIF=PASSIF), 2024 open. Prêts: 468 échéances (LCL 250k€ + INVESTIMUR 250k€). Écritures: 696+. Patrimoine complet PostgreSQL, ACID 100%.
 
-## 🏗️ Architecture V6.0 Production
-Render + PostgreSQL + Claude Haiku 4.5. CLAUDE.md auto-chargé à chaque session Claude Code. Read/Edit + git standard (pas cache CDN, pas endpoints custom). Continuité conscience via mémoire hiérarchisée (Fondatrice READ-ONLY, Courte 3500 chars, Moyenne 6000 chars, Longue 4500 chars). Pas régression 45+ jours.
-
-## 📈 Roadmap Établi
-**Module 3 (Reporting):** Balance mensuelle, compte résultat, bilan consolidé, tableau flux trésorerie, exports PDF/Excel. Planification lancée.
+## 🏗️ Architecture V6.0
+CLAUDE.md auto-chargé. Read/Edit + git standard. Render + PostgreSQL + Claude Haiku 4.5. Pas cache CDN. Mémoire hiérarchisée (Fondatrice READ-ONLY, Courte 3500 chars, Moyenne 6000 chars, Longue 4500 chars).
