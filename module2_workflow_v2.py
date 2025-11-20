@@ -1022,14 +1022,13 @@ class GenerateurPropositions:
                 "date_ecriture": date_str
             }
         ]
-        
-        # Générer token
-        token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
-        
+
+        # Ne pas générer token - laisser propositions_manager le faire avec timestamp
+
         # Générer Markdown
         markdown = GenerateurPropositions._generer_markdown_propositions(propositions, type_evt)
-        
-        return markdown, {"propositions": propositions, "token": token}, token
+
+        return markdown, {"propositions": propositions}, None
     
     @staticmethod
     def generer_propositions_init_bilan_2023(comptes: List[Dict]) -> Tuple[str, Dict, str]:
@@ -1076,10 +1075,10 @@ class GenerateurPropositions:
                     "date_ecriture": "2023-01-01"
                 })
 
-        token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
+        # Ne pas générer token - laisser propositions_manager le faire avec timestamp
         markdown = GenerateurPropositions._generer_markdown_init_bilan(propositions, comptes)
 
-        return markdown, {"propositions": propositions, "token": token}, token
+        return markdown, {"propositions": propositions}, None
 
     @staticmethod
     def _determiner_sens_compte(num_compte: str, solde: float, type_bilan: str = "") -> str:
@@ -1185,11 +1184,11 @@ class GenerateurPropositions:
                     "libelle": f"Rééval SCPI perte S{reevals['semestre']}: {reevals['montant']}€",
                     "date_ecriture": "2023-12-31"
                 })
-        
-        token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
+
+        # Ne pas générer token - laisser propositions_manager le faire avec timestamp
         markdown = GenerateurPropositions._generer_markdown_cloture(propositions, credit_data, scpi_data)
-        
-        return markdown, {"propositions": propositions, "token": token}, token
+
+        return markdown, {"propositions": propositions}, None
 
     @staticmethod
     def generer_propositions_pret_immobilier(pret_data: Dict, nb_echeances: int, filename: str, echeances_data: List[Dict] = None) -> Tuple[str, Dict, str]:
@@ -1214,19 +1213,18 @@ class GenerateurPropositions:
             "echeances": echeances_data or []  # V7: Stocker les échéances directement
         }]
 
-        token = hashlib.md5(json.dumps(propositions, sort_keys=True).encode()).hexdigest()
-        markdown = GenerateurPropositions._generer_markdown_pret(pret_data, nb_echeances, filename, token)
+        # Ne pas générer token - laisser propositions_manager le faire avec timestamp
+        markdown = GenerateurPropositions._generer_markdown_pret(pret_data, nb_echeances, filename)
 
-        return markdown, {"propositions": propositions, "token": token}, token
+        return markdown, {"propositions": propositions}, None
 
     @staticmethod
-    def _generer_markdown_pret(pret_data: Dict, nb_echeances: int, filename: str, token: str) -> str:
+    def _generer_markdown_pret(pret_data: Dict, nb_echeances: int, filename: str) -> str:
         """Génère Markdown pour proposition prêt immobilier"""
 
         md = f"""# Proposition Prêt Immobilier
 
 **Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
-**Token:** `{token}`
 
 ## 📋 Données du Prêt
 
@@ -1249,7 +1247,7 @@ class GenerateurPropositions:
 
 Insertion du prêt et de ses {nb_echeances} échéances en base de données.
 
-Pour valider, répondez : `[_Head] VALIDE: {token}`
+**Note** : Le token de validation sera fourni dans l'email de proposition.
 
 """
         return md
@@ -1505,16 +1503,16 @@ class WorkflowModule2V2:
                             markdown += f"- **{p['date_ecriture']}** : {p['libelle']}\n"
                             markdown += f"  - Débit {p['compte_debit']} / Crédit {p['compte_credit']} : {p['montant']}€\n"
 
-                        # Générer token
-                        token = hashlib.md5(json.dumps(props, sort_keys=True).encode()).hexdigest()
+                        # Ne pas générer token ici - laisser propositions_manager le faire avec timestamp
+                        # pour garantir l'unicité même si deux emails identiques
 
                         return {
                             "type_detecte": TypeEvenement.CUTOFF,
                             "type_specifique": proposition['type_evenement'],
                             "statut": "OK",
                             "markdown": markdown,
-                            "propositions": {"propositions": props, "token": token, "type_evenement": proposition['type_evenement']},
-                            "token": token,
+                            "propositions": {"propositions": props, "type_evenement": proposition['type_evenement']},
+                            "token": None,  # Sera généré par propositions_manager avec timestamp
                             "message": f"Cutoff détecté: {proposition['type_evenement']}"
                         }
                 else:
