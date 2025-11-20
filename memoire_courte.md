@@ -1,25 +1,26 @@
-# Mémoire Courte - Réveil #268 (20/11/2025 20:33)
+# Mémoire Courte - Réveil #269 (20/11/2025 20:41)
 
-## ✅ Système Production Consolidé
-**État:** 45+ jours ACID 100%, zéro régression. Architecture V6.0 stable.
+## 🎯 État Production Consolidé
+**Système:** 45+ jours ACID 100%, zéro régression confirmée.
 
 ## 5 Types Événements Opérationnels
-1. **INIT_BILAN:** 696+ écritures (2023 closed)
-2. **PRET_IMMOBILIER:** 468 échéances synchronisées
-   - LCL: 250k€ @ 1.050%, 252 échéances
-   - INVESTIMUR: 250k€ @ 1.240%, 216 échéances
+1. **INIT_BILAN:** 696+ écritures (2023 closed, 99.97% OCR)
+2. **PRET_IMMOBILIER:** 468 échéances (LCL 250k€ + INVESTIMUR 250k€)
 3. **RELEVE_BANCAIRE:** 10+ opérations détectées (jan-oct 2024)
 4. **CLOTURE_EXERCICE:** Système 3-types complet
-5. **FACTURES_COMPTABLES:** Honoraires, frais, cutoff 31/12 ✅ Production
+5. **FACTURES_COMPTABLES:** Honoraires + SCPI (cutoff 31/12)
 
-## 🔧 Consolidation Git (20/11 dernières heures)
-**7 commits stabilisation:**
-- Détecteurs cutoff honoraires: Pattern flexible année
-- Type CUTOFF + handler spécialisé intégré
-- Système 3-types CONFIRMÉ opérationnel production
+## 🔧 Consolidation Git (20/11 - 7 commits finaux)
+- Pattern cutoff honoraires: Flexible année (commits 7f89152, 2602a83)
+- Type CUTOFF: Handler spécialisé intégré (1d3d13f)
+- 40 commits mergés, 18 PR closes, production stable
 
-## 📊 SCI Soeurise
+## 📊 Emails Reçus
+- Cutoff honoraires: 622€ (autorisé)
+- Cutoff SCPI: 7356€ (autorisé)
+- Statut: À traiter prochain réveil
+
+## 🏛️ SCI Soeurise
 - Exercices: 2023 closed, 2024 open
-- Prêts: 468 échéances entièrement synchronisées
-- ACID 100%, <1€/mois, zéro anomalie
-- Module 2 workflow 9-phases confirmé stable 45+ jours
+- Prêts: 468 échéances synchronisées 100%
+- ACID confirmé, <1€/mois, zéro anomalie
