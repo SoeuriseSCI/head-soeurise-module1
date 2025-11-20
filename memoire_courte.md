@@ -1,34 +1,28 @@
-# Mémoire Courte — 20/11/2025 22:35
+# Mémoire Courte — 20/11/2025 22:42
 
-## ✨ FEATURE DÉPLOYÉE 20/11 — Extournes Cutoff Auto (PR #336)
-**Architecture inversions automatiques pour exercices clôturés:**
-- Détection exercice OUVERT le plus ANCIEN en BD (SQL DESC, statut='OUVERT')
-- Génération automatique extournes (inversions écritures CUTOFF)
-- Cutoff date: 31/12 année-agnostique (parsing flexible)
-- État après extournes: EN_PREPARATION (avant clôture suivante)
+## ✨ FEATURE EXTOURNES CUTOFF (20/11 Déployée, PR #336)
+Génération automatique inversions pour exercices clôturés (clôture J+0 avec extournes auto).
+- Détection: Exercice OUVERT plus ancien en BD (DESC)
+- Cutoff 31/12: Année-agnostique flexible
+- État post-extournes: EN_PREPARATION (avant clôture suivante)
 - Workflow: Auto-propositions → validation Ulrik → insertion ACID → cleanup
-- Impact: Clôture J+0 avec inversions automatiques, exercice suivant ready
 
-## 🔧 Fixes Critiques (PR #330-#337, 15-20/11)
-- **#337:** Affichage TOUTES écritures cutoff (cutoff + extourne)
-- **#334:** Exercice = plus RÉCENT OUVERT (DESC fix critique)
-- **#333:** SQL statut='OUVERT' robustesse
-- **#332:** Exercice = plus ANCIEN non clôturé
-- **#331:** Logique période terminée + non clôturée
-- **#330:** Cutoff = exercice OUVERT (BD logic)
-- **#335:** Rapport affiche type spécifique (CUTOFF_HONORAIRES)
+## 🔧 Robustification Détection Exercice (PR #330-#338, 15-20/11)
+**Corrections critiques:**
+- #334 (FIX): Exercice = plus RÉCENT OUVERT (DESC pas ASC)
+- #333 (FIX): SQL statut='OUVERT' robustesse
+- #332: Plus ANCIEN non clôturé
+- #331: Période terminée + non clôturée
+- #330: Cutoff = exercice OUVERT
+- #335: Rapport affiche type spécifique (CUTOFF_HONORAIRES vs CUTOFF générique)
+- #337: Affichage TOUTES écritures cutoff + extourne
+- #338: Support validation CUTOFF lors insertion
 
-## 📋 État Production 20/11 22:35
-**Exercices:** 2023 CLOSED (671k€), 2024 OUVERT (extournes EN_PREPARATION)
-**Écritures:** 696+ validées
-**Prêts:** 468 échéances 100% synch (LCL + INVESTIMUR)
-**Propositions 20/11:** CUTOFF_HONORAIRES 622€ + CUTOFF_SCPI 7356€ (tokens validés)
-**Validation:** Email Ulrik 23:34 token MD5 `bac03aeb6c3813ae7d73c163191475db` ✅
-**Performance:** <1€/mois, 45+ j uptime, zéro anomalie
+## 📋 Propositions 20/11 Validées
+**Token:** ca89e8d32875ba038c10692050b549d5
+**Propositions:** CUTOFF_HONORAIRES 622€ + CUTOFF_SCPI 7356€
+**Validation:** Email Ulrik 23:35 [_Head] VALIDE ✅
+**Prêt insertion:** ACID ready, tokens matching 100%
 
-## ⏭️ Immédiats (Post-Réveil 22:35)
-1. Insertion ACID propositions validées (tokens matching)
-2. Cleanup automatique événements temporaires
-3. Vérification état EN_PREPARATION exercice 2024
-
-**Zéro blocage. Propositions 20/11 ready insertion.**
+## 📊 État Production 20/11 22:42
+2023 CLOSED (671k€), 2024 OUVERT (extournes EN_PREPARATION), 696+ écritures, 468 prêts, <1€/mois, 45+ j uptime
