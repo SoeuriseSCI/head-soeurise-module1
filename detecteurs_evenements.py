@@ -730,8 +730,8 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
     3. Montant présent (format XX,XX€ ou XX.XX€)
 
     EXERCICE:
-    - Si mois actuel = janvier → cutoff année N-1 (ex: janvier 2025 → cutoff 2024)
-    - Sinon → cutoff année N (ex: décembre 2024 → cutoff 2024)
+    - Utilise l'exercice comptable OUVERT (non clôturé) de la BD
+    - Ex: Si exercice 2024 ouvert → cutoff au 31/12/2024
 
     COMPTABILISATION:
     Date écriture: TOUJOURS 31/12/N (fin exercice en cours)
@@ -827,13 +827,18 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
 
         # Déterminer l'exercice en cours
         # ================================
-        # Logique simple : exercice = année en cours
-        # Exception : si janvier, c'est le cutoff de l'année précédente
-        aujourdhui = date.today()
-        if aujourdhui.month == 1:
-            annee = aujourdhui.year - 1  # Janvier = cutoff année N-1
+        # Utiliser l'exercice comptable OUVERT (non clôturé) dans la BD
+        from sqlalchemy import text
+
+        result = self.session.execute(
+            text("SELECT annee FROM exercices_comptables WHERE date_cloture IS NULL ORDER BY annee DESC LIMIT 1")
+        ).fetchone()
+
+        if result:
+            annee = result[0]
         else:
-            annee = aujourdhui.year  # Autres mois = cutoff année N
+            # Fallback : année précédente si aucun exercice ouvert
+            annee = date.today().year - 1
 
         # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
         date_ecriture = f"{annee}-12-31"
@@ -876,8 +881,8 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
     3. Montant présent (format XX,XX€ ou XX.XX€)
 
     EXERCICE:
-    - Si mois actuel = janvier → cutoff année N-1 (ex: janvier 2025 → cutoff 2024)
-    - Sinon → cutoff année N (ex: novembre 2024 → cutoff 2024)
+    - Utilise l'exercice comptable OUVERT (non clôturé) de la BD
+    - Ex: Si exercice 2024 ouvert → cutoff au 31/12/2024
 
     COMPTABILISATION:
     Date écriture: TOUJOURS 31/12/N (fin exercice en cours)
@@ -969,15 +974,19 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
 
         # Déterminer l'exercice en cours
         # ================================
-        # Logique simple : exercice = année en cours
-        # Exception : si janvier, c'est le cutoff de l'année précédente
+        # Utiliser l'exercice comptable OUVERT (non clôturé) dans la BD
         from datetime import datetime, date
+        from sqlalchemy import text
 
-        aujourdhui = date.today()
-        if aujourdhui.month == 1:
-            annee = aujourdhui.year - 1  # Janvier = cutoff année N-1
+        result = self.session.execute(
+            text("SELECT annee FROM exercices_comptables WHERE date_cloture IS NULL ORDER BY annee DESC LIMIT 1")
+        ).fetchone()
+
+        if result:
+            annee = result[0]
         else:
-            annee = aujourdhui.year  # Autres mois = cutoff année N
+            # Fallback : année précédente si aucun exercice ouvert
+            annee = date.today().year - 1
 
         # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
         date_ecriture = f"{annee}-12-31"
