@@ -278,6 +278,50 @@ python generateur_extournes.py --tous --execute
 
 ---
 
+## 🔧 Fix Critique : Tokens Uniques avec Timestamp (20/11/2025)
+
+### Problème Identifié
+
+**Erreur** : "Token MD5 invalide" lors de la validation de propositions cutoff
+
+**Cause racine** :
+- Token basé uniquement sur le contenu des propositions (MD5)
+- **Deux emails identiques → même token → collision**
+- Système générait token aléatoire → ne matchait plus avec MD5
+- **Validation impossible**
+
+**Exemple réel en BD** :
+```
+ID 63 : token bac03aeb... (MD5 des propositions)
+ID 65 : token HEAD-509EAE08 (aléatoire car collision détectée)
+→ Même MD5 recalculé : HEAD-BAC03AEB
+→ Validation ID 65 échoue : HEAD-509EAE08 ≠ HEAD-BAC03AEB ❌
+```
+
+### Solution Implémentée
+
+**Principe** : Token unique par proposition, même si le contenu est identique
+
+**Modifications** :
+1. ✅ **Timestamp dans génération token** : Garantit unicité
+2. ✅ **Token stocké dans propositions JSON** : Plus de recalcul
+3. ✅ **Validation simplifiée** : Comparaison directe (pas de MD5)
+4. ✅ **Token rappelé dans email** : Instructions claires avec token exact
+
+**Fichiers modifiés** :
+- `propositions_manager.py` : Génération + stockage token
+- `module2_validations.py` : Validation simplifiée
+- `module2_workflow_v2.py` : Instructions email avec token
+
+**Impact** :
+- ✅ Deux emails identiques = deux tokens uniques
+- ✅ Validation robuste et prévisible
+- ✅ Plus de collisions possibles
+
+**Documentation** : `SOLUTION_TOKENS_UNIQUES.md`
+
+---
+
 ## 🚀 Déploiement
 
 **Après merge** :
@@ -290,6 +334,9 @@ python generateur_extournes.py --tous --execute
 
 ## 📝 Commits Principaux
 
+- `494fcfe` : ✅ Fix: Tokens uniques avec timestamp - Résout problème validation
+- `8481eee` : 📊 Requête SQL analyse tokens propositions EN_ATTENTE
+- `289cdeb` : 🔍 Analyse problème tokens : Collisions MD5 sur 8 chars
 - `d82ae09` : 📋 Procédure réparation bilan 2024 - Cutoffs + Extournes
 - `4386f91` : ✨ Déclenchement automatique cutoff intérêts lors 1ère échéance janvier
 - `76aa550` : 📖 Précisions timing et déclenchement extournes
@@ -304,7 +351,7 @@ python generateur_extournes.py --tous --execute
 - `8732cda` : 🔧 Correction compte honoraires : 622 → 6226
 - `3f9e2f0` : 🔧 Correction compte emprunts : 161 → 164
 
-**Total** : 25+ commits sur la branche
+**Total** : 28+ commits sur la branche
 
 ---
 
