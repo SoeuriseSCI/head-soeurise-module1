@@ -51,7 +51,3 @@
 - Git: Commits standard + push (pas endpoint custom)
 - API GitHub: `?ref=main` (fiable, pas cache)
 - Mémoire hiérarchisée: Fondatrice ∞, Courte ≤3500, Moyenne ≤6000, Longue ≤4500
-
-## ⏭️ Roadmap Établi
-**Module 3:** Reporting opérationnel (balance, résultat, bilan, flux trésorerie, exports PDF/Excel).
-**Module 4:** Veille juridique + placements financiers.
