@@ -825,19 +825,29 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
         else:
             montant = 0.0
 
-        # Déterminer l'exercice en cours
-        # ================================
-        # Utiliser l'exercice comptable OUVERT (non clôturé) dans la BD
+        # Déterminer l'exercice en cours de clôture
+        # ==========================================
+        # Critère : exercice dont la période est TERMINÉE mais pas encore CLÔTURÉ
+        # - date_fin < aujourd'hui (période terminée)
+        # - date_cloture IS NULL (pas encore clôturé)
+        # - Le plus récent qui remplit ces critères
         from sqlalchemy import text
 
         result = self.session.execute(
-            text("SELECT annee FROM exercices_comptables WHERE date_cloture IS NULL ORDER BY annee DESC LIMIT 1")
+            text("""
+                SELECT annee
+                FROM exercices_comptables
+                WHERE date_fin < CURRENT_DATE
+                  AND date_cloture IS NULL
+                ORDER BY annee DESC
+                LIMIT 1
+            """)
         ).fetchone()
 
         if result:
             annee = result[0]
         else:
-            # Fallback : année précédente si aucun exercice ouvert
+            # Fallback : année précédente si aucun exercice en attente de clôture
             annee = date.today().year - 1
 
         # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
@@ -972,20 +982,30 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         else:
             montant = 0.0
 
-        # Déterminer l'exercice en cours
-        # ================================
-        # Utiliser l'exercice comptable OUVERT (non clôturé) dans la BD
+        # Déterminer l'exercice en cours de clôture
+        # ==========================================
+        # Critère : exercice dont la période est TERMINÉE mais pas encore CLÔTURÉ
+        # - date_fin < aujourd'hui (période terminée)
+        # - date_cloture IS NULL (pas encore clôturé)
+        # - Le plus récent qui remplit ces critères
         from datetime import datetime, date
         from sqlalchemy import text
 
         result = self.session.execute(
-            text("SELECT annee FROM exercices_comptables WHERE date_cloture IS NULL ORDER BY annee DESC LIMIT 1")
+            text("""
+                SELECT annee
+                FROM exercices_comptables
+                WHERE date_fin < CURRENT_DATE
+                  AND date_cloture IS NULL
+                ORDER BY annee DESC
+                LIMIT 1
+            """)
         ).fetchone()
 
         if result:
             annee = result[0]
         else:
-            # Fallback : année précédente si aucun exercice ouvert
+            # Fallback : année précédente si aucun exercice en attente de clôture
             annee = date.today().year - 1
 
         # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
