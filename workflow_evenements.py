@@ -272,7 +272,8 @@ class WorkflowEvenements:
             result = self.session.execute(
                 text("""
                     SELECT id, date_operation, libelle, libelle_normalise,
-                           montant, type_operation, type_evenement
+                           montant, type_operation, type_evenement,
+                           email_subject, email_body, email_date
                     FROM evenements_comptables
                     WHERE id = :id
                 """),
@@ -289,7 +290,10 @@ class WorkflowEvenements:
                 'libelle_normalise': row[3],
                 'montant': float(row[4]) if row[4] else None,
                 'type_operation': row[5],
-                'type_evenement': row[6]
+                'type_evenement': row[6],
+                'email_subject': row[7],
+                'email_body': row[8],
+                'email_date': row[9]
             }
 
             # EXCLURE les soldes d'ouverture (non comptabilisables)

@@ -763,24 +763,24 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
 
         Args:
             evenement: Dictionnaire contenant:
-                - type_source: 'EMAIL' (requis)
-                - objet_email: Objet de l'email
-                - corps_email: Corps de l'email
-                - date_reception: Date réception email
+                - email_subject: Objet de l'email (requis)
+                - email_body: Corps de l'email (requis)
+                - email_date: Date réception email
                 - libelle / libelle_normalise: Pour compatibilité
 
         Returns:
             True si annonce de produit à recevoir détectée
         """
-        # Vérifier que c'est un email (pas un relevé bancaire)
-        type_source = evenement.get('type_source', '').upper()
-        if type_source != 'EMAIL':
+        # Vérifier que c'est un email (a un sujet)
+        # Si l'événement vient d'un relevé bancaire, pas de email_subject
+        email_subject = evenement.get('email_subject')
+        if not email_subject:
             return False
 
         # Récupérer les champs email
-        objet = evenement.get('objet_email', '').lower()
-        corps = evenement.get('corps_email', '').lower()
-        date_reception_str = evenement.get('date_reception', evenement.get('date_operation', ''))
+        objet = email_subject.lower()
+        corps = evenement.get('email_body', '').lower()
+        date_reception_str = evenement.get('email_date', '')
 
         # Combiner objet + corps pour analyse
         texte_complet = f"{objet} {corps}"
@@ -854,8 +854,8 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
         """
         # Extraire le montant
         import re
-        corps = evenement.get('corps_email', '')
-        objet = evenement.get('objet_email', '')
+        corps = evenement.get('email_body', '')
+        objet = evenement.get('email_subject', '')
         texte_complet = f"{objet} {corps}"
 
         pattern_montant = r'(\d{1,3}(?:\s?\d{3})*)[,\.](\d{2})\s*€'
@@ -873,13 +873,18 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
             annee = int(match_annee.group(0))
         else:
             # Par défaut: année de réception email
-            date_reception_str = evenement.get('date_reception', evenement.get('date_operation', ''))
+            email_date = evenement.get('email_date')
             try:
-                if isinstance(date_reception_str, str):
-                    date_reception = datetime.strptime(date_reception_str, '%Y-%m-%d').date()
+                if email_date:
+                    if isinstance(email_date, str):
+                        date_reception = datetime.strptime(email_date, '%Y-%m-%d').date()
+                    elif hasattr(email_date, 'year'):
+                        date_reception = email_date
+                        if isinstance(date_reception, datetime):
+                            date_reception = date_reception.date()
+                    annee = date_reception.year
                 else:
-                    date_reception = date_reception_str
-                annee = date_reception.year
+                    annee = datetime.now().year
             except:
                 annee = datetime.now().year
 
@@ -910,7 +915,7 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
                 }
             ],
             'metadata': {
-                'email_date': evenement.get('date_reception', evenement.get('date_operation', '')),
+                'email_date': evenement.get('email_date', ''),
                 'scpi_name': 'Épargne Pierre',
                 'trimestre': 'T4',
                 'annee': annee,
@@ -962,22 +967,22 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
 
         Args:
             evenement: Dictionnaire contenant:
-                - type_source: 'EMAIL' (requis)
-                - objet_email: Objet de l'email
-                - corps_email: Corps de l'email
-                - date_reception: Date réception email
+                - email_subject: Objet de l'email (requis)
+                - email_body: Corps de l'email (requis)
+                - email_date: Date réception email
 
         Returns:
             True si annonce de cutoff honoraires détectée
         """
-        # Vérifier que c'est un email
-        type_source = evenement.get('type_source', '').upper()
-        if type_source != 'EMAIL':
+        # Vérifier que c'est un email (a un sujet)
+        # Si l'événement vient d'un relevé bancaire, pas de email_subject
+        email_subject = evenement.get('email_subject')
+        if not email_subject:
             return False
 
         # Récupérer les champs email
-        objet = evenement.get('objet_email', '').lower()
-        corps = evenement.get('corps_email', '').lower()
+        objet = email_subject.lower()
+        corps = evenement.get('email_body', '').lower()
 
         # Combiner objet + corps
         texte_complet = f"{objet} {corps}"
@@ -1032,8 +1037,8 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         import re
 
         # Extraire les informations
-        objet = evenement.get('objet_email', '')
-        corps = evenement.get('corps_email', '')
+        objet = evenement.get('email_subject', '')
+        corps = evenement.get('email_body', '')
         texte_complet = f"{objet} {corps}"
 
         # Extraire montant
@@ -1051,13 +1056,18 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
             annee = int(match_exercice.group(1))
         else:
             # Par défaut: année de réception email
-            date_reception_str = evenement.get('date_reception', evenement.get('date_operation', ''))
+            email_date = evenement.get('email_date')
             try:
-                if isinstance(date_reception_str, str):
-                    date_reception = datetime.strptime(date_reception_str, '%Y-%m-%d').date()
+                if email_date:
+                    if isinstance(email_date, str):
+                        date_reception = datetime.strptime(email_date, '%Y-%m-%d').date()
+                    elif hasattr(email_date, 'year'):
+                        date_reception = email_date
+                        if isinstance(date_reception, datetime):
+                            date_reception = date_reception.date()
+                    annee = date_reception.year
                 else:
-                    date_reception = date_reception_str
-                annee = date_reception.year
+                    annee = datetime.now().year
             except:
                 annee = datetime.now().year
 
@@ -1092,7 +1102,7 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
                 }
             ],
             'metadata': {
-                'email_date': evenement.get('date_reception', evenement.get('date_operation', '')),
+                'email_date': evenement.get('email_date', ''),
                 'cabinet': nom_cabinet,
                 'annee': annee,
                 'date_facture_prevue': date_facture_prevue
