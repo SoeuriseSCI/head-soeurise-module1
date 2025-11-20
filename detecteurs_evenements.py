@@ -825,21 +825,20 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
         else:
             montant = 0.0
 
-        # Déterminer l'exercice en cours de clôture
-        # ==========================================
-        # Critère : exercice dont la période est TERMINÉE mais pas encore CLÔTURÉ
-        # - date_fin < aujourd'hui (période terminée)
-        # - date_cloture IS NULL (pas encore clôturé)
-        # - Le plus récent qui remplit ces critères
+        # Déterminer l'exercice en cours (à clôturer)
+        # ============================================
+        # Logique : L'exercice le plus ANCIEN non encore clôturé
+        # - Si 2024 et 2025 non clôturés → retourne 2024 (à clôturer en premier)
+        # - Fonctionne même AVANT la fin de l'exercice (cutoffs créés en nov/déc)
+        # - Ne dépend PAS de la date calendaire actuelle
         from sqlalchemy import text
 
         result = self.session.execute(
             text("""
                 SELECT annee
                 FROM exercices_comptables
-                WHERE date_fin < CURRENT_DATE
-                  AND date_cloture IS NULL
-                ORDER BY annee DESC
+                WHERE date_cloture IS NULL
+                ORDER BY annee ASC
                 LIMIT 1
             """)
         ).fetchone()
@@ -982,12 +981,12 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         else:
             montant = 0.0
 
-        # Déterminer l'exercice en cours de clôture
-        # ==========================================
-        # Critère : exercice dont la période est TERMINÉE mais pas encore CLÔTURÉ
-        # - date_fin < aujourd'hui (période terminée)
-        # - date_cloture IS NULL (pas encore clôturé)
-        # - Le plus récent qui remplit ces critères
+        # Déterminer l'exercice en cours (à clôturer)
+        # ============================================
+        # Logique : L'exercice le plus ANCIEN non encore clôturé
+        # - Si 2024 et 2025 non clôturés → retourne 2024 (à clôturer en premier)
+        # - Fonctionne même AVANT la fin de l'exercice (cutoffs créés en nov/déc)
+        # - Ne dépend PAS de la date calendaire actuelle
         from datetime import datetime, date
         from sqlalchemy import text
 
@@ -995,9 +994,8 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
             text("""
                 SELECT annee
                 FROM exercices_comptables
-                WHERE date_fin < CURRENT_DATE
-                  AND date_cloture IS NULL
-                ORDER BY annee DESC
+                WHERE date_cloture IS NULL
+                ORDER BY annee ASC
                 LIMIT 1
             """)
         ).fetchone()
