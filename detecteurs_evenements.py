@@ -919,6 +919,187 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
         }
 
 
+class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
+    """
+    Détecte emails annonçant honoraires comptables à payer (cutoff fin d'année)
+
+    CONTEXTE:
+    - Les honoraires de clôture comptable sont engagés en année N
+    - Mais la facture est reçue en N+1 (après clôture des comptes)
+    - Principe comptabilité d'engagement: charges comptabilisées dans exercice où engagées
+
+    PATTERN EMAIL:
+    - Objet/Corps contient: HONORAIRES + EXERCICE COMPTABLE + année N
+    - Date facture dans le futur (année N+1)
+    - Montant présent
+    - Mots-clés: "clôture", "exercice", "sera facturé"
+
+    DATE DÉTECTION:
+    - Email reçu en décembre N ou janvier N+1
+    - Mentionne "exercice N" avec facture datée N+1
+
+    COMPTABILISATION:
+    Date écriture: 31/12/N (toujours fin exercice)
+      Débit 6226 (Honoraires comptables)     : XX.XX€
+      Crédit 4081 (Factures non parvenues)   : XX.XX€
+
+    EXEMPLE:
+    Email du 20/12/2024:
+      "Honoraires exercice comptable 2024
+       Montant : 622€ TTC
+       Date facture : 01/06/2025"
+
+    Génère écriture au 31/12/2024:
+      Débit 6226 : 622,00 €
+      Crédit 4081 : 622,00 €
+
+    Date création: 20/11/2025
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """
+        Détecte une annonce de cutoff honoraires
+
+        Args:
+            evenement: Dictionnaire contenant:
+                - type_source: 'EMAIL' (requis)
+                - objet_email: Objet de l'email
+                - corps_email: Corps de l'email
+                - date_reception: Date réception email
+
+        Returns:
+            True si annonce de cutoff honoraires détectée
+        """
+        # Vérifier que c'est un email
+        type_source = evenement.get('type_source', '').upper()
+        if type_source != 'EMAIL':
+            return False
+
+        # Récupérer les champs email
+        objet = evenement.get('objet_email', '').lower()
+        corps = evenement.get('corps_email', '').lower()
+
+        # Combiner objet + corps
+        texte_complet = f"{objet} {corps}"
+
+        # Vérifier pattern honoraires
+        match_honoraires = any(pattern in texte_complet for pattern in [
+            'honoraires', 'honoraire', 'expert comptable', 'expert-comptable',
+            'cabinet comptable', 'comptable', 'comptabilité', 'comptabilite'
+        ])
+        if not match_honoraires:
+            return False
+
+        # Vérifier pattern exercice comptable avec année
+        import re
+        match_exercice = re.search(r'exercice\s+(?:comptable\s+)?(\d{4})', texte_complet)
+        if not match_exercice:
+            return False
+
+        # Vérifier montant présent
+        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*[,\.]\d{2})\s*€'
+        match_montant = re.search(pattern_montant, texte_complet)
+        if not match_montant:
+            return False
+
+        # Vérifier date facture dans le futur (optionnel mais fort indicateur)
+        pattern_date_facture = r'date\s+facture\s*:\s*(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})'
+        match_date_facture = re.search(pattern_date_facture, texte_complet)
+
+        annee_exercice = int(match_exercice.group(1))
+
+        if match_date_facture:
+            annee_facture = int(match_date_facture.group(3))
+            # Si facture datée année N+1 pour exercice N → CUTOFF
+            if annee_facture > annee_exercice:
+                return True
+
+        # Si pas de date facture, vérifier mots-clés cutoff
+        match_cutoff = any(mot in texte_complet for mot in [
+            'clôture', 'cloture', 'provision', 'provisionner',
+            'sera facturé', 'sera facture', 'à facturer', 'a facturer'
+        ])
+
+        return match_cutoff
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """
+        Génère la proposition d'écriture de cutoff honoraires
+
+        Returns:
+            Proposition avec écriture au 31/12/N
+        """
+        import re
+
+        # Extraire les informations
+        objet = evenement.get('objet_email', '')
+        corps = evenement.get('corps_email', '')
+        texte_complet = f"{objet} {corps}"
+
+        # Extraire montant
+        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*)[,\.](\d{2})\s*€'
+        match = re.search(pattern_montant, texte_complet)
+        if match:
+            montant_str = match.group(1).replace(' ', '') + '.' + match.group(2)
+            montant = float(montant_str)
+        else:
+            montant = 0.0
+
+        # Extraire année exercice
+        match_exercice = re.search(r'exercice\s+(?:comptable\s+)?(\d{4})', texte_complet, re.IGNORECASE)
+        if match_exercice:
+            annee = int(match_exercice.group(1))
+        else:
+            # Par défaut: année de réception email
+            date_reception_str = evenement.get('date_reception', evenement.get('date_operation', ''))
+            try:
+                if isinstance(date_reception_str, str):
+                    date_reception = datetime.strptime(date_reception_str, '%Y-%m-%d').date()
+                else:
+                    date_reception = date_reception_str
+                annee = date_reception.year
+            except:
+                annee = datetime.now().year
+
+        # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
+        date_ecriture = f"{annee}-12-31"
+
+        # Extraire date facture prévue (si mentionnée)
+        date_facture_prevue = None
+        pattern_date = r'(\d{1,2})[/-](\d{1,2})[/-](20\d{2})'
+        match_date = re.search(pattern_date, texte_complet)
+        if match_date:
+            jour, mois, annee_facture = match_date.groups()
+            date_facture_prevue = f"{annee_facture}-{mois.zfill(2)}-{jour.zfill(2)}"
+
+        # Extraire nom cabinet (si mentionné)
+        match_cabinet = re.search(r'cabinet\s+([^\n]+)', texte_complet, re.IGNORECASE)
+        nom_cabinet = match_cabinet.group(1).strip()[:50] if match_cabinet else "Expert-Comptable"
+
+        return {
+            'type_evenement': 'CUTOFF_HONORAIRES',
+            'description': f'Cutoff honoraires comptables exercice {annee} : {montant}€',
+            'confiance': 0.90,
+            'ecritures': [
+                {
+                    'date_ecriture': date_ecriture,
+                    'libelle_ecriture': f'Cutoff {annee} - Honoraires comptables (clôture)',
+                    'compte_debit': '6226',   # Honoraires
+                    'compte_credit': '4081',   # Factures non parvenues
+                    'montant': montant,
+                    'type_ecriture': 'CUTOFF_HONORAIRES',
+                    'notes': f'Cutoff fin exercice {annee} - Facture prévue {date_facture_prevue or "année suivante"}'
+                }
+            ],
+            'metadata': {
+                'email_date': evenement.get('date_reception', evenement.get('date_operation', '')),
+                'cabinet': nom_cabinet,
+                'annee': annee,
+                'date_facture_prevue': date_facture_prevue
+            }
+        }
+
+
 class DetecteurApportAssocie(DetecteurBase):
     """
     Détecte les apports en compte courant des associés (Ulrik Bergsten)
@@ -1371,6 +1552,7 @@ class FactoryDetecteurs:
             DetecteurRemboursementPret(session),  # Lookup table echeances_prets
             DetecteurFraisBancaires(session),
             DetecteurFraisAdministratifs(session),  # LEI, certificats, etc.
+            DetecteurAnnonceCutoffHonoraires(session),  # EMAIL: Annonce cutoff honoraires (AVANT DetecteurHonorairesComptable)
             DetecteurHonorairesComptable(session),
 
             # Détecteurs d'investissements (priorité moyenne - patterns multiples)
