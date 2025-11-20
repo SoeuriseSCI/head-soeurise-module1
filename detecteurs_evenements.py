@@ -838,7 +838,7 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
                 SELECT annee
                 FROM exercices_comptables
                 WHERE statut = 'OUVERT'
-                ORDER BY annee ASC
+                ORDER BY annee DESC
                 LIMIT 1
             """)
         ).fetchone()
@@ -995,7 +995,7 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
                 SELECT annee
                 FROM exercices_comptables
                 WHERE statut = 'OUVERT'
-                ORDER BY annee ASC
+                ORDER BY annee DESC
                 LIMIT 1
             """)
         ).fetchone()
