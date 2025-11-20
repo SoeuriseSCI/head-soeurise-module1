@@ -926,33 +926,31 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
 
 class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
     """
-    Détecte emails annonçant honoraires comptables à payer (cutoff fin d'année)
+    Détecte emails de cutoff honoraires comptables
 
-    CONTEXTE:
-    - Les honoraires de clôture comptable sont engagés en année N
-    - Mais la facture est reçue en N+1 (après clôture des comptes)
+    PRINCIPE:
+    - Les honoraires de clôture sont engagés en année N
+    - Mais facturés en N+1 (après clôture des comptes)
     - Principe comptabilité d'engagement: charges comptabilisées dans exercice où engagées
 
-    PATTERN EMAIL:
-    - Objet/Corps contient: HONORAIRES + EXERCICE COMPTABLE + année N
-    - Date facture dans le futur (année N+1)
-    - Montant présent
-    - Mots-clés: "clôture", "exercice", "sera facturé"
+    CRITÈRES DE DÉTECTION (SIMPLES):
+    1. Email contient "honoraires" (ou variantes: comptable, expert-comptable, etc.)
+    2. Email contient "cutoff" (ou variantes: cut-off, cut off)
+    3. Montant présent (format XX,XX€ ou XX.XX€)
 
-    DATE DÉTECTION:
-    - Email reçu en décembre N ou janvier N+1
-    - Mentionne "exercice N" avec facture datée N+1
+    EXERCICE:
+    - Si mois actuel = janvier → cutoff année N-1 (ex: janvier 2025 → cutoff 2024)
+    - Sinon → cutoff année N (ex: novembre 2024 → cutoff 2024)
 
     COMPTABILISATION:
-    Date écriture: 31/12/N (toujours fin exercice)
+    Date écriture: TOUJOURS 31/12/N (fin exercice en cours)
       Débit 6226 (Honoraires comptables)     : XX.XX€
       Crédit 4081 (Factures non parvenues)   : XX.XX€
 
     EXEMPLE:
-    Email du 20/12/2024:
-      "Honoraires exercice comptable 2024
-       Montant : 622€ TTC
-       Date facture : 01/06/2025"
+    Email reçu 20/11/2024:
+      "Cutoff honoraires comptables
+       Montant : 622€ TTC"
 
     Génère écriture au 31/12/2024:
       Débit 6226 : 622,00 €
@@ -1002,44 +1000,11 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         if not match_montant:
             return False
 
-        # INDICATEURS UNIVERSELS DE CUTOFF (ne dépendent pas de l'année)
-        # ================================================================
+        # CRITÈRE UNIQUE : Présence du mot "cutoff" (ou variantes)
+        # =========================================================
+        mots_cles_cutoff = ['cutoff', 'cut-off', 'cut off']
 
-        # Indicateur 1: Mots-clés explicites de cutoff/provision
-        mots_cles_cutoff = [
-            'exercice comptable',  # "honoraires exercice comptable" = cutoff
-            'clôture', 'cloture',  # "honoraires de clôture" = cutoff
-            'provision', 'provisionner',  # "à provisionner" = cutoff
-            'sera facturé', 'sera facture',  # futur = cutoff
-            'à facturer', 'a facturer',  # pas encore facturé = cutoff
-            'cutoff', 'cut-off', 'cut off'  # explicite !
-        ]
-
-        if any(mot in texte_complet for mot in mots_cles_cutoff):
-            return True
-
-        # Indicateur 2: Date facture dans le futur (> 2 mois)
-        # Si facture prévue dans plusieurs mois, c'est un cutoff
-        pattern_date_facture = r'date\s+(?:de\s+)?facture\s*:\s*(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})'
-        match_date = re.search(pattern_date_facture, texte_complet)
-
-        if match_date:
-            from datetime import datetime, date
-            try:
-                jour = int(match_date.group(1))
-                mois = int(match_date.group(2))
-                annee = int(match_date.group(3))
-                date_facture = date(annee, mois, jour)
-                date_aujourdhui = date.today()
-
-                # Si facture prévue dans plus de 60 jours, c'est un cutoff
-                delta_jours = (date_facture - date_aujourdhui).days
-                if delta_jours > 60:
-                    return True
-            except:
-                pass
-
-        return False
+        return any(mot in texte_complet for mot in mots_cles_cutoff)
 
     def generer_proposition(self, evenement: Dict) -> Dict:
         """
@@ -1064,47 +1029,17 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         else:
             montant = 0.0
 
-        # Extraire année exercice (recherche universelle)
-        # Chercher n'importe quelle année 20XX mentionnée dans le texte
-        annee = None
+        # Déterminer l'exercice en cours
+        # ================================
+        # Logique simple : exercice = année en cours
+        # Exception : si janvier, c'est le cutoff de l'année précédente
+        from datetime import datetime, date
 
-        # Essai 1: Chercher pattern "exercice comptable AAAA" ou "honoraires comptables AAAA"
-        match_exercice = re.search(r'(?:exercice|honoraires|facture)\s+(?:comptable[s]?\s+)?(\d{4})', texte_complet, re.IGNORECASE)
-        if match_exercice:
-            annee = int(match_exercice.group(1))
-
-        # Essai 2: Chercher n'importe quelle année 20XX dans le texte
-        if not annee:
-            match_annee = re.search(r'(202\d)', texte_complet)
-            if match_annee:
-                annee = int(match_annee.group(1))
-
-        # Essai 3: Utiliser année de réception email - 1 si email reçu en janvier
-        # (car cutoff fin N reçu en janvier N+1)
-        if not annee:
-            email_date = evenement.get('email_date')
-            try:
-                if email_date:
-                    if isinstance(email_date, str):
-                        date_reception = datetime.strptime(email_date, '%Y-%m-%d').date()
-                    elif hasattr(email_date, 'year'):
-                        date_reception = email_date
-                        if isinstance(date_reception, datetime):
-                            date_reception = date_reception.date()
-
-                    # Si email reçu en janvier, c'est probablement cutoff année précédente
-                    if date_reception.month == 1:
-                        annee = date_reception.year - 1
-                    else:
-                        annee = date_reception.year
-                else:
-                    annee = datetime.now().year
-            except:
-                annee = datetime.now().year
-
-        # Fallback final
-        if not annee:
-            annee = datetime.now().year
+        aujourdhui = date.today()
+        if aujourdhui.month == 1:
+            annee = aujourdhui.year - 1  # Janvier = cutoff année N-1
+        else:
+            annee = aujourdhui.year  # Autres mois = cutoff année N
 
         # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
         date_ecriture = f"{annee}-12-31"
