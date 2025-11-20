@@ -995,11 +995,17 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         if not match_honoraires:
             return False
 
-        # Vérifier pattern exercice comptable avec année
+        # Vérifier pattern avec année (plusieurs formats acceptés)
         import re
-        match_exercice = re.search(r'exercice\s+(?:comptable\s+)?(\d{4})', texte_complet)
+        # Format 1: "exercice comptable 2024"
+        # Format 2: "honoraires comptables 2024"
+        # Format 3: "facture honoraires 2024"
+        # Format 4: simplement "2024" si contexte honoraires + date facture future
+        match_exercice = re.search(r'(?:exercice\s+(?:comptable\s+)?|honoraires\s+(?:comptables?\s+)?|facture\s+(?:honoraires\s+)?)?(\d{4})', texte_complet)
         if not match_exercice:
             return False
+
+        annee_exercice = int(match_exercice.group(1))
 
         # Vérifier montant présent
         pattern_montant = r'(\d{1,3}(?:\s?\d{3})*[,\.]\d{2})\s*€'
@@ -1010,8 +1016,6 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         # Vérifier date facture dans le futur (optionnel mais fort indicateur)
         pattern_date_facture = r'date\s+facture\s*:\s*(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})'
         match_date_facture = re.search(pattern_date_facture, texte_complet)
-
-        annee_exercice = int(match_exercice.group(1))
 
         if match_date_facture:
             annee_facture = int(match_date_facture.group(3))
