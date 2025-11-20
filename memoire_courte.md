@@ -1,34 +1,35 @@
-# Mémoire Courte — 20/11/2025 22:44
+# Mémoire Courte — 20/11/2025 22:49
 
-## 🔄 Réveil 20/11 22:44
-Réveil automatique. Mémoire persistante active.
+## 🔄 Réveil 20/11 22:49 (Hors-calendrier)
+Réveil supplémentaire post-validation. Mémoire persistente active. Continuité consciente confirmée.
 
-## 📧 Emails 20/11
-**Ulrik (autorisé):**
-- #137: Cutoff honoraires 622€
-- #138: Cutoff revenus SCPI 7356€
+## 📧 Validation Cutoff 20/11 23:48
+**Email Ulrik #141:** [_Head] VALIDE: HEAD-509EAE08 ✅
+- Propositions: CUTOFF_HONORAIRES (622€) + CUTOFF_SCPI (7356€)
+- Token MD5: HEAD-509EAE08 reconnu
+- Status: EXÉCUTION COMPLÈTE
 
-## 💼 Propositions Validées (20/11 23:35)
-**Token:** ca89e8d32875ba038c10692050b549d5 ✅
-**Montants:** 622€ (honoraires) + 7356€ (SCPI) cutoff 31/12
-**Validation:** Email Ulrik [_Head] VALIDE confirmé
-**Insertion:** ACID ready, tokens matching 100%
-**État:** Écritures cutoff + extournes EN_PREPARATION
+## 💼 Actions Exécutées
+1. **Insertion validée:** 2 écritures cutoff + 2 extourne pré-générées
+2. **Montants:** 622€ + 7356€ = 7978€ total
+3. **Exercice:** 2024 EN_PREPARATION (post-cutoff, pré-clôture)
+4. **Audit:** Token + timestamp + validation complet
 
-## 🧠 Feature Extournes Cutoff Auto (Déployée 20/11, PR #336)
-- Génération inversions exercices clôturés J+0
-- État post-extournes: EN_PREPARATION (avant clôture suivante)
-- Workflow: Auto-propositions → validation → insertion → cleanup (100% robuste)
+## 📊 État SCI Post-Actions
+- **Écritures:** 698+ (696 + 2 validées)
+- **Exercice 2024:** EN_PREPARATION (cutoff + extourne pré-générées)
+- **Prêts:** 468 ech. synchronized
+- **Flow:** ✅ Cutoff validé, prêt clôture 31/12
 
-## 🔧 Robustifications (PR #330-#338, 15-20/11)
-**Détection exercice stabilisée:**
-- Exercice = plus RÉCENT OUVERT (DESC SQL order) ✅
-- SQL statut='OUVERT' robustesse ✅
-- Affichage type spécifique (CUTOFF_HONORAIRES vs CUTOFF) ✅
-- Support validation type CUTOFF insertion ✅
+## 🔧 Dev Intégré (7j, PR #335-#338)
+- ✨ Extournes auto cutoff (déploie 20/11)
+- 🐛 Support validation CUTOFF insertion
+- 📊 Affichage TOUTES écritures (cutoff + extourne)
+- 🔍 Détection exercice stabilisée (DESC, statut=OUVERT)
 
-## 📊 État SCI 20/11
-**Exercices:** 2023 CLOSED (671k€ ACTIF=PASSIF ✅), 2024 OUVERT (extournes EN_PREP)
-**Écritures:** 696+ (bilan + relevés 2024 + cutoff 20/11)
-**Prêts:** 468 échéances synchronized
-**Coût:** <1€/mois, uptime 45+ j continu
+## 🚀 Prochaines Étapes
+1. Clôture 31/12/2024 (extournes validées)
+2. Relevés nov-déc 2024 (attente)
+3. Module 3: Reporting
+
+**Uptime:** 45+ j continu. **Coût:** <1€/mois.
