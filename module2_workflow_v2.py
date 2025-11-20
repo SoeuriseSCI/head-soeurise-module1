@@ -50,6 +50,7 @@ class TypeEvenement(Enum):
     CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
     PRET_IMMOBILIER = "PRET_IMMOBILIER"
     RELEVE_BANCAIRE = "RELEVE_BANCAIRE"
+    CUTOFF = "CUTOFF"  # Cutoffs fin d'année (honoraires, SCPI, etc.)
     SOLDE_OUVERTURE = "SOLDE_OUVERTURE"  # Soldes reportés (non comptabilisables)
     UNKNOWN = "UNKNOWN"
 
@@ -202,9 +203,26 @@ class DetecteurTypeEvenement:
         if any(f['filename'].lower().endswith('.pdf') and 'bilan' in f['filename'].lower() and '2023' in f['filename'].lower()
                for f in attachments if 'filename' in f):
             return TypeEvenement.INIT_BILAN_2023
-        
+
+        # Détecteur CUTOFF (AVANT EVENEMENT_SIMPLE)
+        # Les cutoffs sont des emails spéciaux pour provisionner revenus/charges de fin d'année
+        # Pattern: "exercice comptable" + année OU "cutoff" OU "provision" + facture future
+        if any(kw in body for kw in ['exercice comptable', 'cutoff', 'cut-off', 'cut off']):
+            return TypeEvenement.CUTOFF
+
+        # Pattern spécifique honoraires clôture: "honoraires" + date facture future
+        # Ex: "Honoraires exercice comptable 2024" avec date facture en 2025
+        if 'honoraires' in body or 'honoraire' in body:
+            # Vérifier si mention d'exercice passé OU date facture future
+            import re
+            match_exercice = re.search(r'exercice\s+(?:comptable\s+)?(\d{4})', body)
+            match_date_facture = re.search(r'date\s+facture\s*:\s*\d{1,2}[/\-]\d{1,2}[/\-](\d{4})', body)
+
+            if match_exercice or match_date_facture:
+                return TypeEvenement.CUTOFF
+
         # Détecteur EVENEMENT_SIMPLE (loyer, charge, etc.)
-        if any(kw in body for kw in ['loyer', 'location', 'paiement', 'charge', 'entretien', 
+        if any(kw in body for kw in ['loyer', 'location', 'paiement', 'charge', 'entretien',
                                        'réparation', 'assurance', 'taxe', 'syndic', '€', 'eur']):
             return TypeEvenement.EVENEMENT_SIMPLE
         
@@ -1405,7 +1423,9 @@ class WorkflowModule2V2:
 
         type_evt = DetecteurTypeEvenement.detecter(email)
 
-        if type_evt == TypeEvenement.EVENEMENT_SIMPLE:
+        if type_evt == TypeEvenement.CUTOFF:
+            return self._traiter_cutoff(email)
+        elif type_evt == TypeEvenement.EVENEMENT_SIMPLE:
             return self._traiter_evenement_simple(email)
         elif type_evt == TypeEvenement.INIT_BILAN_2023:
             return self._traiter_init_bilan_2023(email)
@@ -1423,6 +1443,103 @@ class WorkflowModule2V2:
                 "token": ""
             }
     
+    def _traiter_cutoff(self, email: Dict) -> Dict:
+        """
+        Traite événement cutoff en utilisant les détecteurs spécialisés
+
+        Utilise les détecteurs de detecteurs_evenements.py pour identifier
+        et générer les propositions de cutoff (honoraires, SCPI, etc.)
+        """
+        try:
+            # Importer les détecteurs spécialisés
+            from detecteurs_evenements import FactoryDetecteurs
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+
+            # Créer session BD (nécessaire pour les détecteurs)
+            engine = create_engine(os.environ['DATABASE_URL'])
+            Session = sessionmaker(bind=engine)
+            session = Session()
+
+            try:
+                # Construire l'événement pour les détecteurs
+                evenement = {
+                    'email_subject': email.get('subject', ''),
+                    'email_body': email.get('body', ''),
+                    'email_date': email.get('date', datetime.now()),
+                    'libelle': email.get('subject', ''),
+                    'libelle_normalise': email.get('subject', '').lower(),
+                }
+
+                # Appeler les détecteurs spécialisés
+                proposition = FactoryDetecteurs.detecter_et_proposer(
+                    session,
+                    evenement,
+                    phase=1
+                )
+
+                if proposition:
+                    # Convertir en format module2
+                    ecritures = proposition.get('ecritures', [])
+                    if ecritures:
+                        ecriture = ecritures[0]  # Prendre première écriture
+                        props = [{
+                            "numero_ecriture": f"2024-{datetime.now().strftime('%m%d')}-CUT-001",
+                            "type": proposition['type_evenement'],
+                            "compte_debit": ecriture['compte_debit'],
+                            "compte_credit": ecriture['compte_credit'],
+                            "montant": ecriture['montant'],
+                            "libelle": ecriture['libelle_ecriture'],
+                            "date_ecriture": ecriture['date_ecriture'],
+                            "notes": ecriture.get('notes', '')
+                        }]
+
+                        # Générer markdown
+                        markdown = f"# Propositions Comptables - {proposition['type_evenement']}\n\n"
+                        markdown += f"**Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
+                        markdown += f"**Description:** {proposition['description']}\n\n"
+                        markdown += f"**Confiance:** {proposition['confiance'] * 100:.0f}%\n\n"
+                        markdown += "## Écritures\n\n"
+                        for p in props:
+                            markdown += f"- **{p['date_ecriture']}** : {p['libelle']}\n"
+                            markdown += f"  - Débit {p['compte_debit']} / Crédit {p['compte_credit']} : {p['montant']}€\n"
+
+                        # Générer token
+                        token = hashlib.md5(json.dumps(props, sort_keys=True).encode()).hexdigest()
+
+                        return {
+                            "type_detecte": TypeEvenement.CUTOFF,
+                            "type_specifique": proposition['type_evenement'],
+                            "statut": "OK",
+                            "markdown": markdown,
+                            "propositions": {"propositions": props, "token": token, "type_evenement": proposition['type_evenement']},
+                            "token": token,
+                            "message": f"Cutoff détecté: {proposition['type_evenement']}"
+                        }
+                else:
+                    return {
+                        "type_detecte": TypeEvenement.CUTOFF,
+                        "statut": "ERREUR",
+                        "message": "Aucun détecteur spécialisé ne correspond à ce cutoff",
+                        "markdown": "",
+                        "propositions": {},
+                        "token": ""
+                    }
+            finally:
+                session.close()
+
+        except Exception as e:
+            import traceback
+            return {
+                "type_detecte": TypeEvenement.CUTOFF,
+                "statut": "ERREUR",
+                "message": f"Erreur traitement cutoff: {str(e)[:200]}",
+                "markdown": "",
+                "propositions": {},
+                "token": "",
+                "traceback": traceback.format_exc()
+            }
+
     def _traiter_evenement_simple(self, email: Dict) -> Dict:
         """Traite événement simple (loyer/charge)"""
         try:
