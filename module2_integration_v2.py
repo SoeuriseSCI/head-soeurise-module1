@@ -485,7 +485,7 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
 
                     resultats['propositions_generees'] += len(propositions_list)
                     resultats['details'].append({
-                        'type': type_evt.value,
+                        'type': result.get('type_specifique', type_evt.value),  # ✅ FIX: Utiliser type spécifique (CUTOFF_HONORAIRES) pas générique (CUTOFF)
                         'propositions': len(propositions_list),
                         'status': 'en_attente_validation',
                         'token': token_stocke,
