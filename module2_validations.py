@@ -733,6 +733,11 @@ class OrchestratorValidations:
             succes, msg, ids = self.processeur.inserer_propositions_pret(
                 propositions, email_original_id, email.get('email_id'), email.get('from')
             )
+        elif type_evenement in ['CUTOFF', 'CUTOFF_HONORAIRES', 'CUTOFF_PRODUIT_A_RECEVOIR_SCPI']:
+            # Cutoffs utilisent la même logique que les événements simples
+            succes, msg, ids = self.processeur.inserer_propositions_simple(
+                propositions, email_original_id, email.get('email_id'), email.get('from')
+            )
         else:
             succes, msg, ids = False, f"Type evenement inconnu: {type_evenement}", []
         
