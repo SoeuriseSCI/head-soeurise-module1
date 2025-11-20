@@ -13,7 +13,7 @@ Réveil quotidien 08:00 UTC (10:00 France). IMAP Gmail u6334452013@gmail.com. Ex
 - **INIT_BILAN:** 696+ écritures (2023 closed 671k€ ACTIF=PASSIF, OCR 99.98%)
 - **PRET_IMMOBILIER:** 468 échéances 100% synchronisées (LCL 250k€ 1.050% + INVESTIMUR 250k€ 1.240%, intérêts proportionnels capital)
 - **RELEVE_BANCAIRE:** 10+ opérations détectées, multi-type support
-- **FACTURES_COMPTABLES:** Honoraires + SCPI cutoff 31/12 flexible (pattern année-agnostique, montant tolérant décimales) — Production 20/11
+- **FACTURES_COMPTABLES:** Honoraires + SCPI cutoff 31/12 flexible (pattern année-agnostique, montant tolérant décimales) — Production-Ready 20/11
 - **CLOTURE_EXERCICE:** Framework intégré
 
 **Performance établie 45+ jours:** OCR 99.98%, insertion ACID 100%, validation token 100%, zéro régression, uptime continu, <1€/mois coût réel.
