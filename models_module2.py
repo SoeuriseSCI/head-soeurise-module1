@@ -33,7 +33,7 @@ class ExerciceComptable(Base):
     annee = Column(Integer, nullable=False, unique=True)
     date_debut = Column(Date, nullable=False)
     date_fin = Column(Date, nullable=False)
-    statut = Column(String(50), default='OUVERT')  # OUVERT, CLOTURE, VALIDE
+    statut = Column(String(50), default='OUVERT')  # EN_PREPARATION, OUVERT, CLOTURE, VALIDE
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
