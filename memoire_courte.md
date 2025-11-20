@@ -1,28 +1,34 @@
-# Mémoire Courte — 20/11/2025 22:42
+# Mémoire Courte — 20/11/2025 22:44
 
-## ✨ FEATURE EXTOURNES CUTOFF (20/11 Déployée, PR #336)
-Génération automatique inversions pour exercices clôturés (clôture J+0 avec extournes auto).
-- Détection: Exercice OUVERT plus ancien en BD (DESC)
-- Cutoff 31/12: Année-agnostique flexible
+## 🔄 Réveil 20/11 22:44
+Réveil automatique. Mémoire persistante active.
+
+## 📧 Emails 20/11
+**Ulrik (autorisé):**
+- #137: Cutoff honoraires 622€
+- #138: Cutoff revenus SCPI 7356€
+
+## 💼 Propositions Validées (20/11 23:35)
+**Token:** ca89e8d32875ba038c10692050b549d5 ✅
+**Montants:** 622€ (honoraires) + 7356€ (SCPI) cutoff 31/12
+**Validation:** Email Ulrik [_Head] VALIDE confirmé
+**Insertion:** ACID ready, tokens matching 100%
+**État:** Écritures cutoff + extournes EN_PREPARATION
+
+## 🧠 Feature Extournes Cutoff Auto (Déployée 20/11, PR #336)
+- Génération inversions exercices clôturés J+0
 - État post-extournes: EN_PREPARATION (avant clôture suivante)
-- Workflow: Auto-propositions → validation Ulrik → insertion ACID → cleanup
+- Workflow: Auto-propositions → validation → insertion → cleanup (100% robuste)
 
-## 🔧 Robustification Détection Exercice (PR #330-#338, 15-20/11)
-**Corrections critiques:**
-- #334 (FIX): Exercice = plus RÉCENT OUVERT (DESC pas ASC)
-- #333 (FIX): SQL statut='OUVERT' robustesse
-- #332: Plus ANCIEN non clôturé
-- #331: Période terminée + non clôturée
-- #330: Cutoff = exercice OUVERT
-- #335: Rapport affiche type spécifique (CUTOFF_HONORAIRES vs CUTOFF générique)
-- #337: Affichage TOUTES écritures cutoff + extourne
-- #338: Support validation CUTOFF lors insertion
+## 🔧 Robustifications (PR #330-#338, 15-20/11)
+**Détection exercice stabilisée:**
+- Exercice = plus RÉCENT OUVERT (DESC SQL order) ✅
+- SQL statut='OUVERT' robustesse ✅
+- Affichage type spécifique (CUTOFF_HONORAIRES vs CUTOFF) ✅
+- Support validation type CUTOFF insertion ✅
 
-## 📋 Propositions 20/11 Validées
-**Token:** ca89e8d32875ba038c10692050b549d5
-**Propositions:** CUTOFF_HONORAIRES 622€ + CUTOFF_SCPI 7356€
-**Validation:** Email Ulrik 23:35 [_Head] VALIDE ✅
-**Prêt insertion:** ACID ready, tokens matching 100%
-
-## 📊 État Production 20/11 22:42
-2023 CLOSED (671k€), 2024 OUVERT (extournes EN_PREPARATION), 696+ écritures, 468 prêts, <1€/mois, 45+ j uptime
+## 📊 État SCI 20/11
+**Exercices:** 2023 CLOSED (671k€ ACTIF=PASSIF ✅), 2024 OUVERT (extournes EN_PREP)
+**Écritures:** 696+ (bilan + relevés 2024 + cutoff 20/11)
+**Prêts:** 468 échéances synchronized
+**Coût:** <1€/mois, uptime 45+ j continu
