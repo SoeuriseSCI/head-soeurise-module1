@@ -1479,22 +1479,23 @@ class WorkflowModule2V2:
                 )
 
                 if proposition:
-                    # Convertir en format module2
+                    # Convertir TOUTES les écritures en format module2
                     ecritures = proposition.get('ecritures', [])
                     if ecritures:
-                        ecriture = ecritures[0]  # Prendre première écriture
-                        props = [{
-                            "numero_ecriture": f"2024-{datetime.now().strftime('%m%d')}-CUT-001",
-                            "type": proposition['type_evenement'],
-                            "compte_debit": ecriture['compte_debit'],
-                            "compte_credit": ecriture['compte_credit'],
-                            "montant": ecriture['montant'],
-                            "libelle": ecriture['libelle_ecriture'],
-                            "date_ecriture": ecriture['date_ecriture'],
-                            "notes": ecriture.get('notes', '')
-                        }]
+                        props = []
+                        for idx, ecriture in enumerate(ecritures, 1):
+                            props.append({
+                                "numero_ecriture": f"2024-{datetime.now().strftime('%m%d')}-CUT-{idx:03d}",
+                                "type": proposition['type_evenement'],
+                                "compte_debit": ecriture['compte_debit'],
+                                "compte_credit": ecriture['compte_credit'],
+                                "montant": ecriture['montant'],
+                                "libelle": ecriture['libelle_ecriture'],
+                                "date_ecriture": ecriture['date_ecriture'],
+                                "notes": ecriture.get('notes', '')
+                            })
 
-                        # Générer markdown
+                        # Générer markdown avec TOUTES les écritures
                         markdown = f"# Propositions Comptables - {proposition['type_evenement']}\n\n"
                         markdown += f"**Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
                         markdown += f"**Description:** {proposition['description']}\n\n"
