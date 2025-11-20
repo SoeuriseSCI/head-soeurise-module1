@@ -175,12 +175,12 @@ class ValidateurIntegriteJSON:
     def __init__(self, session: Session):
         self.session = session
     
-    def valider_propositions(self, propositions: List[Dict], token_email: str) -> Tuple[bool, str]:
+    def valider_propositions(self, propositions: List[Dict], token_email: str, token_stocke: str) -> Tuple[bool, str]:
         """
         Valide integrite des propositions
 
         Verifications:
-        1. Token MD5 match (detecte tampering)
+        1. Token email match token stocké (detecte tampering)
         2. Tous les comptes existent
         3. Montants > 0
         4. Structure JSON valide
@@ -190,28 +190,23 @@ class ValidateurIntegriteJSON:
         - PRET_IMMOBILIER: ['type', 'action', 'pret', 'nb_echeances']
         - Autres (BILAN, CLOTURE, EVENEMENT, RELEVE, etc): ['compte_debit', 'compte_credit', 'montant', 'numero_ecriture', 'date_ecriture']
 
+        Args:
+            propositions: Liste des propositions d'écritures
+            token_email: Token reçu dans l'email de validation
+            token_stocke: Token stocké en base de données
+
         Returns:
             (valide, message_erreur)
         """
-        
-        # 1. Verifier token MD5
-        token_calculated = hashlib.md5(
-            json.dumps(propositions, sort_keys=True).encode()
-        ).hexdigest()
 
-        # Normaliser la comparaison selon le format du token
-        token_to_compare = token_email
-        if token_email.startswith('HEAD-'):
-            # Token court: extraire les 8 caractères hexa et comparer avec les 8 premiers du MD5
-            token_hexa = token_email.replace('HEAD-', '').lower()
-            token_calculated_short = token_calculated[:8]
-            if token_hexa != token_calculated_short:
-                return False, f"Token MD5 invalide (tampering detecte?) - Attendu: HEAD-{token_calculated_short.upper()}, Reçu: {token_email}"
-        else:
-            # MD5 complet: comparer directement
-            if token_calculated != token_email.lower():
-                return False, f"Token MD5 invalide (tampering detecte?) - Attendu: {token_email}, Calcule: {token_calculated}"
-        
+        # 1. Vérifier que le token reçu correspond au token stocké
+        # Normaliser les deux tokens pour comparaison
+        token_email_norm = token_email.strip().upper()
+        token_stocke_norm = token_stocke.strip().upper()
+
+        if token_email_norm != token_stocke_norm:
+            return False, f"Token invalide (tampering detecte?) - Attendu: {token_stocke}, Reçu: {token_email}"
+
         # 2. Verifier chaque proposition
         for i, prop in enumerate(propositions):
 
@@ -660,7 +655,8 @@ class OrchestratorValidations:
         # Extraction des données de la proposition
         propositions = proposition_data['propositions']
         type_evenement = proposition_data['type_evenement']
-        
+        token_stocke = proposition_data['token']
+
         if not propositions:
             return {
                 "validation_detectee": True,
@@ -669,9 +665,9 @@ class OrchestratorValidations:
                 "ecritures_creees": 0,
                 "type_evenement": type_evenement
             }
-        
-        # PHASE 7: Validation integrite
-        valide, msg_erreur = self.validateur.valider_propositions(propositions, token_email)
+
+        # PHASE 7: Validation integrite (passer aussi le token stocké)
+        valide, msg_erreur = self.validateur.valider_propositions(propositions, token_email, token_stocke)
 
         if not valide:
             # Creer EvenementComptable rejete
