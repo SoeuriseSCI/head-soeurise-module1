@@ -84,6 +84,42 @@ class DetecteurBase:
         """
         raise NotImplementedError("Méthode à implémenter par les sous-classes")
 
+    def _assurer_exercice_existe(self, annee: int) -> None:
+        """
+        Vérifie qu'un exercice existe pour l'année donnée.
+        Si inexistant, le crée avec statut 'EN_PREPARATION'.
+
+        Args:
+            annee: Année de l'exercice à vérifier/créer
+        """
+        from sqlalchemy import text
+        from datetime import date
+
+        # Vérifier si l'exercice existe déjà
+        result = self.session.execute(
+            text("SELECT COUNT(*) FROM exercices_comptables WHERE annee = :annee"),
+            {'annee': annee}
+        )
+        count = result.scalar()
+
+        if count == 0:
+            # Créer l'exercice avec statut EN_PREPARATION
+            self.session.execute(
+                text("""
+                    INSERT INTO exercices_comptables (annee, date_debut, date_fin, statut, description)
+                    VALUES (:annee, :date_debut, :date_fin, :statut, :description)
+                """),
+                {
+                    'annee': annee,
+                    'date_debut': date(annee, 1, 1),
+                    'date_fin': date(annee, 12, 31),
+                    'statut': 'EN_PREPARATION',
+                    'description': f'Exercice {annee} créé automatiquement pour extournes cutoff'
+                }
+            )
+            self.session.commit()
+            print(f"  ✅ Exercice {annee} créé avec statut EN_PREPARATION")
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 1 - DÉTECTEURS SIMPLES
@@ -849,28 +885,47 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
             # Fallback : année précédente si aucun exercice en attente de clôture
             annee = date.today().year - 1
 
-        # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
-        date_ecriture = f"{annee}-12-31"
+        # Date d'écriture cutoff: TOUJOURS 31/12/N (fin exercice)
+        date_cutoff = f"{annee}-12-31"
+
+        # Date d'écriture extourne: TOUJOURS 01/01/N+1 (début exercice suivant)
+        annee_suivante = annee + 1
+        date_extourne = f"{annee_suivante}-01-01"
+
+        # Vérifier/créer exercice N+1 si inexistant
+        self._assurer_exercice_existe(annee_suivante)
 
         return {
             'type_evenement': 'CUTOFF_PRODUIT_A_RECEVOIR_SCPI',
-            'description': f'Cutoff revenus SCPI exercice {annee} : {montant}€',
+            'description': f'Cutoff revenus SCPI exercice {annee} : {montant}€ + extourne {annee_suivante}',
             'confiance': 0.90,
             'ecritures': [
+                # Écriture 1: Cutoff 31/12/N
                 {
-                    'date_ecriture': date_ecriture,
+                    'date_ecriture': date_cutoff,
                     'libelle_ecriture': f'Cutoff {annee} - Revenus SCPI Épargne Pierre',
                     'compte_debit': '4181',
                     'compte_credit': '761',
                     'montant': montant,
                     'type_ecriture': 'CUTOFF_PRODUIT_A_RECEVOIR_SCPI',
-                    'notes': f'Cutoff fin exercice {annee} - Revenus SCPI à encaisser'
+                    'notes': f'Cutoff fin exercice {annee} - Revenus SCPI à encaisser. Extourne automatique au 01/01/{annee_suivante}.'
+                },
+                # Écriture 2: Extourne 01/01/N+1
+                {
+                    'date_ecriture': date_extourne,
+                    'libelle_ecriture': f'Extourne - Cutoff {annee} - Revenus SCPI Épargne Pierre',
+                    'compte_debit': '761',      # INVERSION
+                    'compte_credit': '4181',    # INVERSION
+                    'montant': montant,
+                    'type_ecriture': 'EXTOURNE_CUTOFF_SCPI',
+                    'notes': f'Contre-passation automatique du cutoff {annee}. Annule produit pour ré-enregistrement lors paiement réel.'
                 }
             ],
             'metadata': {
                 'email_date': evenement.get('email_date', ''),
                 'scpi_name': 'Épargne Pierre',
-                'annee': annee
+                'annee': annee,
+                'annee_extourne': annee_suivante
             }
         }
 
@@ -1006,8 +1061,15 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
             # Fallback : année précédente si aucun exercice en attente de clôture
             annee = date.today().year - 1
 
-        # Date d'écriture: TOUJOURS 31/12/N (fin exercice)
-        date_ecriture = f"{annee}-12-31"
+        # Date d'écriture cutoff: TOUJOURS 31/12/N (fin exercice)
+        date_cutoff = f"{annee}-12-31"
+
+        # Date d'écriture extourne: TOUJOURS 01/01/N+1 (début exercice suivant)
+        annee_suivante = annee + 1
+        date_extourne = f"{annee_suivante}-01-01"
+
+        # Vérifier/créer exercice N+1 si inexistant
+        self._assurer_exercice_existe(annee_suivante)
 
         # Extraire date facture prévue (si mentionnée)
         date_facture_prevue = None
@@ -1023,21 +1085,33 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
 
         return {
             'type_evenement': 'CUTOFF_HONORAIRES',
-            'description': f'Cutoff honoraires comptables exercice {annee} : {montant}€',
+            'description': f'Cutoff honoraires comptables exercice {annee} : {montant}€ + extourne {annee_suivante}',
             'confiance': 0.90,
             'ecritures': [
+                # Écriture 1: Cutoff 31/12/N
                 {
-                    'date_ecriture': date_ecriture,
+                    'date_ecriture': date_cutoff,
                     'libelle_ecriture': f'Cutoff {annee} - Honoraires comptables (clôture)',
                     'compte_debit': '6226',   # Honoraires
                     'compte_credit': '4081',   # Factures non parvenues
                     'montant': montant,
                     'type_ecriture': 'CUTOFF_HONORAIRES',
-                    'notes': f'Cutoff fin exercice {annee} - Facture prévue {date_facture_prevue or "année suivante"}'
+                    'notes': f'Cutoff fin exercice {annee} - Facture prévue {date_facture_prevue or "année suivante"}. Extourne automatique au 01/01/{annee_suivante}.'
+                },
+                # Écriture 2: Extourne 01/01/N+1
+                {
+                    'date_ecriture': date_extourne,
+                    'libelle_ecriture': f'Extourne - Cutoff {annee} - Honoraires comptables',
+                    'compte_debit': '4081',   # INVERSION
+                    'compte_credit': '6226',   # INVERSION
+                    'montant': montant,
+                    'type_ecriture': 'EXTOURNE_CUTOFF_HONORAIRES',
+                    'notes': f'Contre-passation automatique du cutoff {annee}. Annule charge pour ré-enregistrement lors facture réelle.'
                 }
             ],
             'metadata': {
                 'email_date': evenement.get('email_date', ''),
+                'annee_extourne': annee_suivante,
                 'cabinet': nom_cabinet,
                 'annee': annee,
                 'date_facture_prevue': date_facture_prevue
