@@ -837,7 +837,7 @@ class DetecteurAnnonceProduitARecevoir(DetecteurBase):
             text("""
                 SELECT annee
                 FROM exercices_comptables
-                WHERE date_cloture IS NULL
+                WHERE statut = 'OUVERT'
                 ORDER BY annee ASC
                 LIMIT 1
             """)
@@ -994,7 +994,7 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
             text("""
                 SELECT annee
                 FROM exercices_comptables
-                WHERE date_cloture IS NULL
+                WHERE statut = 'OUVERT'
                 ORDER BY annee ASC
                 LIMIT 1
             """)
