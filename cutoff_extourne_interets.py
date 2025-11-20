@@ -146,6 +146,7 @@ class CalculateurInteretsCourus:
 
             date_derniere_echeance = derniere[0]
             capital_restant = float(derniere[1])
+            montant_interet_echeance = float(derniere[2])
 
             # Calculer nombre de jours entre dernière échéance et clôture
             jours_courus = (date_cloture - date_derniere_echeance).days
@@ -154,15 +155,19 @@ class CalculateurInteretsCourus:
                 print(f"     ℹ️  Échéance au {date_derniere_echeance} = jour de clôture, pas d'intérêts courus")
                 continue
 
-            # Calculer intérêts courus
-            # Formule : Capital × Taux × (Jours / 365)
-            interets_courus = capital_restant * (taux_annuel / 100) * (jours_courus / 365)
+            # Calculer intérêts courus - MÉTHODE PROPORTIONNELLE
+            # Formule : Intérêts échéance × (Jours courus / Jours période)
+            # Période mensuelle = nombre de jours du mois de clôture
+            jours_periode = (date_cloture.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+            jours_periode = jours_periode.day  # Nombre de jours dans le mois
+
+            interets_courus = montant_interet_echeance * (jours_courus / jours_periode)
             interets_courus = round(interets_courus, 2)
 
             print(f"     Dernière échéance : {date_derniere_echeance}")
-            print(f"     Capital restant : {capital_restant:,.2f}€")
-            print(f"     Jours courus : {jours_courus}")
-            print(f"     ✅ Intérêts courus : {interets_courus:,.2f}€")
+            print(f"     Intérêts échéance : {montant_interet_echeance:,.2f}€")
+            print(f"     Jours courus : {jours_courus}/{jours_periode}")
+            print(f"     ✅ Intérêts courus : {interets_courus:,.2f}€ ({montant_interet_echeance:,.2f}€ × {jours_courus}/{jours_periode})")
             print()
 
             # Date cutoff : 31/12 de l'année
@@ -176,7 +181,7 @@ class CalculateurInteretsCourus:
             libelle_extourne = f"Extourne - Cutoff {annee} - Intérêts courus prêt {banque}"
 
             # Notes
-            note_cutoff = (f'Calcul automatique: {capital_restant:,.2f}€ × {taux_annuel}% × ({jours_courus}/365). '
+            note_cutoff = (f'Calcul proportionnel: {montant_interet_echeance:,.2f}€ × ({jours_courus}/{jours_periode} jours). '
                           f'Période: {date_derniere_echeance + timedelta(days=1)} → {date_cloture}. '
                           f'Extourne créée automatiquement au 01/01/{annee+1}.')
             note_extourne = f'Contre-passation automatique du cutoff {annee}. Annule charge pour ré-enregistrement lors échéance réelle.'
