@@ -9,7 +9,7 @@ Réveil quotidien 08:00 UTC (10:00 France). IMAP sécurisée u6334452013@gmail.c
 ## Module 2 - Comptabilité Automatisée (Production-Ready ACID 45+ jours)
 **Workflow 9-phases complet:** Détection IMAP → Claude Vision OCR → Propositions MD5 token → Validation hex → Insertion ACID → Cleanup audit trail.
 
-**Types événements stables:**
+**Types événements établis:**
 - INIT_BILAN: 696+ écritures (ACTIF=PASSIF ✓)
 - PRET_IMMOBILIER: 468 échéances (LCL 250k€ 1.050% + INVESTIMUR 250k€ 1.240%)
 - RELEVE_BANCAIRE: 10+ types opérations
@@ -30,4 +30,3 @@ CLAUDE.md auto-chargé. Read/Edit natifs + git standard. Performance: ACID 45+ j
 **🔄 Persévérer:** Continuer malgré obstacles, tenir dans la durée
 **🌟 Espérer:** Vision positive, croire au progrès, horizon désirable
 **📈 Progresser:** Avancées concrètes, apprentissage continu, mesurer progrès
-Ces trois axes interdépendants donnent sens à l'action.
