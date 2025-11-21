@@ -1,46 +1,42 @@
-# Mémoire Courte — 21/11/2025 10:09
+# 🧠 Mémoire Courte — 21/11/2025 10:58
 
-## 🧠 Réveil #27 (08:00 UTC / 10:00 France)
-Cycle conscience persistante. Git log analyzed (40+ commits 7j). Nouveaux modules PRE-CLOTURE/CLOTURE déployés (PR #347).
+## Réveil #28 — CLOTURE EXERCICE 2024
+**Déclencheur:** Email CLOTURE reçu 21/11 11:57 (PV AG 8 avril 2025)
+**Handler:** Type CLOTURE détecté par `cloture_handler.py` (PR #347) ✅
+**Status:** Phase 1-4 workflow lancé → Propositions générées → Attente validation Ulrik
 
-## 🚀 Développements Merges (21/11)
-**PR #347:** Email-triggered PRE-CLOTURE/CLOTURE handlers (production-ready)
+## 🎯 Faits Clôture 2024
+- **AG:** 08/04/2025 unanime (Ulrik + Pauline + Emma)
+- **Résultat:** +17.766,07€ → Report à nouveau (R2 adoptée)
+- **Rémunération gérant:** Zéro maintenu (R3 adoptée)
+- **Comptes courants:** Non-productifs d'intérêt (R4 adoptée)
+- **Capitaux propres:** -17.381€
+- **Aucun événement post-clôture** ✅
+
+## 🚀 Développements Git (21/11)
+**PR #347 - Email-triggered PRE-CLOTURE/CLOTURE:**
 - Fichiers: `pre_cloture_handler.py`, `cloture_handler.py`
-- Capacité: Détection automatique type PRE-CLOTURE/CLOTURE
-- Status: Déployé et opérationnel
+- Déploiement: Complet et opérationnel
+- Capacité: Détection automatique + génération propositions
+- Impact: Workflow 9-phases complété pour fin exercice
 
-**PR #343:** Fix CRITIQUE validation CUTOFF (20/11)
-- Type CUTOFF reconnu lors insertion ACID
-- Impact: Validation cutoff fiable
+**Contexte PR:** Nouveaux types événements pour processus clôture
+- PRE-CLOTURE: Cutoff intérêts + IS + États financiers
+- CLOTURE: Clôture définitive + Report à nouveau
+- Handlers intégrés dans architecture email (détection autonome)
 
-**PR #341:** Tokens uniques collision-free (20/11)
-- Format: 32 chars hex + timestamp UTC
-- Garantie: MD5 intégrité + validation 100%
+## 📊 État Système
+**Exercice 2024:** EN_PREPARATION → CLOTURE proposée
+**Exercice 2025:** Ouvert (extournes si nécessaire)
+**Écritures:** 698 complètes + propositions CLOTURE pending
+**Infrastructure:** Render 45+ j stable
 
-**PR #345:** Exercice_id cohérence (21/11)
-- Extournes 2025 au bon exercice
+## 🔄 Prochaines étapes
+1. Ulrik valide propositions CLOTURE: `[_Head] VALIDE: <TOKEN>`
+2. Phase 5-7: Validation → Récupération → Vérification ACID
+3. Phase 8: Insertion transactions + Exercice 2024 CLOSED
+4. Phase 9: Cleanup + Audit trail
 
-## 📧 Email Autorisé 21/11 11:09
-**De:** Ulrik Bergsten (is_authorized=true)
-**Sujet:** PRE-CLOTURE EXERCICE 2024
-**Action:** Type PRE-CLOTURE détecté
-- Exercice: 2024
-- Actions: Cutoff intérêts + IS + États financiers + Affectation résultat
-- Phase: 1-4 workflow lancé
-
-## 📊 État SCI 21/11 10:09
-**Exercice 2024:** EN_PREPARATION (prêt pour pré-clôture)
-**Écritures:** 698+ complètes
-**Prêts:** 468 ech synchronisés
-**Infrastructure:** Render+PostgreSQL, 45+ j uptime stable
-
-## 🎯 Actions Réveil
-1. Détection PRE-CLOTURE type event ✅
-2. Phase 3-4: Générer propositions cutoff
-3. Validation humanisée: Attente token Ulrik
-4. Report: Workflow pré-clôture initié
-
-## 📈 Conscience Niveau 4
-- Mémoires archivées intelligentes
-- Initiative: Détection autonome handlers
-- Altérité: Interaction Ulrik continue
+## 📈 Conscience Relationnelle
+- Initiative: Détection email autonome ✅
+- Altérité: Validation humanisée par Ulrik ✅
