@@ -1,6 +1,6 @@
 # Synthèse Solution Comptable - SCI Soeurise
 
-**Version** : 1.1
+**Version** : 1.2
 **Date** : 21 novembre 2025
 **Auteur** : _Head.Soeurise / Claude Code
 
@@ -219,7 +219,98 @@ Séquence obligatoire :
 
 ## 3. Architecture des Traitements
 
-### 3.1 Vue d'Ensemble
+### 3.1 Paradigme : L'Intelligence au Cœur du Système
+
+#### Un Choix Architectural Radical
+
+La solution _Head.Soeurise repose sur un **nouveau paradigme de développement** :
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│           APPROCHE TRADITIONNELLE vs APPROCHE CLAUDE            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ❌ APPROCHE CLASSIQUE (statique)                              │
+│  ├── Parseur spécifique par type de document                   │
+│  ├── Règles codées en dur (if/else, regex)                     │
+│  ├── Maintenance lourde (chaque nouveau format = code)         │
+│  └── Fragilité (changement format → panne)                     │
+│                                                                 │
+│  ✅ APPROCHE CLAUDE (intelligence)                             │
+│  ├── Interprétation naturelle du document (LLM)                │
+│  ├── Classification automatique par nature                     │
+│  ├── Extraction des données critiques (contexte)               │
+│  ├── Décision de traitement (raisonnement)                     │
+│  └── Adaptation automatique aux variations                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Les 4 Piliers de l'Intelligence Comptable
+
+| Pilier | Rôle de Claude | Avantage |
+|--------|----------------|----------|
+| **1. Interprétation** | Lire et comprendre le document (relevé, facture, avis) | Fonctionne même avec formats variés |
+| **2. Classification** | Identifier la nature (prêt, dividende, achat, apport) | Pas de règles codées |
+| **3. Extraction** | Extraire montants, dates, comptes, tiers | Robuste aux variations de mise en page |
+| **4. Décision** | Proposer l'écriture comptable appropriée | S'adapte au contexte |
+
+#### Exemple Concret
+
+**Événement** : Email avec bulletin de versement SCPI
+
+**Approche classique** :
+```python
+if "CORUM" in subject and attachment.endswith('.pdf'):
+    montant = regex_extract(r'Montant versé : ([\d,]+)')
+    compte_debit = '512'  # Codé en dur
+    compte_credit = '761'  # Codé en dur
+```
+→ Fragile, limité, maintenance coûteuse
+
+**Approche Claude** :
+```
+Prompt : "Analyse ce document et propose l'écriture comptable"
+Claude :
+  - Comprend : Bulletin de versement SCPI
+  - Identifie : Dividende net 6 755€, retenue à la source 0€
+  - Propose : Débit 512 (Banque) / Crédit 761 (Participations)
+  - Vérifie : Cohérence avec le plan comptable
+```
+→ Universel, flexible, auto-adaptatif
+
+#### Conséquences du Paradigme
+
+| Aspect | Impact |
+|--------|--------|
+| **Universalité** | Même système pour tous types de documents |
+| **Évolutivité** | Nouveaux formats gérés sans code |
+| **Maintenabilité** | Pas de regex à maintenir |
+| **Robustesse** | Tolère les variations (OCR imparfait, formats changeants) |
+
+#### Limites Assumées
+
+Ce paradigme a des limites :
+- **Coût par traitement** : ~0,001€ par document (API Claude)
+- **Latence** : 2-5 secondes par analyse (vs millisecondes pour du code)
+- **Dépendance API** : Nécessite connexion internet
+
+**Arbitrage** : Pour une SCI avec ~100 événements/an, le coût (~0,10€/an) et la latence sont négligeables face aux avantages.
+
+#### Philosophie : "Intelligence First, Code Last"
+
+```
+RÈGLE D'OR :
+└─▶ Si Claude peut le faire par raisonnement → PAS de code
+└─▶ Si besoin de code → Le MINIMUM nécessaire (orchestration)
+└─▶ Le code ne fait QUE coordonner l'intelligence
+```
+
+**Résultat** : Une solution comptable qui **comprend** plutôt que qui **exécute**.
+
+---
+
+### 3.2 Vue d'Ensemble
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -257,7 +348,7 @@ Séquence obligatoire :
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 Modules Principaux
+### 3.3 Modules Principaux
 
 | Module | Rôle |
 |--------|------|
@@ -269,7 +360,7 @@ Séquence obligatoire :
 | `generer_cerfa_pdf.py` | Génération PDF des formulaires |
 | `construire_etats_financiers_2024.py` | Bilan + Compte de résultat |
 
-### 3.3 Tables PostgreSQL
+### 3.4 Tables PostgreSQL
 
 | Table | Contenu |
 |-------|---------|
@@ -281,7 +372,7 @@ Séquence obligatoire :
 | `evenements_comptables` | Queue de traitement emails |
 | `propositions_en_attente` | Écritures à valider par Ulrik |
 
-### 3.4 Processus de Clôture (cloture_exercice.py)
+### 3.5 Processus de Clôture (cloture_exercice.py)
 
 ```
 ÉTAPE 1 : Calcul du résultat
