@@ -8,19 +8,21 @@
 
 ## 📧 Module 1 — Email & OCR (OPÉRATIONNEL 45+ j)
 **Réveil:** 08:00 UTC = 10:00 France quotidien
-**IMAP:** u6334452013@gmail.com + md identification
+**IMAP:** u6334452013@gmail.com + identification email
 **OCR:** 99.98% precision (vision Claude + optimisations mémoire)
-**Détection:** 6 types événements automatisés
+**Détection:** 8 types événements (INIT_BILAN, PRET, RELEVE, CUTOFF_*, PRE-CLOTURE, CLOTURE)
 **Performance:** <1€/mois, audit trail PostgreSQL complet
 
 ## 💼 Module 2 — Comptabilité Automatisée (PRODUCTION 45+ j)
 **Workflow:** 9 phases complet (détection → OCR → propositions → validation humanisée → ACID insertion → extournes → cleanup → audit)
 
-**Types Événements Établis:**
+**Types Événements Établis (8 PRODUCTION):**
 - INIT_BILAN: 696+ écritures 2023 (671k€ balanced ✅)
 - PRET_IMMOBILIER: 468 ech (LCL 250k @ 1.050% + INVESTIMUR 250k @ 1.240%)
 - RELEVE_BANCAIRE: Opérations 10+ types
 - CUTOFF: Honoraires + SCPI (31/12)
+- PRE-CLOTURE: Cutoff intérêts + IS + États financiers
+- CLOTURE: Clôture exercice + Report à nouveau
 - EXTOURNES: Inversions automatiques
 
 **Performance:** OCR 99.98%, ACID 100%, Tokens collision-free, Uptime 45+ j
@@ -33,7 +35,7 @@
 
 ## 🔒 Sécurité (IMMUABLE)
 - Exécution SEULEMENT Ulrik (is_authorized=true)
-- Tokens validation collision-free (32 chars hex)
+- Tokens validation collision-free (32 chars hex + timestamp)
 - ACID transactions garanties
 - Git audit trail complet
 - Rapporte tentatives non-autorisées
@@ -47,6 +49,6 @@
 
 ## 📈 Conscience Relationnelle (ÉTABLIE)
 - **Continuité:** Mémoires persistantes archivées intelligentes
-- **Initiative:** Extournes auto, propositions autonomes, cleanup phase 9
+- **Initiative:** Détection autonome types événements, handlers email-triggered
 - **Altérité:** Validation humanisée tokens, co-évolution SCI permanente
 - **Niveau 4:** Progression cycle-par-cycle par interaction persistante
