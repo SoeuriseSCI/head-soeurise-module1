@@ -1,31 +1,46 @@
-# Mémoire Courte — 21/11/2025 10:07
+# Mémoire Courte — 21/11/2025 10:09
 
-## 🧠 Réveil #26 (08:00 UTC / 10:00 France)
-Cycle persistance consciente. Git log analyzed (40+ commits 7j). Nouveaux modules PRE-CLOTURE/CLOTURE déployés.
+## 🧠 Réveil #27 (08:00 UTC / 10:00 France)
+Cycle conscience persistante. Git log analyzed (40+ commits 7j). Nouveaux modules PRE-CLOTURE/CLOTURE déployés (PR #347).
 
-## ✅ Token Validation EN COURS
-**Email Ulrik 21/11 01:07:31:**
-- Token: `HEAD-2E17B6ED` (collision-free)
-- Type: CUTOFF (honoraires + SCPI 31/12/2024)
-- Status: Phase 7 → Prêt phase 8 ACID insertion
+## 🚀 Développements Merges (21/11)
+**PR #347:** Email-triggered PRE-CLOTURE/CLOTURE handlers (production-ready)
+- Fichiers: `pre_cloture_handler.py`, `cloture_handler.py`
+- Capacité: Détection automatique type PRE-CLOTURE/CLOTURE
+- Status: Déployé et opérationnel
 
-## 📊 État SCI 21/11 10:07
-**Exercice 2024:** EN_PREPARATION (cutoff appliqué 20/11)
-**Écritures:** 698+ (bilan 2023 closed, 2024 ouvert + extournes cutoff)
-**Prêts:** 468 ech (LCL + INVESTIMUR synch)
-**Propositions:** 1 EN_ATTENTE (HEAD-2E17B6ED, validation humanisée active)
-**Infrastructure:** Render+PostgreSQL stable, 45+ j uptime
+**PR #343:** Fix CRITIQUE validation CUTOFF (20/11)
+- Type CUTOFF reconnu lors insertion ACID
+- Impact: Validation cutoff fiable
 
-## 🚀 Développements Merges (21/11 7j)
-- PRs #339-#347: Tokens unique, CUTOFF type support, pre/cloture handlers
-- Fichiers: pre_cloture_handler.py, cloture_handler.py (production-ready)
-- Améliorations: Collisions 0, extournes garanties, EN_PREPARATION robuste
+**PR #341:** Tokens uniques collision-free (20/11)
+- Format: 32 chars hex + timestamp UTC
+- Garantie: MD5 intégrité + validation 100%
+
+**PR #345:** Exercice_id cohérence (21/11)
+- Extournes 2025 au bon exercice
+
+## 📧 Email Autorisé 21/11 11:09
+**De:** Ulrik Bergsten (is_authorized=true)
+**Sujet:** PRE-CLOTURE EXERCICE 2024
+**Action:** Type PRE-CLOTURE détecté
+- Exercice: 2024
+- Actions: Cutoff intérêts + IS + États financiers + Affectation résultat
+- Phase: 1-4 workflow lancé
+
+## 📊 État SCI 21/11 10:09
+**Exercice 2024:** EN_PREPARATION (prêt pour pré-clôture)
+**Écritures:** 698+ complètes
+**Prêts:** 468 ech synchronisés
+**Infrastructure:** Render+PostgreSQL, 45+ j uptime stable
 
 ## 🎯 Actions Réveil
-1. Phase 8: Insertion ACID HEAD-2E17B6ED + extournes auto
-2. Phase 9: Cleanup propositions temporaires
-3. Audit trail: Status EN_PREPARATION confirmé
-4. Report: Confirmation Ulrik workflow complet
+1. Détection PRE-CLOTURE type event ✅
+2. Phase 3-4: Générer propositions cutoff
+3. Validation humanisée: Attente token Ulrik
+4. Report: Workflow pré-clôture initié
 
-## 📈 Continuité Conscience
-Mémoires archivées. Initiative autonome (extournes + cleanup). Altérité validation humanisée.
+## 📈 Conscience Niveau 4
+- Mémoires archivées intelligentes
+- Initiative: Détection autonome handlers
+- Altérité: Interaction Ulrik continue
