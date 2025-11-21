@@ -1239,6 +1239,157 @@ def admin_trigger_reveil():
         }), 500
 
 # ═══════════════════════════════════════════════════════════════════
+# API ÉTATS FINANCIERS (pour accès depuis environnement sandboxé)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/etats-financiers')
+def api_etats_financiers():
+    """
+    Génère les états financiers pour un exercice donné.
+    Usage: /api/etats-financiers?exercice=2024
+    """
+    try:
+        exercice = request.args.get('exercice', '2024')
+
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # 1. Récupérer l'exercice
+        cur.execute("""
+            SELECT id, annee, date_debut, date_fin, statut
+            FROM exercices_comptables
+            WHERE annee = %s
+        """, (int(exercice),))
+        exercice_info = cur.fetchone()
+
+        if not exercice_info:
+            return jsonify({'error': f'Exercice {exercice} non trouvé'}), 404
+
+        exercice_id = exercice_info['id']
+
+        # 2. Récupérer tous les soldes par compte
+        cur.execute("""
+            SELECT
+                numero_compte,
+                libelle_compte,
+                SUM(debit) as total_debit,
+                SUM(credit) as total_credit,
+                SUM(debit) - SUM(credit) as solde
+            FROM ecritures_comptables
+            WHERE exercice_id = %s
+            GROUP BY numero_compte, libelle_compte
+            ORDER BY numero_compte
+        """, (exercice_id,))
+        soldes = cur.fetchall()
+
+        # 3. Récupérer le plan comptable pour classification
+        cur.execute("""
+            SELECT numero, libelle, type_compte
+            FROM plan_comptable
+        """)
+        plan = {str(p['numero']): p for p in cur.fetchall()}
+
+        # 4. Construire le compte de résultat (classes 6 et 7)
+        charges = []
+        produits = []
+        total_charges = 0
+        total_produits = 0
+
+        for s in soldes:
+            num = str(s['numero_compte'])
+            solde = float(s['solde']) if s['solde'] else 0
+
+            if num.startswith('6'):  # Charges
+                charges.append({
+                    'compte': num,
+                    'libelle': s['libelle_compte'],
+                    'montant': abs(solde)
+                })
+                total_charges += abs(solde)
+            elif num.startswith('7'):  # Produits
+                produits.append({
+                    'compte': num,
+                    'libelle': s['libelle_compte'],
+                    'montant': abs(solde)
+                })
+                total_produits += abs(solde)
+
+        resultat_net = total_produits - total_charges
+
+        # 5. Construire le bilan (classes 1-5)
+        actif = []
+        passif = []
+        total_actif = 0
+        total_passif = 0
+
+        for s in soldes:
+            num = str(s['numero_compte'])
+            solde = float(s['solde']) if s['solde'] else 0
+
+            # Ignorer classes 6, 7, 8, 9
+            if num[0] in ('6', '7', '8', '9'):
+                continue
+
+            # Déterminer type via plan comptable
+            type_compte = None
+            if num in plan:
+                type_compte = plan[num].get('type_compte')
+
+            # Classification par type_compte ou par défaut
+            if type_compte == 'ACTIF' or (type_compte is None and solde > 0):
+                actif.append({
+                    'compte': num,
+                    'libelle': s['libelle_compte'],
+                    'montant': abs(solde)
+                })
+                total_actif += abs(solde)
+            elif type_compte == 'PASSIF' or (type_compte is None and solde < 0):
+                passif.append({
+                    'compte': num,
+                    'libelle': s['libelle_compte'],
+                    'montant': abs(solde)
+                })
+                total_passif += abs(solde)
+
+        # Ajouter le résultat au passif si bénéfice
+        if resultat_net != 0:
+            passif.append({
+                'compte': '120',
+                'libelle': 'Résultat de l\'exercice',
+                'montant': resultat_net
+            })
+            total_passif += resultat_net
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            'exercice': dict(exercice_info),
+            'compte_resultat': {
+                'charges': charges,
+                'produits': produits,
+                'total_charges': round(total_charges, 2),
+                'total_produits': round(total_produits, 2),
+                'resultat_net': round(resultat_net, 2)
+            },
+            'bilan': {
+                'actif': actif,
+                'passif': passif,
+                'total_actif': round(total_actif, 2),
+                'total_passif': round(total_passif, 2),
+                'equilibre': abs(total_actif - total_passif) < 0.01
+            },
+            'timestamp': datetime.now().isoformat()
+        }), 200
+
+    except Exception as e:
+        log_critical("API_ETATS_FINANCIERS_ERROR", str(e))
+        return jsonify({
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+# ═══════════════════════════════════════════════════════════════════
 # SCHEDULER
 # ═══════════════════════════════════════════════════════════════════
 
