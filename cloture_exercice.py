@@ -237,6 +237,20 @@ class ClotureExercice:
         print("ÉTAPE 2 : AFFECTATION DU RÉSULTAT")
         print("=" * 80)
 
+        # PROTECTION ANTI-DOUBLON : Vérifier si des écritures d'affectation existent déjà
+        ecritures_existantes = self.session.query(EcritureComptable).filter(
+            EcritureComptable.exercice_id == self.exercice.id,
+            EcritureComptable.type_ecriture == 'AFFECTATION_RESULTAT'
+        ).all()
+
+        if ecritures_existantes:
+            print(f"\n  ⚠️  ATTENTION : {len(ecritures_existantes)} écriture(s) d'affectation existe(nt) déjà !")
+            for ec in ecritures_existantes:
+                print(f"     - ID {ec.id} : {ec.numero_ecriture} | {ec.montant}€")
+            print("\n  ❌ Affectation annulée pour éviter les doublons.")
+            print("     Supprimez les écritures existantes si vous voulez relancer l'affectation.")
+            return []
+
         ecritures = []
 
         print(f"\n  📊 Résultat à affecter : {self.resultat_net:,.2f}€")
@@ -310,12 +324,30 @@ class ClotureExercice:
             print("\n  ℹ️  Résultat nul, pas d'affectation")
 
         if execute and ecritures:
-            print("\n  💾 Création des écritures d'affectation...")
+            # L'affectation du résultat se fait sur l'exercice N+1 (date de l'AG)
+            # Créer l'exercice N+1 s'il n'existe pas
+            if not self.exercice_suivant:
+                self.exercice_suivant = ExerciceComptable(
+                    annee=self.annee + 1,
+                    date_debut=self.date_ouverture_suivant,
+                    date_fin=date(self.annee + 1, 12, 31),
+                    statut=STATUT_OUVERT,
+                    description=f"Exercice {self.annee + 1}"
+                )
+                self.session.add(self.exercice_suivant)
+                self.session.flush()
+                print(f"\n  ✅ Exercice {self.annee + 1} créé pour l'affectation")
+
+            print(f"\n  💾 Création des écritures d'affectation sur exercice {self.annee + 1}...")
             for ec in ecritures:
+                # Date d'affectation = 01/01/N+1 (convention comptable)
+                date_affectation = self.date_ouverture_suivant
+                numero_affectation = ec['numero_ecriture'].replace(f"{self.annee}-1231", f"{self.annee + 1}-0101")
+
                 ecriture = EcritureComptable(
-                    exercice_id=self.exercice.id,
-                    numero_ecriture=ec['numero_ecriture'],
-                    date_ecriture=ec['date_ecriture'],
+                    exercice_id=self.exercice_suivant.id,  # CORRECTION : N+1 au lieu de N
+                    numero_ecriture=numero_affectation,
+                    date_ecriture=date_affectation,  # CORRECTION : 01/01/N+1 au lieu de 31/12/N
                     libelle_ecriture=ec['libelle_ecriture'],
                     compte_debit=ec['compte_debit'],
                     compte_credit=ec['compte_credit'],
@@ -324,10 +356,11 @@ class ClotureExercice:
                     notes=ec['notes']
                 )
                 self.session.add(ecriture)
-                print(f"     ✅ {ec['numero_ecriture']}")
+                print(f"     ✅ {numero_affectation} (exercice {self.annee + 1})")
             self.session.commit()
         elif ecritures:
             print("\n  🔍 Mode simulation - Écritures non créées")
+            print(f"     (Seront créées sur exercice {self.annee + 1})")
 
         return ecritures
 

@@ -622,7 +622,7 @@ def generer_2033b(soldes):
     )
     resultat["FU"] = {"nom": "total_charges_exploitation", "montant": total_charges_exploitation, "comptes": []}
 
-    resultat_exploitation = total_produits_exploitation - total_charges_exploitation
+    resultat_exploitation = round(total_produits_exploitation - total_charges_exploitation, 2)
     resultat["FV"] = {"nom": "resultat_exploitation", "montant": resultat_exploitation, "comptes": []}
 
     total_produits_financiers = sum(
@@ -637,10 +637,10 @@ def generer_2033b(soldes):
     )
     resultat["GL"] = {"nom": "total_charges_financieres", "montant": total_charges_financieres, "comptes": []}
 
-    resultat_financier = total_produits_financiers - total_charges_financieres
+    resultat_financier = round(total_produits_financiers - total_charges_financieres, 2)
     resultat["GM"] = {"nom": "resultat_financier", "montant": resultat_financier, "comptes": []}
 
-    resultat_courant = resultat_exploitation + resultat_financier
+    resultat_courant = round(resultat_exploitation + resultat_financier, 2)
     resultat["GN"] = {"nom": "resultat_courant_avant_impots", "montant": resultat_courant, "comptes": []}
 
     # Résultat net (sans exceptionnel pour l'instant)
