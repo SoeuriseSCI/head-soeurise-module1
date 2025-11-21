@@ -1363,8 +1363,15 @@ def api_etats_financiers():
         cur.close()
         conn.close()
 
+        # Convertir les dates en strings pour JSON
+        exercice_data = dict(exercice_info)
+        if exercice_data.get('date_debut'):
+            exercice_data['date_debut'] = str(exercice_data['date_debut'])
+        if exercice_data.get('date_fin'):
+            exercice_data['date_fin'] = str(exercice_data['date_fin'])
+
         return jsonify({
-            'exercice': dict(exercice_info),
+            'exercice': exercice_data,
             'compte_resultat': {
                 'charges': charges,
                 'produits': produits,
