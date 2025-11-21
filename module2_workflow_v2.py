@@ -1978,7 +1978,8 @@ class WorkflowModule2V2:
 
             try:
                 precloture = PreClotureExercice(session, annee)
-                rapport = precloture.executer_precloture(execute=True)
+                # SIMULATION uniquement - NE PAS exécuter sans validation humaine
+                rapport = precloture.executer_precloture(execute=False)
 
                 if 'erreur' in rapport:
                     return {
@@ -1990,12 +1991,16 @@ class WorkflowModule2V2:
                         "token": ""
                     }
 
-                # Générer le markdown de résultat
-                markdown = f"""# Pré-clôture Exercice {annee} - TERMINÉE
+                # Générer token AVANT le markdown pour l'inclure
+                token = hashlib.md5(f"PRECLOTURE_{annee}_{datetime.now().isoformat()}".encode()).hexdigest()[:12].upper()
+
+                # Générer le markdown de PROPOSITION (pas de résultat final)
+                markdown = f"""# Proposition Pré-clôture Exercice {annee} - EN ATTENTE VALIDATION
 
 **Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
+**Token:** `{token}`
 
-## Résumé
+## Résumé (SIMULATION)
 
 | Élément | Montant |
 |---------|---------|
@@ -2010,26 +2015,43 @@ class WorkflowModule2V2:
 - Taux IS appliqué : {rapport['fiscalite']['taux_is_applique']}
 - Déficit reportable (après) : {rapport['fiscalite']['deficit_reportable_apres']:,.2f}€
 
-## Prochaines étapes
+## Actions écritures proposées
+
+{len(rapport.get('ecritures_cutoff', {}).get('ecritures', []))} écriture(s) de cutoff seront créées
+
+## VALIDATION REQUISE
+
+Pour valider et exécuter cette pré-clôture, répondre par email avec :
+
+```
+[_Head] VALIDE: {token}
+```
+
+**IMPORTANT:** Sans validation, aucune écriture ne sera insérée en base de données.
+
+## Après validation
 
 1. Convoquer l'AG pour approbation des comptes
 2. Faire voter l'affectation du résultat
 3. Établir le PV d'AG
 4. Envoyer email "CLOTURE EXERCICE {annee}" avec référence PV AG
 """
-                # Générer token
-                token = hashlib.md5(f"PRECLOTURE_{annee}_{datetime.now().isoformat()}".encode()).hexdigest()[:12]
 
                 # Convertir les dates en strings pour la sérialisation JSON
                 rapport_serializable = self._convertir_dates_en_strings(rapport)
+                # Ajouter flag indiquant que c'est une proposition
+                rapport_serializable['_attente_validation'] = True
+                rapport_serializable['_token'] = token
+                rapport_serializable['_type_action'] = 'PRE_CLOTURE'
+                rapport_serializable['_annee'] = annee
 
                 return {
                     "type_detecte": TypeEvenement.PRE_CLOTURE_EXERCICE,
-                    "statut": "OK",
+                    "statut": "PROPOSITION",
                     "markdown": markdown,
                     "propositions": rapport_serializable,
                     "token": token,
-                    "message": f"Pré-clôture {annee} effectuée avec succès"
+                    "message": f"Proposition pré-clôture {annee} générée - EN ATTENTE VALIDATION"
                 }
 
             finally:
@@ -2105,7 +2127,8 @@ class WorkflowModule2V2:
 
             try:
                 cloture = ClotureExercice(session, annee, pv_ag)
-                rapport = cloture.executer_cloture(execute=True)
+                # SIMULATION uniquement - NE PAS exécuter sans validation humaine
+                rapport = cloture.executer_cloture(execute=False)
 
                 if 'erreur' in rapport:
                     return {
@@ -2117,42 +2140,61 @@ class WorkflowModule2V2:
                         "token": ""
                     }
 
-                # Générer le markdown de résultat
-                markdown = f"""# Clôture Définitive Exercice {annee} - TERMINÉE
+                # Générer token AVANT le markdown pour l'inclure
+                token = hashlib.md5(f"CLOTURE_{annee}_{datetime.now().isoformat()}".encode()).hexdigest()[:12].upper()
+
+                # Générer le markdown de PROPOSITION (pas de résultat final)
+                markdown = f"""# Proposition Clôture Définitive Exercice {annee} - EN ATTENTE VALIDATION
 
 **Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
 **Référence AG:** {pv_ag}
+**Token:** `{token}`
 
-## Résumé
+## Résumé (SIMULATION)
 
-- **Exercice {annee}** : CLÔTURÉ
-- **Résultat net affecté** : {rapport['resultat_net']:,.2f}€
-- **Bilan d'ouverture {annee + 1}** : {rapport['bilan_ouverture_suivant']['status']}
+- **Exercice {annee}** : sera CLÔTURÉ après validation
+- **Résultat net à affecter** : {rapport['resultat_net']:,.2f}€
+- **Bilan d'ouverture {annee + 1}** : sera créé après validation
 
-## Affectation du résultat
+## Écritures proposées
 
-{len(rapport['affectation']['ecritures'])} écriture(s) d'affectation créée(s)
+{len(rapport['affectation']['ecritures'])} écriture(s) d'affectation seront créées :
+- Affectation du résultat au report à nouveau
 
-## Actions restantes
+## VALIDATION REQUISE
+
+Pour valider et exécuter cette clôture définitive, répondre par email avec :
+
+```
+[_Head] VALIDE: {token}
+```
+
+**IMPORTANT:** Sans validation, l'exercice NE SERA PAS clôturé et aucune écriture ne sera insérée.
+
+## Après validation
 
 1. Télédéclarer le résultat sur impots.gouv.fr
 2. Payer l'IS si applicable (avant le 15/05/{annee + 1})
 3. Archiver les documents comptables (10 ans)
 4. Mettre à jour le registre des décisions
 """
-                # Générer token
-                token = hashlib.md5(f"CLOTURE_{annee}_{datetime.now().isoformat()}".encode()).hexdigest()[:12]
 
                 # Convertir les dates en strings pour la sérialisation JSON
                 rapport_serializable = self._convertir_dates_en_strings(rapport)
+                # Ajouter flag indiquant que c'est une proposition
+                rapport_serializable['_attente_validation'] = True
+                rapport_serializable['_token'] = token
+                rapport_serializable['_type_action'] = 'CLOTURE_DEFINITIF'
+                rapport_serializable['_annee'] = annee
+                rapport_serializable['_pv_ag'] = pv_ag
 
                 return {
                     "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
-                    "statut": "OK",
+                    "statut": "PROPOSITION",
                     "markdown": markdown,
                     "propositions": rapport_serializable,
                     "token": token,
-                    "message": f"Clôture définitive {annee} effectuée avec succès"
+                    "message": f"Proposition clôture définitive {annee} générée - EN ATTENTE VALIDATION"
                 }
 
             finally:
