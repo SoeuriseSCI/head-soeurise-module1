@@ -439,8 +439,18 @@ class ProcesseurInsertion:
                         if date_ecriture_prop is None:
                             raise ValueError(f"Proposition {i}: date_ecriture manquante et impossible à récupérer depuis événement source")
 
+                    # ✅ FIX: Déterminer l'exercice_id en fonction de la date d'écriture
+                    # (important pour les cutoffs/extournes qui chevauchent plusieurs exercices)
+                    annee_ecriture = date_ecriture_prop.year
+                    exercice_pour_ecriture = self.session.query(ExerciceComptable).filter_by(annee=annee_ecriture).first()
+                    if not exercice_pour_ecriture:
+                        # Si l'exercice n'existe pas, utiliser l'exercice par défaut
+                        exercice_id_final = exercice_id
+                    else:
+                        exercice_id_final = exercice_pour_ecriture.id
+
                     ecriture = EcritureComptable(
-                        exercice_id=exercice_id,
+                        exercice_id=exercice_id_final,
                         numero_ecriture=prop['numero_ecriture'],
                         date_ecriture=date_ecriture_prop,  # ✅ Date opération réelle
                         libelle_ecriture=prop.get('libelle', ''),
