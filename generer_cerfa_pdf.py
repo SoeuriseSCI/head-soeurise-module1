@@ -160,11 +160,14 @@ def generer_page_2065(data, styles):
 
     resultat_data = [
         ["Description", "Montant"],
-        ["Résultat fiscal", format_montant(form_2065.get("resultat_fiscal"))],
+        ["Résultat comptable", format_montant(form_2065.get("resultat_comptable"))],
+        ["Déficit reportable utilisé", format_montant(form_2065.get("deficit_reportable_utilise"))],
+        ["Résultat fiscal imposable", format_montant(form_2065.get("resultat_fiscal"))],
         ["IS taux réduit (15%)", format_montant(form_2065.get("is_taux_reduit_15"))],
         ["IS taux normal (25%)", format_montant(form_2065.get("is_taux_normal_25"))],
         ["IS TOTAL À PAYER", format_montant(form_2065.get("is_total"))],
         ["Résultat net après IS", format_montant(form_2065.get("resultat_net_apres_is"))],
+        ["Nouveau déficit reportable", format_montant(form_2065.get("nouveau_deficit_reportable"))],
     ]
 
     table = Table(resultat_data, colWidths=[10*cm, 7*cm])

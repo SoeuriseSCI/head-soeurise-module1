@@ -314,7 +314,7 @@ MAPPING_2033B = {
     },
     "autres_achats_charges_externes": {
         "case": "FM",
-        "comptes": ["613", "616", "6226", "622", "623", "625", "626", "627"]
+        "comptes": ["613", "616", "6226", "623", "625", "626", "627"]  # 622 supprimé (obsolète, remplacé par 6226)
     },
     "impots_taxes": {
         "case": "FN",
@@ -659,15 +659,30 @@ def generer_2033f():
     }
 
 
-def generer_2065(resultat_net, annee):
-    """Génère le formulaire 2065 (Déclaration de résultats)"""
-    # Taux IS 2024 : 15% jusqu'à 42 500€, puis 25%
-    if resultat_net <= 0:
-        is_du = 0
-    elif resultat_net <= 42500:
-        is_du = resultat_net * Decimal('0.15')
+def generer_2065(resultat_comptable, deficit_reportable, annee):
+    """Génère le formulaire 2065 (Déclaration de résultats)
+
+    Args:
+        resultat_comptable: Bénéfice de l'exercice (produits - charges)
+        deficit_reportable: Déficit des exercices antérieurs (valeur positive)
+        annee: Année de l'exercice
+    """
+    # Calcul du résultat fiscal : résultat comptable - déficit reportable
+    resultat_fiscal = resultat_comptable - deficit_reportable
+
+    # Si résultat fiscal négatif, pas d'IS (déficit reportable pour l'année suivante)
+    if resultat_fiscal <= 0:
+        is_du = Decimal('0')
+        nouveau_deficit = abs(resultat_fiscal)  # Déficit à reporter
+        resultat_fiscal_imposable = Decimal('0')
     else:
-        is_du = Decimal('42500') * Decimal('0.15') + (resultat_net - Decimal('42500')) * Decimal('0.25')
+        nouveau_deficit = Decimal('0')
+        resultat_fiscal_imposable = resultat_fiscal
+        # Taux IS 2024 : 15% jusqu'à 42 500€, puis 25%
+        if resultat_fiscal_imposable <= 42500:
+            is_du = resultat_fiscal_imposable * Decimal('0.15')
+        else:
+            is_du = Decimal('42500') * Decimal('0.15') + (resultat_fiscal_imposable - Decimal('42500')) * Decimal('0.25')
 
     return {
         "exercice": {
@@ -675,11 +690,14 @@ def generer_2065(resultat_net, annee):
             "date_debut": f"01/01/{annee}",
             "date_fin": f"31/12/{annee}"
         },
-        "resultat_fiscal": float(resultat_net),
-        "is_taux_reduit_15": float(min(resultat_net, Decimal('42500')) * Decimal('0.15')) if resultat_net > 0 else 0,
-        "is_taux_normal_25": float((resultat_net - Decimal('42500')) * Decimal('0.25')) if resultat_net > 42500 else 0,
+        "resultat_comptable": float(resultat_comptable),
+        "deficit_reportable_utilise": float(min(deficit_reportable, resultat_comptable)) if resultat_comptable > 0 else 0,
+        "resultat_fiscal": float(max(resultat_fiscal, Decimal('0'))),
+        "is_taux_reduit_15": float(min(resultat_fiscal_imposable, Decimal('42500')) * Decimal('0.15')) if resultat_fiscal_imposable > 0 else 0,
+        "is_taux_normal_25": float((resultat_fiscal_imposable - Decimal('42500')) * Decimal('0.25')) if resultat_fiscal_imposable > 42500 else 0,
         "is_total": float(is_du),
-        "resultat_net_apres_is": float(resultat_net - is_du)
+        "resultat_net_apres_is": float(resultat_comptable - is_du),
+        "nouveau_deficit_reportable": float(nouveau_deficit)
     }
 
 
@@ -718,16 +736,35 @@ def exporter_cerfa(annee=2024):
         -data['solde'] for compte, data in soldes.items()
         if compte.startswith('7') and compte != '89'
     )
-    resultat_exercice = float(total_produits - total_charges)
+    resultat_exercice = total_produits - total_charges
 
-    print(f"\nRésultat de l'exercice : {resultat_exercice:,.2f} €")
+    # Calcul du déficit reportable (comptes 119 et 120 débiteurs = déficit)
+    # 119 = Report à nouveau débiteur (déficit)
+    # 120 = Résultat de l'exercice précédent (si débiteur = déficit)
+    deficit_reportable = Decimal('0')
+    if '119' in soldes:
+        solde_119 = soldes['119']['debit'] - soldes['119']['credit']
+        if solde_119 > 0:  # Solde débiteur = déficit
+            deficit_reportable += solde_119
+    if '120' in soldes:
+        solde_120 = soldes['120']['debit'] - soldes['120']['credit']
+        if solde_120 > 0:  # Solde débiteur = déficit (résultat négatif affecté)
+            deficit_reportable += solde_120
+
+    print(f"\nRésultat comptable de l'exercice : {float(resultat_exercice):,.2f} €")
+    print(f"Déficit reportable des exercices antérieurs : {float(deficit_reportable):,.2f} €")
+    if deficit_reportable >= resultat_exercice:
+        print(f"→ Résultat fiscal : 0,00 € (déficit absorbe le bénéfice)")
+        print(f"→ IS à payer : 0,00 €")
+    else:
+        print(f"→ Résultat fiscal imposable : {float(resultat_exercice - deficit_reportable):,.2f} €")
 
     # Générer les formulaires
     print("\n" + "-" * 80)
     print("Génération des formulaires...")
     print("-" * 80)
 
-    cerfa_2033a = generer_2033a(soldes, resultat_exercice)
+    cerfa_2033a = generer_2033a(soldes, float(resultat_exercice))
     print("  2033-A (Bilan) : OK")
 
     cerfa_2033b = generer_2033b(soldes)
@@ -736,7 +773,7 @@ def exporter_cerfa(annee=2024):
     cerfa_2033f = generer_2033f()
     print("  2033-F (Composition capital) : OK")
 
-    cerfa_2065 = generer_2065(Decimal(str(resultat_exercice)), annee)
+    cerfa_2065 = generer_2065(resultat_exercice, deficit_reportable, annee)
     print("  2065 (Déclaration résultats) : OK")
 
     # Assembler l'export
@@ -755,9 +792,12 @@ def exporter_cerfa(annee=2024):
         "resume": {
             "total_actif": cerfa_2033a["actif"]["AT"]["montant"],
             "total_passif": cerfa_2033a["passif"]["BU"]["montant"],
-            "resultat_exercice": resultat_exercice,
+            "resultat_comptable": float(resultat_exercice),
+            "deficit_reportable": float(deficit_reportable),
+            "resultat_fiscal": cerfa_2065["resultat_fiscal"],
             "is_a_payer": cerfa_2065["is_total"],
-            "resultat_net": cerfa_2065["resultat_net_apres_is"]
+            "resultat_net": cerfa_2065["resultat_net_apres_is"],
+            "nouveau_deficit_reportable": cerfa_2065["nouveau_deficit_reportable"]
         }
     }
 
@@ -780,16 +820,21 @@ def exporter_cerfa(annee=2024):
 
     COMPTE DE RÉSULTAT {annee}
     ─────────────────────────────────────
-    Résultat comptable : {resultat_exercice:>14,.2f} €
+    Résultat comptable : {float(resultat_exercice):>14,.2f} €
 
-    IMPÔT SUR LES SOCIÉTÉS
+    CALCUL DE L'IS
     ─────────────────────────────────────
-    IS taux réduit (15%) : {cerfa_2065['is_taux_reduit_15']:>11,.2f} €
-    IS taux normal (25%) : {cerfa_2065['is_taux_normal_25']:>11,.2f} €
+    Résultat comptable     : {cerfa_2065['resultat_comptable']:>11,.2f} €
+    Déficit reportable     : {cerfa_2065['deficit_reportable_utilise']:>11,.2f} €
     ─────────────────────────────────────
-    IS TOTAL À PAYER     : {cerfa_2065['is_total']:>11,.2f} €
+    Résultat fiscal        : {cerfa_2065['resultat_fiscal']:>11,.2f} €
+    IS taux réduit (15%)   : {cerfa_2065['is_taux_reduit_15']:>11,.2f} €
+    IS taux normal (25%)   : {cerfa_2065['is_taux_normal_25']:>11,.2f} €
+    ─────────────────────────────────────
+    IS TOTAL À PAYER       : {cerfa_2065['is_total']:>11,.2f} €
 
-    RÉSULTAT NET APRÈS IS : {cerfa_2065['resultat_net_apres_is']:>12,.2f} €
+    RÉSULTAT NET APRÈS IS  : {cerfa_2065['resultat_net_apres_is']:>12,.2f} €
+    Nouveau déficit report.: {cerfa_2065['nouveau_deficit_reportable']:>12,.2f} €
     """)
 
     session.close()
