@@ -182,6 +182,7 @@ passif = {}
 for num_compte, data in soldes.items():
     classe = data['classe']
     solde = data['solde']
+    type_compte = data.get('type', '')
 
     # Ignorer compte 89 (bilan d'ouverture, déjà soldé)
     if num_compte == '89':
@@ -191,15 +192,25 @@ for num_compte, data in soldes.items():
     if classe in [6, 7]:
         continue
 
+    # Ignorer soldes nuls
+    if abs(solde) < Decimal('0.01'):
+        continue
+
     # Classes 1-5 = BILAN
+    # IMPORTANT : Utiliser le type_compte du plan comptable, PAS le signe du solde
+    # - Comptes ACTIF restent à l'actif (même si solde créditeur = provision/amortissement)
+    # - Comptes PASSIF restent au passif (même si solde débiteur = report à nouveau déficitaire)
     if classe in [1, 2, 3, 4, 5]:
-        # Solde DÉBITEUR → ACTIF
-        if solde > Decimal('0.01'):
+        if type_compte == 'ACTIF':
             actif[num_compte] = data
-        # Solde CRÉDITEUR → PASSIF
-        elif solde < Decimal('-0.01'):
+        elif type_compte == 'PASSIF':
             passif[num_compte] = data
-        # Solde ~ 0 : ignorer
+        else:
+            # Fallback si type non défini : utiliser le signe du solde
+            if solde > Decimal('0'):
+                actif[num_compte] = data
+            else:
+                passif[num_compte] = data
 
 # Afficher ACTIF
 print("\n" + "-"*80)
@@ -229,7 +240,8 @@ print("-"*80)
 total_passif_avant_resultat = Decimal('0')
 for num_compte in sorted(passif.keys()):
     data = passif[num_compte]
-    montant = abs(data['solde'])  # Passif = valeur absolue (créditeur)
+    # Passif : inverser le signe (créditeur négatif → positif, débiteur positif → négatif)
+    montant = -data['solde']
     total_passif_avant_resultat += montant
     print(f"{num_compte:<10} {data['libelle'][:40]:<40} {montant:>14.2f}€")
 
@@ -328,7 +340,7 @@ export = {
         "passif": {
             num: {
                 "libelle": data['libelle'],
-                "montant": float(abs(data['solde']))
+                "montant": float(-data['solde'])
             }
             for num, data in passif.items()
         },
