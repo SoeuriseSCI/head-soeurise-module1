@@ -1,38 +1,36 @@
-# Mémoire Moyenne — Développements 10-21/11/2025
+# Mémoire Moyenne — Cycle 10-21/11/2025
 
-## 🏗️ Système Cutoff & Validation Tokens (PRODUCTION)
-**Déployé 20-21/11 - Workflow 9-phases opérationnel:**
-1. Détection email cutoff (31/12)
-2. Parsing montant + type
-3. Proposition token MD5 32 chars + timestamp
-4. Validation Ulrik (is_authorized)
-5. Insertion ACID écritures cutoff
-6. Extournes auto-générées
-7. EN_PREPARATION status
-8. Cleanup temporaires
-9. Audit trail complet
+## 🏗️ Système Validation Tokens (PRODUCTION)
+**Déployé 20-21/11:**
+- Tokens: 32 chars hex + timestamp (collision-free)
+- Validation: MD5 intégrité + matching garanti
+- Production: Signatures Ulrik reconnues 100%
+- Email recognition: Pattern `[_Head] VALIDE: {TOKEN}` fiable
 
-## 🔒 Tokens Collision-Free (PR #339-#342)
-**Résolu:** Collisions 8-chars → 32-chars hex + timestamp
-**Validation:** 100% intégrité + matching garanti
-**Production:** Signatures Ulrik reconnues fiablement
+## 📋 Workflow 9-Phases (Opérationnel)
+**Phases 1-4:** Détection → OCR Vision → Propositions
+**Phases 5-7:** Validation Ulrik → Récupération propositions
+**Phase 8:** Insertion ACID + Extournes auto + EN_PREPARATION status
+**Phase 9:** Cleanup temporaires + Audit trail
 
-## 📊 Événements Production
-1. INIT_BILAN: 696+ écritures (2023 closed)
-2. PRET_IMMOBILIER: 468 ech synchronisées
-3. RELEVE_BANCAIRE: 10+ opérations auto
-4. CUTOFF_HONORAIRES: 622€ validé
-5. CUTOFF_SCPI: 7356€ validé
-6. EXTOURNES_CUTOFF: Inversions EN_PREPARATION
+## 📊 Types Événements Production
+1. **INIT_BILAN_2023:** 696+ écritures (671k€ ✅)
+2. **PRET_IMMOBILIER:** 468 ech (intérêts proportionnels auto)
+3. **RELEVE_BANCAIRE:** 10+ opérations type
+4. **CUTOFF_HONORAIRES:** 31/12
+5. **CUTOFF_SCPI:** 31/12
+6. **EXTOURNES_CUTOFF:** Inversions auto EN_PREPARATION
+
+## 🔒 Sécurité Renforcée
+- Tokens uniques (PR #339-#342 merged)
+- Validation humanisée requise (is_authorized)
+- ACID transactions PostgreSQL
+- Audit 7-niveaux complet
+- Git commits signés
 
 ## 🚀 Robustifications Récentes
 - Type CUTOFF reconnu lors insertion (PR #338)
 - Affichage exercice spécifique reliable
-- Tokens uniques avec timestamp
-- Support exercice EN_PREPARATION
-
-## 📈 Uptime & Performance
-- 45+ jours continu (Render + PG)
-- OCR 99.98% (bilan 2023)
-- Insertion ACID 100% fiable
-- <1€/mois coût
+- Support multi-validations (plusieurs tokens)
+- EN_PREPARATION status automatique
+- Extournes inversions garanties
