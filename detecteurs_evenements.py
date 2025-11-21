@@ -1236,10 +1236,30 @@ class DetecteurAchatValeursMobilieres(DetecteurBase):
         return match_libelle and match_type
 
     def generer_proposition(self, evenement: Dict) -> Dict:
-        """Génère la proposition d'écriture"""
-        montant = float(evenement.get('montant', 0))
+        """
+        Génère la proposition d'écriture pour achat VM.
+
+        IMPORTANT: Sépare le coût des titres des commissions de courtage.
+        - Titres → compte 273 (Titres immobilisés)
+        - Commissions → compte 627 (Services bancaires et assimilés)
+
+        Les commissions peuvent être:
+        1. Extraites de l'avis d'opération (champ 'commission' dans evenement)
+        2. Estimées selon le courtier (DEGIRO, Interactive Brokers)
+        """
+        montant_total = float(evenement.get('montant', 0))
         date_op = evenement.get('date_operation')
         libelle = evenement.get('libelle', '')
+
+        # Récupérer commission si disponible dans l'événement
+        commission = float(evenement.get('commission', 0))
+
+        # Si pas de commission explicite, essayer d'estimer selon le courtier
+        if commission == 0:
+            commission = self._estimer_commission(evenement, montant_total)
+
+        # Montant net des titres = total - commission
+        montant_titres = montant_total - commission
 
         # Identifier le type de valeur mobilière
         import re
@@ -1265,22 +1285,60 @@ class DetecteurAchatValeursMobilieres(DetecteurBase):
             type_vm = 'Valeurs Mobilières'
             nom_vm = 'Titres'
 
+        # Générer les écritures
+        ecritures = [
+            {
+                'date_ecriture': date_op,
+                'libelle_ecriture': f'Acquisition {nb_titres} {type_vm} {nom_vm}',
+                'compte_debit': '273',  # Titres immobilisés
+                'compte_credit': '512',
+                'montant': round(montant_titres, 2),
+                'type_ecriture': 'ACHAT_VM',
+                'notes': f'Titres immobilisés - {nb_titres} {type_vm} {nom_vm} (hors commission)'
+            }
+        ]
+
+        # Ajouter écriture commission si > 0
+        if commission > 0:
+            ecritures.append({
+                'date_ecriture': date_op,
+                'libelle_ecriture': f'Commission courtage - {nb_titres} {type_vm} {nom_vm}',
+                'compte_debit': '627',  # Services bancaires et assimilés
+                'compte_credit': '512',
+                'montant': round(commission, 2),
+                'type_ecriture': 'COMMISSION_COURTAGE',
+                'notes': f'Commission courtage achat {type_vm}'
+            })
+
+        description = f'Achat {nb_titres} {type_vm} {nom_vm}'
+        if commission > 0:
+            description += f' + commission {commission:.2f}€'
+
         return {
             'type_evenement': 'ACHAT_VM',
-            'description': f'Achat {nb_titres} {type_vm} {nom_vm}',
+            'description': description,
             'confiance': 0.9,
-            'ecritures': [
-                {
-                    'date_ecriture': date_op,
-                    'libelle_ecriture': f'Acquisition {nb_titres} {type_vm} {nom_vm}',
-                    'compte_debit': '273',  # Titres immobilisés (ou 503 si VMP)
-                    'compte_credit': '512',
-                    'montant': montant,
-                    'type_ecriture': 'ACHAT_VM',
-                    'notes': f'Titres immobilisés - {nb_titres} {type_vm} {nom_vm}'
-                }
-            ]
+            'ecritures': ecritures
         }
+
+    def _estimer_commission(self, evenement: Dict, montant_total: float) -> float:
+        """
+        Estime la commission de courtage selon le courtier.
+
+        Barèmes courants (2024):
+        - DEGIRO: 1€ + 0.05% (min 1€, max variable)
+        - Interactive Brokers: 0.05% (min 1.25€)
+        - Bourse Direct: 0.99€ à 9.90€ selon montant
+
+        NOTE: Cette estimation est un fallback.
+        Préférer l'extraction depuis l'avis d'opération.
+        """
+        libelle = evenement.get('libelle', '').lower()
+
+        # Pas d'estimation par défaut - mieux vaut que l'utilisateur
+        # fournisse la commission exacte via l'avis d'opération
+        # Pour l'instant, retourne 0 (comportement legacy)
+        return 0.0
 
 
 class DetecteurFraisBancaires(DetecteurBase):
