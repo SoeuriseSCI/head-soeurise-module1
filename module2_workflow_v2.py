@@ -2020,11 +2020,14 @@ class WorkflowModule2V2:
                 # Générer token
                 token = hashlib.md5(f"PRECLOTURE_{annee}_{datetime.now().isoformat()}".encode()).hexdigest()[:12]
 
+                # Convertir les dates en strings pour la sérialisation JSON
+                rapport_serializable = self._convertir_dates_en_strings(rapport)
+
                 return {
                     "type_detecte": TypeEvenement.PRE_CLOTURE_EXERCICE,
                     "statut": "OK",
                     "markdown": markdown,
-                    "propositions": rapport,
+                    "propositions": rapport_serializable,
                     "token": token,
                     "message": f"Pré-clôture {annee} effectuée avec succès"
                 }
@@ -2140,11 +2143,14 @@ class WorkflowModule2V2:
                 # Générer token
                 token = hashlib.md5(f"CLOTURE_{annee}_{datetime.now().isoformat()}".encode()).hexdigest()[:12]
 
+                # Convertir les dates en strings pour la sérialisation JSON
+                rapport_serializable = self._convertir_dates_en_strings(rapport)
+
                 return {
                     "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
                     "statut": "OK",
                     "markdown": markdown,
-                    "propositions": rapport,
+                    "propositions": rapport_serializable,
                     "token": token,
                     "message": f"Clôture définitive {annee} effectuée avec succès"
                 }
@@ -2163,6 +2169,25 @@ class WorkflowModule2V2:
                 "token": "",
                 "traceback": traceback.format_exc()
             }
+
+    def _convertir_dates_en_strings(self, obj):
+        """
+        Convertit récursivement les objets date/datetime en strings ISO.
+        Nécessaire pour la sérialisation JSON des rapports.
+        """
+        from datetime import date as date_type
+        from decimal import Decimal as decimal_type
+
+        if isinstance(obj, dict):
+            return {k: self._convertir_dates_en_strings(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convertir_dates_en_strings(item) for item in obj]
+        elif isinstance(obj, (date_type, datetime)):
+            return obj.isoformat()
+        elif isinstance(obj, decimal_type):
+            return float(obj)
+        else:
+            return obj
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

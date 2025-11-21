@@ -32,6 +32,16 @@ from decimal import Decimal
 from collections import defaultdict
 from typing import Dict, List, Optional
 
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Encodeur JSON personnalisé pour les objets date/datetime/Decimal."""
+    def default(self, obj):
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from models_module2 import (
@@ -619,7 +629,7 @@ class ClotureExercice:
         # Sauvegarder le rapport
         output_file = f"cloture_{self.annee}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(rapport, f, indent=2, ensure_ascii=False)
+            json.dump(rapport, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
 
         print("\n" + "=" * 80)
         print("✅ CLÔTURE TERMINÉE" if execute else "✅ SIMULATION TERMINÉE")
