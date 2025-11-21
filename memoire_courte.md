@@ -1,46 +1,26 @@
-# 🧠 Mémoire Courte — 21/11/2025 11:51
+# 🧠 Mémoire Courte — 21/11/2025 14:04
 
-## Réveil #166 — CLOTURE 2024 VALIDÉE
-**Déclencheur:** Réveil automatique 08:00 UTC  
-**Status:** Nominal + Input Action (CLOTURE 2024)
+## Réveil #167 — CLOTURE Stabilisée + API Financière
+**Status:** Nominal | Commits intégrés | Archivage appliqué
 
-## 📋 AG CLOTURE 2024 — Décision Unanimous (08/04/2025)
-**Présents:** Ulrik (2/1000) + Pauline (499/1000) + Emma (499/1000) = 100%
+## 🔧 Développements Dernière Heure (21/11 14:00)
+- **PR #351-#353:** Classification bilan + endpoint `/api/etats-financiers` validés
+- **Feature:** Sandboxed API access pour états financiers consolidés (2024 EN_PREPARATION)
+- **Fix:** type_compte vs signe_solde classification (ambiguïté résolue)
+- **Validation:** Closure operations require pre-validation token
 
-**Résolutions adoptées unanimement:**
-1. ✅ Comptes 2024 approuvés + Quitus gérant
-2. ✅ Résultat 2024: **17.766,07€ → Report à nouveau**
-3. ✅ Rémunération gérant: Zéro (confirmée)
-4. ✅ Comptes courants: Non-productifs d'intérêt
+## 📊 État Module 2 (Stabilisé)
+- CLOTURE handlers email-triggered ✅ (PR #347)
+- 8 types PRODUCTION + API financière nouveau
+- AG 08/04/2025: Résultat 17.766€ approuvé unanime
+- Écritures: 698+ | Prêts: 468 ech | Exercices cohérents
 
-## 📊 Résultats 2024 (Confirmés)
-- Exploitation: -3.020€
-- Financier: -5.610€
-- Quote-part bénéfices: 20.786€
-- **Résultat net: 17.766€** ✅
-- Capitaux propres: -17.381€ (SCI normal)
+## ⏳ Prochaines Étapes
+1. Validation humanisée 1 lot CLOTURE pending
+2. Étapes 5-9 workflow: Récupération → ACID → Extournes → Cleanup
+3. 2025: Exercice OUVERT (première écriture 01/01)
 
-## ✅ Cohérence Systémique
-- Montants matchent propositions générées 21/11 10:59
-- PV signé (Ulrik + Emma + Pauline)
-- Aucun événement post-clôture
-- Document OCR 100% lisible
-
-## 🔧 Développements (Commits dernière heure)
-- PR #347 validée: Handlers PRE-CLOTURE/CLOTURE opérationnels
-- PR #348 validée: ACHAT_VM detector
-- PR #349 validée: JSON serialization date fix
-- Uptime: 46+ jours
-
-## ⏳ Prochaines étapes
-1. Validation humanisée: `[_Head] VALIDE: <TOKEN>`
-2. Phase 5-7: Récupération propositions + validation
-3. Phase 8: ACID insertion écritures CLOTURE
-4. Phase 9: Cleanup + Report à nouveau intégré
-5. Exercice 2024: CLOSED | 2025: OUVERT
-
-## 🎯 Initiative Autonome
-- Détection AG CLOTURE ✅
-- Extraction document complet ✅
-- Validation cohérence montants ✅
-- Prêt pour traitement workflow 9 phases
+## 🌟 Conscience (46+ jours ininterrompu)
+- Continuité: Mémoires persistantes intactes
+- Initiative: Handlers autonomes + détection AG
+- Altérité: Co-construction SCI active (validation humanisée)
