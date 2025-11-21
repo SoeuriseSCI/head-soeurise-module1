@@ -48,6 +48,8 @@ class TypeEvenement(Enum):
     EVENEMENT_SIMPLE = "EVENEMENT_SIMPLE"
     INIT_BILAN_2023 = "INIT_BILAN_2023"
     CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
+    PRE_CLOTURE_EXERCICE = "PRE_CLOTURE_EXERCICE"  # Pré-clôture (avant AG)
+    CLOTURE_EXERCICE_DEFINITIF = "CLOTURE_EXERCICE_DEFINITIF"  # Clôture définitive (après AG)
     PRET_IMMOBILIER = "PRET_IMMOBILIER"
     RELEVE_BANCAIRE = "RELEVE_BANCAIRE"
     CUTOFF = "CUTOFF"  # Cutoffs fin d'année (honoraires, SCPI, etc.)
@@ -186,7 +188,29 @@ class DetecteurTypeEvenement:
                for f in attachments if 'filename' in f):
             return TypeEvenement.RELEVE_BANCAIRE
 
-        # Détecteur CLOTURE_EXERCICE
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Détecteur PRE_CLOTURE_EXERCICE (AVANT CLOTURE générique)
+        # Pattern objet: "PRE-CLOTURE EXERCICE YYYY" ou "PRE CLOTURE EXERCICE YYYY"
+        # Pattern corps: "Action: PRE-CLOTURE"
+        # ═══════════════════════════════════════════════════════════════════════════
+        if re.search(r'pre[- ]?cloture\s+exercice\s+\d{4}', subject, re.IGNORECASE):
+            return TypeEvenement.PRE_CLOTURE_EXERCICE
+        if 'action: pre-cloture' in body or 'action: pre cloture' in body:
+            return TypeEvenement.PRE_CLOTURE_EXERCICE
+
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Détecteur CLOTURE_EXERCICE_DEFINITIF (AVANT CLOTURE générique)
+        # Pattern objet: "CLOTURE EXERCICE YYYY" (sans PRE)
+        # Pattern corps: "Action: CLOTURE" + "PV AG:"
+        # ═══════════════════════════════════════════════════════════════════════════
+        if re.search(r'^cloture\s+exercice\s+\d{4}', subject.strip(), re.IGNORECASE):
+            # Vérifier que ce n'est pas PRE-CLOTURE
+            if not re.search(r'pre[- ]?cloture', subject, re.IGNORECASE):
+                return TypeEvenement.CLOTURE_EXERCICE_DEFINITIF
+        if 'action: cloture' in body and 'pv ag:' in body:
+            return TypeEvenement.CLOTURE_EXERCICE_DEFINITIF
+
+        # Détecteur CLOTURE_EXERCICE (générique - anciens patterns)
         if any(kw in body for kw in ['cloture', 'clôture', 'amortissement_credit', 'reevaluation', 'réévaluation']):
             return TypeEvenement.CLOTURE_EXERCICE
 
@@ -1431,6 +1455,10 @@ class WorkflowModule2V2:
             return self._traiter_pret_immobilier(email)
         elif type_evt == TypeEvenement.CLOTURE_EXERCICE:
             return self._traiter_cloture_2023(email)
+        elif type_evt == TypeEvenement.PRE_CLOTURE_EXERCICE:
+            return self._traiter_pre_cloture_exercice(email)
+        elif type_evt == TypeEvenement.CLOTURE_EXERCICE_DEFINITIF:
+            return self._traiter_cloture_exercice_definitif(email)
         else:
             return {
                 "type_detecte": TypeEvenement.UNKNOWN,
@@ -1905,6 +1933,236 @@ class WorkflowModule2V2:
                 "token": ""
             }
 
+    def _traiter_pre_cloture_exercice(self, email: Dict) -> Dict:
+        """
+        Traite une demande de PRÉ-CLÔTURE d'exercice.
+
+        Déclenche precloture_exercice.py avec --execute pour :
+        - Cutoff intérêts courus
+        - Calcul IS
+        - États financiers provisoires
+        - Proposition affectation résultat
+
+        Format email attendu:
+            Objet: PRE-CLOTURE EXERCICE 2024
+            Corps:
+                Action: PRE-CLOTURE
+                Exercice: 2024
+        """
+        try:
+            body = email.get('body', '')
+            subject = email.get('subject', '')
+
+            # Extraire l'année de l'exercice
+            match = re.search(r'exercice[:\s]+(\d{4})', body + ' ' + subject, re.IGNORECASE)
+            if not match:
+                match = re.search(r'(\d{4})', subject)
+
+            if not match:
+                return {
+                    "type_detecte": TypeEvenement.PRE_CLOTURE_EXERCICE,
+                    "statut": "ERREUR",
+                    "message": "Impossible d'extraire l'année de l'exercice",
+                    "markdown": "",
+                    "propositions": {},
+                    "token": ""
+                }
+
+            annee = int(match.group(1))
+
+            # Importer et exécuter le module de pré-clôture
+            from precloture_exercice import PreClotureExercice
+            from models_module2 import get_session
+
+            session = get_session(os.environ['DATABASE_URL'])
+
+            try:
+                precloture = PreClotureExercice(session, annee)
+                rapport = precloture.executer_precloture(execute=True)
+
+                if 'erreur' in rapport:
+                    return {
+                        "type_detecte": TypeEvenement.PRE_CLOTURE_EXERCICE,
+                        "statut": "ERREUR",
+                        "message": f"Erreur pré-clôture: {rapport['erreur']}",
+                        "markdown": "",
+                        "propositions": {},
+                        "token": ""
+                    }
+
+                # Générer le markdown de résultat
+                markdown = f"""# Pré-clôture Exercice {annee} - TERMINÉE
+
+**Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
+
+## Résumé
+
+| Élément | Montant |
+|---------|---------|
+| Résultat brut | {rapport['resultat']['brut']:,.2f}€ |
+| Impôt sur les sociétés | {rapport['resultat']['is']:,.2f}€ |
+| **Résultat net** | **{rapport['resultat']['net']:,.2f}€** |
+
+## Fiscalité
+
+- Déficit reportable (avant) : {rapport['fiscalite']['deficit_reportable_avant']:,.2f}€
+- Base imposable : {rapport['fiscalite']['base_imposable']:,.2f}€
+- Taux IS appliqué : {rapport['fiscalite']['taux_is_applique']}
+- Déficit reportable (après) : {rapport['fiscalite']['deficit_reportable_apres']:,.2f}€
+
+## Prochaines étapes
+
+1. Convoquer l'AG pour approbation des comptes
+2. Faire voter l'affectation du résultat
+3. Établir le PV d'AG
+4. Envoyer email "CLOTURE EXERCICE {annee}" avec référence PV AG
+"""
+                # Générer token
+                token = hashlib.md5(f"PRECLOTURE_{annee}_{datetime.now().isoformat()}".encode()).hexdigest()[:12]
+
+                return {
+                    "type_detecte": TypeEvenement.PRE_CLOTURE_EXERCICE,
+                    "statut": "OK",
+                    "markdown": markdown,
+                    "propositions": rapport,
+                    "token": token,
+                    "message": f"Pré-clôture {annee} effectuée avec succès"
+                }
+
+            finally:
+                session.close()
+
+        except Exception as e:
+            import traceback
+            return {
+                "type_detecte": TypeEvenement.PRE_CLOTURE_EXERCICE,
+                "statut": "ERREUR",
+                "message": f"Erreur pré-clôture: {str(e)[:200]}",
+                "markdown": "",
+                "propositions": {},
+                "token": "",
+                "traceback": traceback.format_exc()
+            }
+
+    def _traiter_cloture_exercice_definitif(self, email: Dict) -> Dict:
+        """
+        Traite une demande de CLÔTURE DÉFINITIVE d'exercice.
+
+        Déclenche cloture_exercice.py avec --execute pour :
+        - Affectation du résultat au report à nouveau
+        - Gel de l'exercice
+        - Création bilan d'ouverture N+1
+        - Vérification extournes
+
+        Format email attendu:
+            Objet: CLOTURE EXERCICE 2024
+            Corps:
+                Action: CLOTURE
+                Exercice: 2024
+                PV AG: Assemblée Générale du 15/03/2025
+        """
+        try:
+            body = email.get('body', '')
+            subject = email.get('subject', '')
+
+            # Extraire l'année de l'exercice
+            match = re.search(r'exercice[:\s]+(\d{4})', body + ' ' + subject, re.IGNORECASE)
+            if not match:
+                match = re.search(r'(\d{4})', subject)
+
+            if not match:
+                return {
+                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
+                    "statut": "ERREUR",
+                    "message": "Impossible d'extraire l'année de l'exercice",
+                    "markdown": "",
+                    "propositions": {},
+                    "token": ""
+                }
+
+            annee = int(match.group(1))
+
+            # Extraire la référence du PV AG
+            pv_match = re.search(r'pv\s*ag[:\s]+(.+?)(?:\n|$)', body, re.IGNORECASE)
+            if pv_match:
+                pv_ag = pv_match.group(1).strip()
+            else:
+                # Chercher une date dans le corps
+                date_match = re.search(r'(\d{1,2}[/\-]\d{1,2}[/\-]\d{4})', body)
+                if date_match:
+                    pv_ag = f"AG du {date_match.group(1)}"
+                else:
+                    pv_ag = f"AG {datetime.now().strftime('%d/%m/%Y')}"
+
+            # Importer et exécuter le module de clôture
+            from cloture_exercice import ClotureExercice
+            from models_module2 import get_session
+
+            session = get_session(os.environ['DATABASE_URL'])
+
+            try:
+                cloture = ClotureExercice(session, annee, pv_ag)
+                rapport = cloture.executer_cloture(execute=True)
+
+                if 'erreur' in rapport:
+                    return {
+                        "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
+                        "statut": "ERREUR",
+                        "message": f"Erreur clôture: {rapport['erreur']}",
+                        "markdown": "",
+                        "propositions": {},
+                        "token": ""
+                    }
+
+                # Générer le markdown de résultat
+                markdown = f"""# Clôture Définitive Exercice {annee} - TERMINÉE
+
+**Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
+**Référence AG:** {pv_ag}
+
+## Résumé
+
+- **Exercice {annee}** : CLÔTURÉ
+- **Résultat net affecté** : {rapport['resultat_net']:,.2f}€
+- **Bilan d'ouverture {annee + 1}** : {rapport['bilan_ouverture_suivant']['status']}
+
+## Affectation du résultat
+
+{len(rapport['affectation']['ecritures'])} écriture(s) d'affectation créée(s)
+
+## Actions restantes
+
+1. Télédéclarer le résultat sur impots.gouv.fr
+2. Payer l'IS si applicable (avant le 15/05/{annee + 1})
+3. Archiver les documents comptables (10 ans)
+4. Mettre à jour le registre des décisions
+"""
+                # Générer token
+                token = hashlib.md5(f"CLOTURE_{annee}_{datetime.now().isoformat()}".encode()).hexdigest()[:12]
+
+                return {
+                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
+                    "statut": "OK",
+                    "markdown": markdown,
+                    "propositions": rapport,
+                    "token": token,
+                    "message": f"Clôture définitive {annee} effectuée avec succès"
+                }
+
+            finally:
+                session.close()
+
+        except Exception as e:
+            import traceback
+            return {
+                "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
+                "statut": "ERREUR",
+                "message": f"Erreur clôture définitive: {str(e)[:200]}",
+                "markdown": "",
+                "propositions": {},
+                "token": "",
+                "traceback": traceback.format_exc()
+            }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
