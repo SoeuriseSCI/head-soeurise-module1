@@ -1,0 +1,100 @@
+{
+  "date_generation": "2025-11-21T15:59:34.602968",
+  "exercice": {
+    "annee": 2024,
+    "date_debut": "2024-01-01",
+    "date_fin": "2024-12-31",
+    "statut": "CLOTURE"
+  },
+  "compte_resultat": {
+    "charges": {
+      "616": {
+        "libelle": "Primes d'assurance",
+        "montant": 1053.69
+      },
+      "627": {
+        "libelle": "Services bancaires et assimilés",
+        "montant": 473.44
+      },
+      "661": {
+        "libelle": "Charges d'intérêts",
+        "montant": 5854.89
+      },
+      "6226": {
+        "libelle": "Honoraires",
+        "montant": 2148.4
+      }
+    },
+    "produits": {
+      "761": {
+        "libelle": "Produits de participations",
+        "montant": 40506.92
+      },
+      "768": {
+        "libelle": "Autres produits financiers",
+        "montant": 601.0
+      }
+    },
+    "total_charges": 8630.45,
+    "total_produits": 26395.92,
+    "resultat": 17765.47
+  },
+  "bilan": {
+    "actif": {
+      "512": {
+        "libelle": "Banque",
+        "montant": 2320.35
+      },
+      "273": {
+        "libelle": "Titres immobilisés",
+        "montant": 25759.63
+      },
+      "271": {
+        "libelle": "Titres immobilisés (autres que TIAP)",
+        "montant": 500032.0
+      },
+      "4181": {
+        "libelle": "Produits à recevoir",
+        "montant": 6755.0
+      },
+      "120": {
+        "libelle": "Résultat de l'exercice (bénéfice)",
+        "montant": 35530.94
+      },
+      "119": {
+        "libelle": "Report à nouveau (solde débiteur)",
+        "montant": 617.06
+      }
+    },
+    "passif": {
+      "164": {
+        "libelle": "Emprunts auprès des établissements de crédit",
+        "montant": 486509.69
+      },
+      "101": {
+        "libelle": "Capital social",
+        "montant": 1000.0
+      },
+      "290": {
+        "libelle": "Provision SCPI",
+        "montant": 50003.0
+      },
+      "455": {
+        "libelle": "Associés - Comptes courants",
+        "montant": 15120.0
+      },
+      "4081": {
+        "libelle": "Fournisseurs - Factures non parvenues",
+        "montant": 622.0
+      },
+      "1688": {
+        "libelle": "Intérêts courus",
+        "montant": -5.18
+      }
+    },
+    "resultat_exercice": 17765.47,
+    "total_actif": 571014.98,
+    "total_passif": 571014.98,
+    "equilibre": true
+  }
+}
