@@ -36,8 +36,8 @@ if not exercice_2025:
 ecritures_2025 = session.query(EcritureComptable).filter_by(exercice_id=exercice_2025.id).all()
 
 print(f"\n📝 Écritures 2025 : {len(ecritures_2025)}")
-print(f"   Dont écritures d'ouverture : {sum(1 for e in ecritures_2025 if e.type_ecriture == 'INIT_BILAN_2024')}")
-print(f"   Dont flux de l'année : {sum(1 for e in ecritures_2025 if e.type_ecriture != 'INIT_BILAN_2024')}")
+print(f"   Dont écritures d'ouverture : {sum(1 for e in ecritures_2025 if e.type_ecriture == 'BILAN_OUVERTURE')}")
+print(f"   Dont flux de l'année : {sum(1 for e in ecritures_2025 if e.type_ecriture != 'BILAN_OUVERTURE')}")
 print(f"   Période : {exercice_2025.date_debut} → {exercice_2025.date_fin}")
 
 # ==============================================================================
