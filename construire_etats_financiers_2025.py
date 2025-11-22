@@ -146,7 +146,7 @@ print("-"*80)
 total_produits = Decimal('0')
 for num_compte in sorted(produits.keys()):
     data = produits[num_compte]
-    montant = abs(data['solde'])  # Produits = solde (en valeur absolue car créditeur)
+    montant = -data['solde']  # Produits = -solde (créditeur → positif, débiteur/extourne → négatif)
     total_produits += montant
     print(f"{num_compte:<10} {data['libelle'][:40]:<40} {montant:>14.2f}€")
 
