@@ -149,6 +149,53 @@ class ClotureExercice:
 
         return dict(self.soldes)
 
+    def _calculer_soldes_cloture(self) -> Dict:
+        """
+        Calcule les soldes de clôture de l'exercice N pour le bilan d'ouverture N+1.
+
+        IMPORTANT : Exclut explicitement les écritures d'affectation pour garantir
+        que les écritures d'ouverture reflètent l'état AVANT affectation.
+
+        Contexte : Les écritures d'affectation sont normalement créées sur l'exercice N+1,
+        mais par sécurité (compatibilité avec d'anciennes versions), on les exclut explicitement.
+
+        Returns:
+            Dictionnaire des soldes par compte (état de clôture N = état d'ouverture N+1)
+        """
+        ecritures = self.session.query(EcritureComptable).filter(
+            EcritureComptable.exercice_id == self.exercice.id,
+            EcritureComptable.type_ecriture != 'AFFECTATION_RESULTAT'
+        ).all()
+
+        soldes = defaultdict(lambda: {
+            'debit': Decimal('0'),
+            'credit': Decimal('0'),
+            'libelle': '',
+            'type': '',
+            'classe': 0
+        })
+
+        for e in ecritures:
+            montant = Decimal(str(e.montant))
+            soldes[e.compte_debit]['debit'] += montant
+            soldes[e.compte_credit]['credit'] += montant
+
+            # Récupérer infos compte
+            for compte_num in [e.compte_debit, e.compte_credit]:
+                cpte = self.session.query(PlanCompte).filter_by(
+                    numero_compte=compte_num
+                ).first()
+                if cpte:
+                    soldes[compte_num]['libelle'] = cpte.libelle
+                    soldes[compte_num]['type'] = cpte.type_compte
+                    if compte_num and compte_num[0].isdigit():
+                        soldes[compte_num]['classe'] = int(compte_num[0])
+
+        for num_compte, data in soldes.items():
+            data['solde'] = data['debit'] - data['credit']
+
+        return dict(soldes)
+
     def calculer_resultat_net(self) -> Decimal:
         """
         Calcule le résultat net de l'exercice.
@@ -445,8 +492,10 @@ class ClotureExercice:
                 'nb_ecritures': len(ecritures_ouverture_existantes)
             }
 
-        # Recalculer les soldes après affectation
-        self.calculer_soldes()
+        # Calculer les soldes de clôture de l'exercice N (AVANT affectation)
+        # pour créer les écritures d'ouverture de l'exercice N+1
+        print(f"\n  🔍 Calcul des soldes de clôture {self.annee} (état AVANT affectation)...")
+        soldes_cloture = self._calculer_soldes_cloture()
 
         # Préparer les écritures d'ouverture (classes 1-5 uniquement)
         ecritures_ouverture = []
@@ -454,7 +503,7 @@ class ClotureExercice:
 
         print(f"\n  📝 Écritures d'ouverture à créer :")
 
-        for num_compte, data in sorted(self.soldes.items()):
+        for num_compte, data in sorted(soldes_cloture.items()):
             classe = data['classe']
             solde = data['solde']
 
