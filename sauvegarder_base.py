@@ -60,7 +60,7 @@ backup_data = {
 
 # 1. Exercices comptables
 print("📊 Sauvegarde exercices comptables...")
-exercices = session.query(ExerciceComptable).all()
+exercices = session.query(ExerciceComptable).order_by(ExerciceComptable.id).all()
 for ex in exercices:
     backup_data["exercices"].append({
         "id": ex.id,
@@ -74,7 +74,7 @@ print(f"   ✅ {len(exercices)} exercices sauvegardés")
 
 # 2. Plan comptable
 print("📊 Sauvegarde plan comptable...")
-comptes = session.query(PlanCompte).all()
+comptes = session.query(PlanCompte).order_by(PlanCompte.id).all()
 for compte in comptes:
     backup_data["plan_comptable"].append({
         "id": compte.id,
@@ -86,7 +86,7 @@ print(f"   ✅ {len(comptes)} comptes sauvegardés")
 
 # 3. Écritures comptables
 print("📊 Sauvegarde écritures comptables...")
-ecritures = session.query(EcritureComptable).all()
+ecritures = session.query(EcritureComptable).order_by(EcritureComptable.id).all()
 for ec in ecritures:
     backup_data["ecritures"].append({
         "id": ec.id,
@@ -107,7 +107,7 @@ print(f"   ✅ {len(ecritures)} écritures sauvegardées")
 
 # 4. Prêts immobiliers
 print("📊 Sauvegarde prêts immobiliers...")
-prets = session.query(PretImmobilier).all()
+prets = session.query(PretImmobilier).order_by(PretImmobilier.id).all()
 for pret in prets:
     backup_data["prets"].append({
         "id": pret.id,
@@ -134,7 +134,7 @@ print(f"   ✅ {len(prets)} prêts sauvegardés")
 
 # 5. Échéances
 print("📊 Sauvegarde échéances...")
-echeances = session.query(EcheancePret).all()
+echeances = session.query(EcheancePret).order_by(EcheancePret.id).all()
 for ech in echeances:
     backup_data["echeances"].append({
         "id": ech.id,
