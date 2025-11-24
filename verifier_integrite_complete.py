@@ -60,28 +60,16 @@ def verifier_integrite_complete(backup_file):
         ex_id = ex['id']
         annee = ex['annee']
         statut = ex['statut']
-        date_cloture = ex.get('date_cloture')
-        resultat = ex.get('resultat_exercice')
+        date_debut = ex.get('date_debut')
+        date_fin = ex.get('date_fin')
 
         print(f"\n📅 EXERCICE {annee} (ID: {ex_id}) - Statut: {statut}")
         print("─" * 80)
+        print(f"  Période              : {date_debut} → {date_fin}")
 
-        # Vérifications
-        if statut == 'CLOTURE':
-            if not date_cloture:
-                anomalies.append(f"❌ EX{annee}: Statut CLOTURE mais date_cloture NULL")
-                print(f"  ❌ Date clôture      : MANQUANTE")
-            else:
-                print(f"  ✅ Date clôture      : {date_cloture}")
-
-            if resultat is None:
-                anomalies.append(f"❌ EX{annee}: Statut CLOTURE mais resultat_exercice NULL")
-                print(f"  ❌ Résultat exercice : MANQUANT")
-            else:
-                print(f"  ✅ Résultat exercice : {float(resultat):,.2f} €")
-        else:
-            print(f"  ℹ️  Date clôture      : {date_cloture if date_cloture else 'Non applicable'}")
-            print(f"  ℹ️  Résultat exercice : {float(resultat):,.2f} €" if resultat else "  ℹ️  Résultat exercice : Non calculé")
+        # Note : date_cloture et resultat_exercice ne sont pas stockés dans le modèle
+        # - date_cloture = date_fin pour les exercices clôturés
+        # - resultat_exercice est calculé dynamiquement depuis les écritures (classes 6-7)
 
         # Vérifier équilibre
         ex_ecritures = ecritures_by_ex.get(ex_id, [])
@@ -248,22 +236,7 @@ def verifier_integrite_complete(backup_file):
     print(f"\n  Total produits (7xxx)  : {total_produits:,.2f} €")
     print(f"  Total charges (6xxx)   : {total_charges:,.2f} €")
     print(f"  Résultat calculé       : {resultat_calcule:,.2f} €")
-
-    # Comparer avec le résultat enregistré
-    ex_2024 = next((e for e in exercices if e['id'] == 2), None)
-    if ex_2024 and ex_2024.get('resultat_exercice') is not None:
-        resultat_enregistre = float(ex_2024.get('resultat_exercice'))
-        print(f"  Résultat enregistré    : {resultat_enregistre:,.2f} €")
-
-        diff_resultat = abs(resultat_calcule - resultat_enregistre)
-        if diff_resultat < 0.01:
-            print(f"  ✅ Cohérence résultat  : OK (diff {diff_resultat:.4f} €)")
-        else:
-            anomalies.append(f"❌ Résultat calculé ({resultat_calcule:.2f}) != enregistré ({resultat_enregistre:.2f})")
-            print(f"  ❌ Cohérence résultat  : ERREUR (diff {diff_resultat:.2f} €)")
-    else:
-        warnings.append("⚠️  Résultat 2024 non enregistré en base")
-        print(f"  ⚠️  Résultat non enregistré en base")
+    print(f"  ℹ️  Note : Le résultat est calculé dynamiquement (non stocké en base)")
 
     # ====================================================================
     # RAPPORT FINAL
