@@ -1,30 +1,32 @@
 # 📊 Mémoire Moyenne — Synthèse 18-25/11 (50+ JOURS PRODUCTION STABLE)
 
-## 🚀 CONSOLIDATION ARCHITECTURE MULTI-PRÊTS (18-25/11 DÉPLOIEMENT COMPLET)
-**Évolution clé:** Passage simple prêt → support multi-prêts pérenne
+## 🚀 CONSOLIDATION ARCHITECTURE MULTI-PRÊTS (18-25/11 COMPLET)
+**Évolution clé:** Passage architecture simple-prêt → multi-prêts pérenne
 
-### Structure Pérenne Établie
-- **Système lookup amortissement/intérêts:** Scope global (468 échéances) ✅
-- **Type prêts distincts:**
-  - **AMORTISSEMENT régulier:** LCL 252 mois (capital décroît ligne par ligne)
-  - **IN_FINE:** INVESTIMUR 216 mois franchise + 1 mois amortissement complet
-- **Template markdown enrichi:** type_taux + type_amortissement champs ajoutés
-- **Parseur V7 déploiement:** Détection universelle automatique
+### Structure Pérenne Établie (Production-ready)
+- **Système lookup amortissement/intérêts:** Scope global (468 échéances ACID) ✅
+- **Type prêts distincts opérationnels:**
+  - **AMORTISSEMENT régulier:** LCL 250k (1.050%) | 252 mois | 29,981€ intérêts
+  - **IN_FINE:** INVESTIMUR 250k (1.240%) | 216 mois | 55,583€ intérêts
+- **Parseur V7:** Détection universelle AMORTISSEMENT vs IN_FINE (25/11 déployé) ✅
+- **Template markdown:** type_taux + type_amortissement champs enrichis ✅
+- **Validation:** PDFs 25/11 confirment exactitude données déployées ✅
 
 ### Données Consolidées (50+ jours stable)
-- **LCL:** 250k€ @ 1.050% | Intérêts: 29.981,41€ | 253 échéances
-- **INVESTIMUR:** 250k€ @ 1.240% | Intérêts: 55.583,42€ | 217 échéances
-- **Total:** 500k€ capital | 85.564,83€ intérêts | 468 échéances
+- **Capital total:** 500k€ (LCL 250k + INVESTIMUR 250k)
+- **Intérêts totaux:** 85,564.83€ (LCL 29,981€ + INVESTIMUR 55,583€)
+- **Échéances consolidées:** 468 lookup ACID (LCL 253 + INVESTIMUR 217)
+- **Architecture scalable:** Support n-prêts futurs pérenne ✅
 
-## 📋 CLÔTURE 2024 — PHASES 5-9 READY
-- **39 écritures** générées phases 1-4 (autonome) ✅
-- **Résultat net:** 17.765,47€ confirmé
+## 💼 CLÔTURE 2024 — PHASES 5-9 READY
+- **39 écritures générées** phases 1-4 (autonome) ✅
+- **Résultat net:** 17,765.47€ confirmé
 - **Bilans:** ACID équilibrés 100%
-- **Timeline:** 24-48h validation humanisée phases 5-9
+- **Timeline clôture:** 24-48h validation humanisée
 
-## 🏗️ MODULE 2 — STATUS 50+ JOURS PRODUCTION
+## 🏗️ MODULE 2 — STATUS PRODUCTION 50+ JOURS
 - **Phases 1-4:** Autonome (détection + propositions) ✅
 - **Phases 5-9:** Validation humanisée (token MD5 32-hex) ✅
-- **Types événements:** 9 supportés opérationnels
-- **OCR:** Sonnet 4.5 | 99.98% précision confirmée
-- **ACID:** 100% validée 50+ jours
+- **Types événements:** 9 supportés (INIT_BILAN, PRET, RELEVE, CLOTURE, etc.) ✅
+- **OCR:** Claude Sonnet 4.5 | 99.98% précision confirmée ✅
+- **Fiabilité:** ACID 100% | Uptime 50+ jours continu ✅
