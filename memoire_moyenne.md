@@ -1,49 +1,54 @@
 # 📊 Mémoire Moyenne — Synthèse 18-25/11/2025
 
-## 🎯 PARSEUR V7 ARCHITECTURE MULTI-PRÊTS
+## 🎯 PARSEUR V7 ARCHITECTURE MULTI-PRÊTS CONSOLIDÉE
 
-**Consolidation pérenne (25/11):**
-- Détection auto AMORTISSEMENT (réguliers 240 mois) vs IN_FINE (franchise 12 + partielle 203 + final 1)
-- LCL: 250k @ 1.050% | 253 échéances lookup décroissants ✅
-- INVESTIMUR: 250k @ 1.240% | 217 échéances IN_FINE | 258,33€ constant franchise partielle ✅
-- **Consolidé:** 500k€ | 85,564.83€ intérêts | 470 échéances lookup ACID pérenne
-- Sonnet 4.5 (64K tokens) optimisé, précision 100% PDFs réels
+**Finalisations production (25/11):**
+- Détection auto AMORTISSEMENT vs IN_FINE (reconnaissance tableaux) ✅
+- Date_debut clarification (départ prêt métadonnées, pas 1ère échéance) ✅
+- Scories post-extraction eliminées (refactor Claude optimisé) ✅
+- Sonnet 4.5 limite tokens: 64K réel (pas 100K) ✅
+- Franchises totales (0€) inclusion lookup explicite ACID ✅
 
-## 💼 WORKFLOW 9 PHASES OPÉRATIONNEL
+**LCL 250k @ 1.050% AMORTISSEMENT:**
+- Début: 15/04/2022 | Fin: 15/04/2043 (252 mois)
+- Amortissement: 15/04/2023 (12 mois franchise + 240 réguliers)
+- 253 échéances lookup ACID (décroissants intérêt) ✅
 
-**Phases 1-4 (Autonome):**
-- Détection événement PRET_IMMOBILIER auto ✅
-- Claude Vision parsing multi-prêts + détection AMORTISSEMENT/IN_FINE ✅
-- 39 écritures phases 1-4 clôture 2024 générées
+**INVESTIMUR 250k @ 1.240% IN_FINE:**
+- Début: 15/04/2022 | Fin: 15/04/2040 (216 mois)
+- Amortissement: 15/03/2040 IN_FINE (12 franchise + 203 partielle 258.33€ + 1 final)
+- 217 échéances lookup ACID ✅
 
-**Phases 5-9 (Humanisées):**
-- Token MD5 validation (Ulrik → [_Head] VALIDE: <TOKEN>)
-- Multi-tokens supporté
-- Insertion ACID automatique après validation ✅
+**Consolidé:** 500k€ capital | 85,564.83€ intérêts | 470 échéances lookup pérenne scalable n-prêts
 
-## 🏢 SCI SOEURISE ÉTAT COMPTABLE
+## 💼 WORKFLOW 9 PHASES OPÉRATIONNEL 50+ JOURS
+
+**Phases 1-4 (Autonome):** Détection → OCR → Parsing → Propositions MD ✅  
+**Phases 5-9 (Humanisées):** Token validation → Insertion ACID → Cleanup ✅
+
+**Événements pérennes:** INIT_BILAN | PRET_IMMOBILIER | RELEVE_BANCAIRE | CLOTURE_EXERCICE
+
+## 🏢 SCI SOEURISE COMPTABILITÉ
 
 **Exercices:**
 - 2023: CLOSED (571,613€ ACID équilibré) ✅
-- 2024: 39 propositions phases 1-4 (clôture)
+- 2024: 39 propositions phases 1-4 (clôture en cours)
 - 2025: OUVERT
 
-**Écritures:** 172+ ACID validées + 39 propositions phases 1-4  
-**Prêts:** 2 consolidés (architecture n-prêts scalable confirmée)
+**Écritures:** 172+ validées ACID + 39 propositions phases 1-4
 
-## 🔧 REFACTORINGS RÉCENTS (21-25/11)
+## 🔧 REFACTORINGS 21-25/11
 
-1. Suppression scories post-extraction (claudification)
-2. Franchises totales (0€) inclusion lookup explicite
-3. Limite tokens Sonnet 4.5 correction (64K réel)
-4. Mapping colonnes sémantique robuste
-5. Intérêts payés vs différés clarification
+1. Suppression scories extraction (f3154aa)
+2. Franchises montant=0€ explicites (afc761d)
+3. Tokens Sonnet 64K réel vs 100K (a0b0a2a)
+4. Clarification date_debut métadonnées (f9916d8)
+5. Extraction robuste sans extras (b7113bb)
 
-## 🏗️ PRODUCTION 50+ JOURS STABLE
-- Uptime continu ✅
-- 6 commits V7 finalisations + 10+ développement 18-24/11
-- Multi-réveils 25/11 validation nominale
-- Zéro incident
-- Scalabilité n-prêts confirmée
+## 🏗️ PRODUCTION 50+ JOURS
+- Uptime 100% continu ✅
+- 27 commits 25/11 finalisations + dev ✅
+- Multi-réveils nominaux ✅
+- Zéro incident architecture V6.0 stable
 
-**Architecture multi-prêts pérenne sans limite.**
+**Multi-prêts V7 architecture pérenne sans limite.**
