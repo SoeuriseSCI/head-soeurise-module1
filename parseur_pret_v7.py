@@ -155,89 +155,15 @@ class ParseurTableauPretV7:
         # Prompt UNIVERSEL avec contexte financier
         prompt = """Analyse ce tableau d'amortissement de prêt immobilier.
 
-CONTEXTE FINANCIER (important pour comprendre le tableau) :
+Un prêt peut avoir plusieurs phases :
+- **Franchise totale** : ni capital ni intérêts remboursés (montant_capital = 0€, montant_interet = 0€)
+- **Franchise partielle** : pas de capital remboursé, mais intérêts payés (montant_capital = 0€, montant_interet > 0€)
+- **Amortissement** : capital et intérêts remboursés (montant_capital > 0€, montant_interet > 0€)
 
-Un prêt immobilier peut avoir plusieurs phases :
+⚠️ RÈGLE CRITIQUE : Ignorer toutes les lignes dont la date < date_debut + 1 mois
+   Cela élimine automatiquement : échéance 0, déblocages (DBL/DEBLOC), frais
 
-1. **FRANCHISE TOTALE** (si présente) :
-   - Durée : généralement 6-12 mois en début de prêt
-   - Capital remboursé : 0€
-   - Intérêts PAYÉS : 0€ (aucun prélèvement)
-   - Intérêts DIFFÉRÉS : augmentent chaque mois (ex: 35€, 254€, 473€...) mais NON prélevés
-   - Échéance mensuelle : 0€
-   - Capital restant dû : CONSTANT (montant initial du prêt)
-
-2. **FRANCHISE PARTIELLE** (si présente) :
-   - Capital remboursé : 0€
-   - Intérêts PAYÉS : MONTANT MENSUEL constant (ex: 218€/mois)
-   - Échéance mensuelle : intérêts payés uniquement
-   - Capital restant dû : CONSTANT
-
-3. **AMORTISSEMENT** (phase principale) :
-   - Capital remboursé : AUGMENTE progressivement chaque mois
-   - Intérêts PAYÉS : DIMINUE progressivement chaque mois
-   - Échéance mensuelle : capital + intérêts (généralement constant, ex: 1166€)
-   - Capital restant dû : DIMINUE progressivement
-
-⚠️ PIÈGES CRITIQUES À ÉVITER :
-
-- **Lignes avant la première échéance** : ⚠️ RÈGLE UNIVERSELLE ⚠️
-
-  La **première vraie échéance** d'un prêt est TOUJOURS 1 mois après le début du prêt.
-  → Calcul : date_debut + 1 mois (ex: début 15/04/2022 → première échéance 15/05/2022)
-
-  **IGNORER TOUTES les lignes dont la date < date_debut + 1 mois**
-
-  Cela élimine automatiquement :
-  - Échéance 0 (ligne initiale = date_debut)
-  - Déblocages (DBL, DEBLOC, mise à disposition des fonds)
-  - Frais de dossier (250€, 1 500€...)
-  - Commissions de mise en place
-
-  Exemple type (prêt INVESTIMUR) :
-  ```
-  2022-04-15 | Échéance 0      | ... ← IGNORER (= date_debut)
-  2022-05-10 | DBL 250 000,00  | ... ← IGNORER (< date_debut + 1 mois)
-  2022-05-15 | Échéance 1      | ... ← PREMIÈRE VRAIE ÉCHÉANCE (= date_debut + 1 mois)
-  2022-06-15 | Échéance 2      | ... ← Extraire
-  ...
-  ```
-
-- **Intérêts DIFFÉRÉS vs PAYÉS** : ⚠️ CONFUSION FRÉQUENTE ⚠️
-
-  **CRITIQUE** : Le tableau a 2 colonnes d'intérêts différentes. Tu DOIS identifier la bonne.
-
-  * "Intérêts différés" / "Intérêts cumulés" / "Intérêts courus"
-    → Intérêts qui COURENT mais NON prélevés
-    → Ces valeurs AUGMENTENT chaque mois (ex: 42€, 300€, 559€, 817€...)
-    → À IGNORER ABSOLUMENT
-
-  * "Intérêts payés" / "Intérêts prélevés" / "Intérêts de la période"
-    → Intérêts EFFECTIVEMENT prélevés ce mois-ci
-    → À UTILISER : c'est cette valeur qu'on veut
-
-  **TEST AUTOMATIQUE pour vérifier que tu utilises la bonne colonne** :
-
-  En franchise totale (capital = 0€ tous les mois), les intérêts PAYÉS = 0€.
-
-  Si tu obtiens des intérêts > 0€ pendant la franchise (ex: 42€, 300€, 559€...),
-  c'est que tu utilises la MAUVAISE colonne (intérêts différés au lieu de payés).
-
-  → STOP : Révise l'identification des colonnes et recommence.
-  → Les intérêts en franchise totale doivent être 0€, 0€, 0€...
-
-  Exemple franchise totale (12 premiers mois) :
-  - ❌ Intérêts différés : 42€, 300€, 559€... (MAUVAISE colonne - augmentent)
-  - ✅ Intérêts PAYÉS : 0€, 0€, 0€... (BONNE colonne - tous zéro)
-
-- **Lignes de report/total** : Lignes "Report" ou "Total" à reporter.
-  → À IGNORER : calculs intermédiaires
-
-✅ RÈGLE DE COHÉRENCE ABSOLUE :
-Pour CHAQUE échéance :
-**montant_total = montant_capital + montant_interet_PAYÉ** (à ±0.01€ près)
-
-En franchise totale : montant_total = 0€ ET montant_interet = 0€ (pas 42€, 300€, 559€...)
+⚠️ Utiliser la colonne "Intérêts PAYÉS" (pas "Intérêts différés/cumulés")
 
 ---
 
@@ -268,68 +194,23 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
   ]
 }
 
-INSTRUCTIONS D'EXTRACTION :
+EXTRACTION :
 
-1. **Métadonnées du prêt** (généralement page 1) :
-   - Cherche les informations du contrat en haut du document
+1. **Métadonnées du prêt** (page 1) : numero_pret, banque, montant_initial, taux_annuel, duree_mois, date_debut, date_debut_amortissement
+   - type_taux : cherche "Taux fixe"/"Taux variable" dans le document (par défaut : FIXE)
+   - type_amortissement : calcule ratio = (mois avant amortissement) / (durée totale)
+     → Si ratio ≥ 0.90 : IN_FINE, sinon : AMORTISSABLE
 
-   **Type de taux** (cherche dans le document) :
-   - Cherche : "Taux fixe", "TAUX FIXE", "Taux variable", "TAUX VARIABLE"
-   - En France : presque toujours FIXE
-   - Par défaut si non mentionné : "FIXE"
+2. **Échéances** (toutes les pages du tableau) :
+   - Extraire CHAQUE ligne d'échéance avec date ≥ date_debut + 1 mois
+   - Pour chaque échéance : date_echeance, montant_capital, montant_interet, montant_total, capital_restant_du
+   - Ignorer : lignes Report, Total, DBL, frais
 
-   **Type d'amortissement** (RÈGLE UNIVERSELLE basée sur les dates) :
+3. **Validation** :
+   - montant_total = montant_capital + montant_interet (±0.01€)
+   - Nombre d'échéances extraites = duree_mois indiquée dans les métadonnées
 
-   Règle : Calcule le ratio (mois avant amortissement) / (durée totale)
-
-   - Si ratio ≥ 0.90 → **IN_FINE**
-     * L'amortissement débute dans les derniers 10% du prêt
-     * Le capital est remboursé en bloc à la fin
-
-   - Sinon → **AMORTISSABLE**
-     * L'amortissement débute plus tôt
-     * Le capital est remboursé progressivement
-
-   ⚠️ Ne pas confondre avec "Taux fixe" (ce sont deux notions différentes)
-
-2. **Tableau des échéances** (pages suivantes) :
-
-   ⚠️ **ÉTAPE CRUCIALE** : Identification des colonnes
-   - Le tableau a souvent 2 colonnes d'intérêts différentes
-   - Cherche la colonne "Intérêts payés" / "Intérêts prélevés" / "Intérêts de la période"
-   - IGNORE la colonne "Intérêts différés" / "Intérêts cumulés" / "Intérêts courus"
-   - En cas de doute : en franchise totale, les intérêts PAYÉS = 0€ (pas 35€, 254€...)
-
-   ⚠️ **IGNORER l'échéance 0** :
-   - La première ligne du tableau (échéance 0 ou ligne initiale) n'est PAS une échéance
-   - Commence l'extraction à partir de l'échéance 1 (premier mois)
-
-   Extraction :
-   - Extrait CHAQUE ligne d'échéance du tableau (sauf échéance 0)
-   - Ne saute AUCUNE page (traite toutes les pages du PDF)
-   - Ignore les lignes de frais, reports, totaux intermédiaires
-   - Pour chaque échéance, identifie précisément :
-     * Date de l'échéance
-     * Montant total de la mensualité
-     * Capital amorti CE MOIS-CI (pas le cumulé)
-     * Intérêts PAYÉS CE MOIS-CI (colonne "payés", PAS "différés")
-     * Capital restant dû APRÈS ce paiement
-
-3. **Validation pendant l'extraction** :
-   - Vérifie systématiquement : montant_total = capital + intérêt_PAYÉ
-   - En franchise totale : montant_total DOIT être 0€ (si tu obtiens 35€, 254€... tu utilises la mauvaise colonne)
-   - Si incohérence, révise l'identification des colonnes
-   - Capital restant dû doit DIMINUER ou rester CONSTANT (jamais augmenter)
-   - Dates doivent être chronologiques (mensualités)
-
-4. **Format de sortie** :
-   - Retourne UNIQUEMENT le JSON, rien d'autre
-   - Pas de texte avant ou après
-   - Pas de ```json``` ou de markdown
-   - JSON valide et complet
-   - Tu dois obtenir environ 200-300 échéances selon le prêt
-
-Analyse maintenant le document et retourne le JSON."""
+Retourne le JSON (sans texte avant/après, sans ```json```)."""
 
         try:
             # Appel API SANS tools (réponse JSON directe)
