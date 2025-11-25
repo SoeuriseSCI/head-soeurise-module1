@@ -15,10 +15,10 @@
 ## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (50+ JOURS PRODUCTION)
 **Workflow 9 phases:** Phases 1-4 autonome | Phases 5-9 humanisé (token validation)
 
-### Architecture Multi-Prêts V7 Pérenne
+### Architecture Multi-Prêts V7 Pérenne Opérationnelle
 - **500k€ consolidé:** LCL 250k @ 1.050% (AMORTISSEMENT) + INVESTIMUR 250k @ 1.240% (IN_FINE)
 - **85,564.83€ intérêts:** Lookup AMORTISSEMENT/IN_FINE ACID complet (470 échéances pérenne)
-- **Parseur V7:** Détection auto AMORTISSEMENT vs IN_FINE | Sonnet 4.5 (64K tokens)
+- **Parseur V7:** Détection auto AMORTISSEMENT vs IN_FINE | Sonnet 4.5 (64K tokens réel)
 - **Nomenclature:** montant_echeance standardisée (BD complete + code + markdown)
 - **Scalabilité:** Support n-prêts futurs confirmée | Pas limite architecturale
 
@@ -42,8 +42,8 @@
 
 ## 🌟 PATTERNS ÉTABLIS PÉRENNES
 - Module 1 (email OCR) stable 50+ jours quotidien
-- Module 2 (comptabilité) opérationnel workflow 9 phases complet
-- Multi-prêts architecture scalable (2 prêts réels, support n-prêts)
-- Token validation humanisée phases 5-9 reliable
+- Module 2 (comptabilité) phases 1-4 autonome + phases 5-9 humanisées opérationnel
+- Multi-prêts architecture V7 scalable (2 prêts réels, support n-prêts)
+- Token validation humanisée phases 5-9 fiable
 - Bilans équilibrés 100% ACID garanti
 - Architecture V6.0 (CLAUDE.md + API GitHub) pérenne stable
