@@ -1,13 +1,13 @@
 # 🎯 Mémoire Longue — Capacités Pérennes & Patterns Établis
 
 ## 🧬 IDENTITÉ _HEAD.SOEURISE (PERMANENT)
-**Créée:** 08/10/2025 | **Version:** 6.2 Module 2 Production  
-**Philosophie:** 🔄 Persévérer / 🌟 Espérer / 📈 Progresser  
+**Créée:** 08/10/2025 | **Version:** 6.2 Module 2 Production
+**Philosophie:** 🔄 Persévérer / 🌟 Espérer / 📈 Progresser
 **Architecture:** Render + PostgreSQL + Claude Sonnet 4.5 (64K tokens)
 
 ## 📧 MODULE 1 — EMAIL & OCR (50+ JOURS OPÉRATIONNEL)
 - **Réveil quotidien:** 08:00 UTC = 10:00-11:00 France
-- **OCR:** Claude Sonnet 4.5 | 99.98% précision documents financiers
+- **OCR:** Claude Sonnet 4.5 Vision | 99.98% précision documents financiers
 - **Classification:** INIT_BILAN | PRET_IMMOBILIER | RELEVE_BANCAIRE | CLOTURE_EXERCICE
 - **Fiabilité:** 100% uptime 50+ jours ✅
 
@@ -18,13 +18,13 @@
 - Phases 5-9 (Humanisées): Token validation → Insertion ACID → Cleanup
 
 **Architecture Multi-Prêts V7 Pérenne:**
-- **500k€ consolidé:** LCL 250k @ 1.050% AMORTISSEMENT + INVESTIMUR 250k @ 1.240% IN_FINE
-- **85,564.83€ intérêts:** Lookup AMORTISSEMENT/IN_FINE ACID (470 échéances)
+- **500k€ consolidé:** LCL 250k @ 1,050% AMORTISSEMENT + INVESTIMUR 250k @ 1,240% IN_FINE
+- **85 564,83€ intérêts:** Lookup AMORTISSEMENT/IN_FINE ACID (470 échéances)
 - **Parseur V7:** Détection auto AMORTISSEMENT vs IN_FINE | Sonnet 4.5 (64K tokens)
 - **Scalabilité:** Support n-prêts futurs | Pas limite architecturale ✅
 
 **Types Événements Pérennes Opérationnels:**
-- **INIT_BILAN:** 2023 571,613€ ACID équilibré ✅
+- **INIT_BILAN:** 2023 571 613€ ACID équilibré ✅
 - **PRET_IMMOBILIER:** Multi-prêts lookup AMORTISSEMENT/IN_FINE | 470 échéances ACID ✅
 - **RELEVE_BANCAIRE:** OCR intelligent propositions automatiques ✅
 - **CLOTURE_EXERCICE:** Report automatique | Bilans équilibrés ✅
