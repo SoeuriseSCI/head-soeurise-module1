@@ -118,14 +118,14 @@ class RapprocheurCutoff:
             query_exercice = text("""
                 SELECT id
                 FROM exercices_comptables
-                WHERE date_cloture < (
-                    SELECT date_ouverture
+                WHERE date_fin < (
+                    SELECT date_debut
                     FROM exercices_comptables
                     WHERE statut = 'OUVERT'
-                    ORDER BY date_ouverture DESC
+                    ORDER BY date_debut DESC
                     LIMIT 1
                 )
-                ORDER BY date_cloture DESC
+                ORDER BY date_fin DESC
                 LIMIT 1
             """)
             result = self.session.execute(query_exercice).fetchone()
@@ -225,14 +225,14 @@ class RapprocheurCutoff:
             query_exercice = text("""
                 SELECT id
                 FROM exercices_comptables
-                WHERE date_cloture < (
-                    SELECT date_ouverture
+                WHERE date_fin < (
+                    SELECT date_debut
                     FROM exercices_comptables
                     WHERE statut = 'OUVERT'
-                    ORDER BY date_ouverture DESC
+                    ORDER BY date_debut DESC
                     LIMIT 1
                 )
-                ORDER BY date_cloture DESC
+                ORDER BY date_fin DESC
                 LIMIT 1
             """)
             result = self.session.execute(query_exercice).fetchone()
