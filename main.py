@@ -547,8 +547,13 @@ def save_to_db(resultat, emails):
 # CLAUDE DECISION ENGINE - V3.7.1 FUSION
 # ═══════════════════════════════════════════════════════════════════
 
-def claude_decide_et_execute(emails, memoire_files, db_data, recent_commits=""):
+def claude_decide_et_execute(emails, memoire_files, db_data, recent_commits="", rapport_module2=None):
     """
+    V3.9 ARCHITECTURE 2 TEMPS:
+    - Module 2 s'exécute D'ABORD (si événements comptables)
+    - Claude reçoit le rapport Module 2 et synthétise TOUT
+    - Mémoires incluent les actions comptables de Module 2
+
     V3.8 AMÉLIORATION MÉMOIRES:
     - Logique V3.6.2: archivage intelligent + détection inputs externes
     - Logique V3.7: discrimination emails authorized/non-authorized + logs min
@@ -607,6 +612,18 @@ NON-AUTORISÉS (action_allowed=false):
 === DONNÉES POSTGRESQL ===
 Observations : {len(db_data['observations'])}
 Patterns : {len(db_data['patterns'])}
+
+=== 📊 MODULE 2 - COMPTABILITÉ (EXÉCUTÉ AVANT MOI) ===
+
+{rapport_module2.get('rapport', '') if rapport_module2 and rapport_module2.get('rapport') else "Aucune activité comptable détectée"}
+
+Stats Module 2: {json.dumps(rapport_module2.get('stats', {}), indent=2, ensure_ascii=False) if rapport_module2 else "N/A"}
+
+⚠️ IMPORTANT: Si Module 2 a traité de la comptabilité:
+- Intègre ses résultats dans ton rapport_quotidien
+- Mets à jour memoire_courte avec les actions comptables détaillées
+- Exemple: "Module 2 a extrait 252 échéances du prêt LCL (1,050%)"
+- NE PAS recalculer ou réinterpréter, LIRE les nombres exacts du rapport
 
 === 🎯 MISSION DU RÉVEIL (PAR ORDRE DE PRIORITÉ) ===
 
@@ -840,41 +857,65 @@ def reveil_quotidien():
         log_critical("GIT_LOG_EXCEPTION", str(e)[:100])
 
     db_data = query_db_context()
-    resultat = claude_decide_et_execute(emails, memoire_files, db_data, recent_commits)
-    
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # TEMPS 1: MODULE 2 V2 - Traitement comptable (AVANT Claude)
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    rapport_module2 = {
+        'rapport': '',
+        'stats': {}
+    }
+
+    if MODULE2_V2_AVAILABLE:
+        try:
+            log_critical("MODULE2_V2_START", "⏱️  TEMPS 1: Traitement comptable Module 2 (AVANT Claude)")
+
+            rapport_module2 = integrer_module2_v2(
+                emails,
+                DB_URL,
+                ANTHROPIC_API_KEY,
+                SOEURISE_EMAIL,
+                SOEURISE_PASSWORD,
+                NOTIF_EMAIL
+            )
+
+            if rapport_module2.get('success'):
+                stats = rapport_module2.get('stats', {})
+                log_critical(
+                    "MODULE2_V2_SUCCESS",
+                    f"✅ Module 2 terminé - Propositions: {stats.get('propositions_generees', 0)}, "
+                    f"Validations: {stats.get('validations_traitees', 0)}, "
+                    f"Écritures: {stats.get('ecritures_inserees', 0)}"
+                )
+            else:
+                log_critical("MODULE2_V2_ERROR", "❌ Erreur traitement comptable")
+
+        except Exception as e:
+            log_critical("MODULE2_V2_EXCEPTION", f"Exception: {str(e)[:100]}")
+            rapport_module2['rapport'] = f"\n## ❌ MODULE 2 - ERREUR\n\n{str(e)}\n"
+    else:
+        log_critical("MODULE2_SKIP", "Module 2 non disponible, passage direct à Claude")
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # TEMPS 2: CLAUDE - Synthèse globale (reçoit rapport Module 2)
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    log_critical("CLAUDE_START", "⏱️  TEMPS 2: Claude synthétise (emails + Module 2 + mémoires)")
+
+    resultat = claude_decide_et_execute(
+        emails,
+        memoire_files,
+        db_data,
+        recent_commits,
+        rapport_module2  # ★ Claude reçoit le rapport Module 2 ★
+    )
+
     if not resultat:
         log_critical("REVEIL_CLAUDE_ERROR", "claude_decide_et_execute retourné None")
         return
-    
-    save_to_db(resultat, emails)
-    
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # DEBUG: Logger les propositions PRET_IMMOBILIER en base AVANT génération rapport
-    # ═══════════════════════════════════════════════════════════════════════════════
-    try:
-        from sqlalchemy import create_engine, text
-        engine = create_engine(DB_URL)
-        with engine.connect() as conn:
-            result_props = conn.execute(text('''
-                SELECT
-                    id,
-                    created_at,
-                    jsonb_array_length((propositions_json->'propositions'->0)->'echeances') as nb_ech_pret1,
-                    jsonb_array_length((propositions_json->'propositions'->1)->'echeances') as nb_ech_pret2,
-                    (propositions_json->'propositions'->0->'pret')->>'numero_pret' as num_pret1,
-                    (propositions_json->'propositions'->1->'pret')->>'numero_pret' as num_pret2
-                FROM propositions_en_attente
-                WHERE type_evenement = 'PRET_IMMOBILIER'
-                AND statut = 'EN_ATTENTE'
-                ORDER BY created_at DESC
-                LIMIT 3
-            '''))
 
-            log_critical("DEBUG_PROPOSITIONS_HEAD", "Propositions en base AVANT rapport _Head:")
-            for row in result_props:
-                log_critical("DEBUG_PROP_DETAIL", f"ID {row[0]} | {row[1]} | Prêt {row[4]}: {row[2]} éch | Prêt {row[5]}: {row[3]} éch")
-    except Exception as e:
-        log_critical("DEBUG_PROPOSITIONS_ERROR", f"Erreur lecture propositions: {str(e)[:100]}")
+    save_to_db(resultat, emails)
 
     # Utiliser directement git_write_file pour chaque mémoire
     files_updated = []
@@ -893,52 +934,12 @@ def reveil_quotidien():
                 log_critical("GIT_WRITE_SUCCESS", filename)
             else:
                 log_critical("GIT_WRITE_ERROR", msg)
-    
+
     # ═══════════════════════════════════════════════════════════════════════════════
-    # NOUVEAU: Module 2 V2 - Traitement comptable
+    # Rapport final = rapport_quotidien de Claude (qui intègre déjà Module 2)
     # ═══════════════════════════════════════════════════════════════════════════════
-    
-    rapport_module2 = {
-        'rapport': '',
-        'stats': {}
-    }
-    
-    if MODULE2_V2_AVAILABLE:
-        try:
-            log_critical("MODULE2_V2_START", "Démarrage traitement comptable Module 2 V2")
-            
-            rapport_module2 = integrer_module2_v2(
-                emails,
-                DB_URL,
-                ANTHROPIC_API_KEY,
-                SOEURISE_EMAIL,
-                SOEURISE_PASSWORD,
-                NOTIF_EMAIL
-            )
-            
-            if rapport_module2.get('success'):
-                stats = rapport_module2.get('stats', {})
-                log_critical(
-                    "MODULE2_V2_SUCCESS",
-                    f"Propositions: {stats.get('propositions_generees', 0)}, "
-                    f"Validations: {stats.get('validations_traitees', 0)}, "
-                    f"Écritures: {stats.get('ecritures_inserees', 0)}"
-                )
-            else:
-                log_critical("MODULE2_V2_ERROR", "Erreur traitement comptable")
-        
-        except Exception as e:
-            log_critical("MODULE2_V2_EXCEPTION", f"Exception: {str(e)[:100]}")
-            rapport_module2['rapport'] = f"\n## ❌ MODULE 2 - ERREUR\n\n{str(e)}\n"
-    
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # Inclure rapport Module 2 dans le rapport quotidien
-    # ═══════════════════════════════════════════════════════════════════════════════
-    
+
     rapport_final = resultat.get('rapport_quotidien', '')
-    
-    if rapport_module2.get('rapport'):
-        rapport_final += rapport_module2['rapport']
     
     # Extraire les PDFs traitées pour les attacher
     extracted_pdf_texts = []

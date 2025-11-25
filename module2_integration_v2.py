@@ -484,12 +484,27 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
                         self.erreurs.append(f"Impossible d'envoyer email pour {type_evt.value}")
 
                     resultats['propositions_generees'] += len(propositions_list)
+
+                    # Pour PRET_IMMOBILIER, extraire détails échéances par prêt
+                    details_prets = []
+                    if type_evt.value == 'PRET_IMMOBILIER':
+                        for prop in propositions_list:
+                            if prop.get('type') == 'PRET_IMMOBILIER':
+                                pret_data = prop.get('pret', {})
+                                nb_ech = prop.get('nb_echeances', 0)
+                                banque = pret_data.get('banque', 'Banque inconnue')
+                                details_prets.append({
+                                    'banque': banque,
+                                    'nb_echeances': nb_ech
+                                })
+
                     resultats['details'].append({
                         'type': result.get('type_specifique', type_evt.value),  # ✅ FIX: Utiliser type spécifique (CUTOFF_HONORAIRES) pas générique (CUTOFF)
                         'propositions': len(propositions_list),
                         'status': 'en_attente_validation',
                         'token': token_stocke,
-                        'proposition_id': prop_id
+                        'proposition_id': prop_id,
+                        'details_prets': details_prets if details_prets else None  # Ajouter détails par prêt
                     })
                 
                 else:
@@ -598,6 +613,32 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
             rapport += "### 📝 Propositions générées\n\n"
             for detail in resultats_entrants['details']:
                 rapport += f"- **{detail['type']}**: {detail['propositions']} proposition(s) → En attente de validation\n"
+
+                # Détails spécifiques selon le type d'événement
+                type_evt = detail['type']
+
+                # PRET_IMMOBILIER: Afficher détails par prêt
+                if type_evt == 'PRET_IMMOBILIER' and detail.get('details_prets'):
+                    for pret_detail in detail['details_prets']:
+                        banque = pret_detail.get('banque', 'Banque inconnue')
+                        nb_ech = pret_detail.get('nb_echeances', 0)
+                        rapport += f"  - **{banque}**: {nb_ech} échéances extraites\n"
+
+                # RELEVE_BANCAIRE: Afficher opérations et période
+                elif type_evt == 'RELEVE_BANCAIRE':
+                    if detail.get('operations_extraites'):
+                        rapport += f"  - {detail['operations_extraites']} opérations extraites\n"
+                    if detail.get('evenements_crees'):
+                        rapport += f"  - {detail['evenements_crees']} événements comptables créés\n"
+                    if detail.get('types_detectes'):
+                        rapport += f"  - {detail['types_detectes']} types d'événements détectés\n"
+                    if detail.get('periode_document'):
+                        rapport += f"  - Période: {detail['periode_document']}\n"
+
+                # CUTOFF, PRE_CLOTURE, etc: Afficher message si disponible
+                elif detail.get('message'):
+                    # Pour les autres types, afficher le message s'il existe
+                    rapport += f"  - {detail['message']}\n"
         
         # Détails des validations traitées
         if resultats_validations.get('details'):
