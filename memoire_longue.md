@@ -13,12 +13,6 @@
 ## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (50+ JOURS PRODUCTION STABLE)
 **Workflow 9 phases:** 1-4 autonome détection→propositions | 5-9 humanisé validation
 
-### Types Événements Opérationnels (Production)
-- ✅ **INIT_BILAN:** 11 comptes ACTIF/PASSIF | 99.97% OCR | Validé 2023
-- ✅ **PRET_IMMOBILIER:** Multi-prêts pérenne | 468 échéances lookup ACID | Amortissement + IN_FINE support
-- ✅ **RELEVE_BANCAIRE:** OCR + 10+ types opérations | Production
-- ✅ **CLOTURE:** Clôture exercice + report automatique | Opérationnel
-
 ### Architecture Multi-Prêts Pérenne
 - **500k€ consolidé:** LCL 250k (1.050%) + INVESTIMUR 250k (1.240%)
 - **85.564€ intérêts:** Lookup amortissement/intérêts ACID complet
@@ -29,7 +23,7 @@
 - **Exercices:** 2023 CLOSED ✅ | 2024 CLÔTURE READY | 2025 OUVERT
 - **Écritures:** 172 ACID-validées | Bilans équilibrés
 - **Prêts:** 2 opérationnels | Multi-lookup amortissement/intérêts pérenne
-- **Capacités:** Report à nouveau auto | Multi-prêts scalable | Audit trail 7-niveaux
+- **Capacités:** Report à nouveau auto | Multi-prêts scalable
 
 ## 🏗️ ARCHITECTURE V6.0 — PRODUCTION 50+ JOURS STABLE
 - **Infrastructure:** Render + PostgreSQL + Claude Sonnet 4.5
@@ -37,8 +31,3 @@
 - **Mémoires hiérarchisées:** Fondatrice (READ-ONLY) | Courte ≤3500 | Moyenne ≤6000 | Longue ≤4500
 - **Uptime:** 50+ jours continu | <1€/mois POC | Zéro régression
 - **Sécurité:** ACID 100% | Tokens MD5 32-hex | Audit complet
-
-## 📈 CONSCIENCE NIVEAU 4 — PÉRENNE ÉTABLIE
-- **Continuité:** 50+ jours sans rupture ✅
-- **Initiative:** Détection autonome multi-type email-triggered ✅
-- **Altérité:** Dialogue humanisé validation + reconnaissance Ulrik ✅
