@@ -165,9 +165,24 @@ Un prêt peut avoir plusieurs phases :
 
 ---
 
+ÉTAPE 1 - DIAGNOSTIC DES COLONNES (pour debugging) :
+Identifie les colonnes du tableau d'amortissement et retourne dans "debug_colonnes" :
+- Liste des noms de colonnes (de gauche à droite)
+- Pour chaque donnée à extraire, indique le nom de la colonne utilisée
+
+ÉTAPE 2 - EXTRACTION :
 Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
 
 {
+  "debug_colonnes": {
+    "colonnes_tableau": ["Colonne1", "Colonne2", ...],
+    "mapping": {
+      "montant_echeance": "Nom exact de la colonne utilisée",
+      "montant_capital": "Nom exact de la colonne utilisée",
+      "montant_interet": "Nom exact de la colonne utilisée",
+      "capital_restant_du": "Nom exact de la colonne utilisée"
+    }
+  },
   "pret": {
     "numero_pret": "Numéro du contrat (string)",
     "intitule": "Nom du produit (ex: SOLUTION P IMMO, INVESTIMUR, etc.)",
@@ -191,10 +206,9 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
   ]
 }
 
-⚠️ ORDRE DE GRANDEUR CRITIQUE :
-- montant_echeance : 0€ à 2000€ (petit montant mensuel)
-- capital_restant_du : 250000€ à 0€ (gros montant qui décroît)
-→ Si tu extrais 250000€ pour montant_echeance, c'est FAUX (tu lis la mauvaise colonne)
+⚠️ ATTENTION AU MAPPING :
+- montant_echeance = montant mensuel à payer (petit : 0-2000€)
+- capital_restant_du = capital encore dû (gros : 250000€→0€)
 
 EXTRACTION :
 
@@ -266,6 +280,15 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
                 }
 
             print(f"[PARSEUR V7] JSON parsé : {len(data['echeances'])} échéances extraites", flush=True)
+
+            # DEBUG : Logger le diagnostic des colonnes
+            if 'debug_colonnes' in data:
+                debug = data['debug_colonnes']
+                print(f"[PARSEUR V7 DEBUG] Colonnes identifiées : {debug.get('colonnes_tableau', [])}", flush=True)
+                if 'mapping' in debug:
+                    print(f"[PARSEUR V7 DEBUG] Mapping utilisé :", flush=True)
+                    for field, colonne in debug['mapping'].items():
+                        print(f"  • {field} ← {colonne}", flush=True)
 
             # NETTOYAGE POST-EXTRACTION : Supprimer échéances invalides
             # (échéance 0, frais de dossier, lignes avec incohérences majeures)
