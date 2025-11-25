@@ -604,7 +604,14 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
             rapport += "\n### ✅ Validations traitées\n\n"
             for detail in resultats_validations['details']:
                 if detail.get('status') == 'insere_en_db':
-                    rapport += f"- **{detail['type']}**: {detail['ecritures_inserees']} écriture(s) insérée(s)\n"
+                    # Message spécifique selon le type
+                    type_evt = detail['type']
+                    nb_items = detail['ecritures_inserees']
+
+                    if type_evt == 'PRET_IMMOBILIER':
+                        rapport += f"- **{type_evt}**: {nb_items} prêt(s) inséré(s)\n"
+                    else:
+                        rapport += f"- **{type_evt}**: {nb_items} écriture(s) insérée(s)\n"
                 elif detail.get('status') == 'erreur':
                     rapport += f"- ❌ {detail.get('message', 'Erreur')}\n"
         

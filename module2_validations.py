@@ -780,11 +780,19 @@ class OrchestratorValidations:
                 "type_evenement": type_evenement
             }
 
+        # Message spécifique selon le type
+        if type_evenement == 'PRET_IMMOBILIER':
+            item_label = "prêt(s)"
+            notes_msg = f"{len(ids)} prêt(s) inséré(s)"
+        else:
+            item_label = "écriture(s)"
+            notes_msg = f"{len(ids)} écriture(s) insérée(s)"
+
         # Marquer la proposition comme validée dans la table propositions_en_attente
         self.propositions_manager.valider_proposition(
             token=token_email,
             validee_par=email.get('from'),
-            notes=f"Validée via email le {datetime.now()}, {len(ids)} écritures insérées"
+            notes=f"Validée via email le {datetime.now()}, {notes_msg}"
         )
 
         # Nettoyer les événements temporaires liés à cette proposition
@@ -797,7 +805,7 @@ class OrchestratorValidations:
         return {
             "validation_detectee": True,
             "statut": "OK",
-            "message": f"OK: {len(ids)} ecritures inserees avec succes",
+            "message": f"OK: {len(ids)} {item_label} insérée(s) avec succès",
             "ecritures_creees": len(ids),
             "type_evenement": type_evenement
         }
@@ -840,7 +848,13 @@ class OrchestratorValidations:
 
             # Afficher le résultat
             if result['statut'] == 'OK':
-                print(f"   ✅ {result['ecritures_creees']} écriture(s) insérée(s)")
+                type_evt = result.get('type_evenement', '')
+                nb_items = result['ecritures_creees']
+
+                if type_evt == 'PRET_IMMOBILIER':
+                    print(f"   ✅ {nb_items} prêt(s) inséré(s)")
+                else:
+                    print(f"   ✅ {nb_items} écriture(s) insérée(s)")
             else:
                 print(f"   ❌ {result['message']}")
 
