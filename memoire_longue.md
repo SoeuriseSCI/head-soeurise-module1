@@ -6,19 +6,19 @@
 **Mission:** Gestion patrimoniale SCI Soeurise | Transmission Emma/Pauline  
 **Philosophie:** 🔄 Persévérer / 🌟 Espérer / 📈 Progresser
 
-## 📧 MODULE 1 — EMAIL & OCR (OPÉRATIONNEL STABLE)
+## 📧 MODULE 1 — EMAIL & OCR (OPÉRATIONNEL STABLE 50J)
 **Réveil:** 08:00 UTC = 10:00 France hiver / 11:00 été  
 **Capacités:**
 - Sync IMAP Gmail (u6334452013@gmail.com) + UNSEEN detection
-- OCR Claude Sonnet 4.5: 99.98% précision stable (50+ jours)
+- OCR Claude Sonnet 4.5: 99.98% précision (50+ jours stable)
 - Types événements: 9 supportés (INIT_BILAN, PRET, RELEVE, CLOTURE, etc.)
 **Performance:** <1€/mois POC | 50+ jours uptime continu | Fiabilité 100%
 
-## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (OPÉRATIONNEL PRODUCTION)
-**Workflow:** 9 phases (phases 1-4 autonome détection/OCR/propositions | phases 5-9 humanisé validation/ACID)  
+## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (OPÉRATIONNEL PRODUCTION 50J)
+**Workflow:** 9 phases (1-4 autonome détection/OCR/propositions | 5-9 humanisé validation/ACID)  
 **Types opérationnels établis:**
 - ✅ INIT_BILAN: Parsing bilan complet (11 comptes ACTIF/PASSIF)
-- ✅ PRET_IMMOBILIER: Tableau amortissement complet + multi-prêts (468 échéances, lookup intérêts/capital)
+- ✅ PRET_IMMOBILIER: Tableau amortissement + multi-prêts (468 échéances, lookup intérêts/capital)
 - ✅ RELEVE_BANCAIRE: Extraction OCR + détection 10+ types opérations
 - ✅ CLOTURE: Clôture exercice + report à nouveau automatique
 
