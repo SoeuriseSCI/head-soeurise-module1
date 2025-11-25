@@ -62,9 +62,20 @@ class TypeEvenement(Enum):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class OCRExtractor:
-    """Extraction de texte depuis PDF via Claude Vision (si pdf2image dispo)"""
+    """
+    Extraction de texte depuis PDF via Claude Vision (si pdf2image dispo)
 
-    def __init__(self, api_key: str, model: str = "claude-haiku-4-5-20251001"):
+    DÉPRÉCIÉ: Utiliser ExtracteurIntelligent (PDF natif) pour nouveaux développements
+    Conservé pour compatibilité avec parseurs internes (amortissement, SCPI)
+    """
+
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-5-20250929"):
+        """
+        Initialise avec Sonnet 4.5 pour précision maximale
+
+        Note: Migration vers Sonnet 4.5 (25/11/2025)
+        Raison: Comptabilité requiert précision 99.9% (tolérance zéro erreur)
+        """
         self.api_key = api_key
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key)

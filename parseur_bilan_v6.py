@@ -45,7 +45,14 @@ class ParseurBilan2023V6:
     5. Vérifie équilibre automatiquement
     """
 
-    def __init__(self, api_key: str, model: str = "claude-haiku-4-5-20251001"):
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-5-20250929"):
+        """
+        Initialise le parseur avec Sonnet 4.5 pour précision maximale
+
+        Modèle: Sonnet 4.5 (claude-sonnet-4-5-20250929)
+        Raison: Bilan comptable = document critique (tolérance zéro erreur)
+                Précision 99.9% requise pour extraction comptes/montants
+        """
         self.api_key = api_key
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key)

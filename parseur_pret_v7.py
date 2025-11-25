@@ -49,7 +49,14 @@ class ParseurTableauPretV7:
     Avantage vs V6 : Même précision que Claude chat (100%)
     """
 
-    def __init__(self, api_key: str, model: str = "claude-haiku-4-5-20251001"):
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-5-20250929"):
+        """
+        Initialise le parseur avec Sonnet 4.5 pour précision maximale
+
+        Modèle: Sonnet 4.5 (claude-sonnet-4-5-20250929)
+        Raison: Tableaux amortissement peuvent dépasser 240 échéances
+                Précision 99.9% requise pour comptabilité (tolérance zéro)
+        """
         self.api_key = api_key
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key)
