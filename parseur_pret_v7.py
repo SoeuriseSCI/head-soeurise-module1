@@ -288,9 +288,15 @@ INSTRUCTIONS D'EXTRACTION :
    - Par défaut si non mentionné : "FIXE"
 
    **Type d'amortissement** (cherche dans le document) :
-   - Cherche EXPLICITEMENT : "IN FINE", "IN-FINE", "Prêt in fine", "in fine"
+   - Cherche EXPLICITEMENT l'une de ces mentions :
+     * "IN FINE", "IN-FINE", "Prêt in fine", "in fine"
+     * "PERCEPTION D'INTÉRÊTS : A TERME ÉCHU" (= IN FINE)
+     * "Remboursement du capital : à l'échéance finale"
    - Si trouvé → type_amortissement = "IN_FINE"
-   - Sinon → type_amortissement = "AMORTISSABLE"
+   - Sinon, vérifie la colonne "Capital remboursé" du tableau :
+     * Si = 0€ pour toutes les échéances sauf la dernière → "IN_FINE"
+     * Si > 0€ dès le début de l'amortissement → "AMORTISSABLE"
+   - Par défaut → "AMORTISSABLE"
    - ⚠️ Ne pas confondre avec "Taux fixe" (ce sont deux notions différentes)
 
 2. **Tableau des échéances** (pages suivantes) :
