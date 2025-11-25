@@ -168,7 +168,7 @@ Un prêt peut avoir plusieurs phases :
 ÉTAPE 1 - DIAGNOSTIC DES COLONNES (pour debugging) :
 Identifie les colonnes du tableau d'amortissement et retourne dans "debug_colonnes" :
 - Liste des noms de colonnes (de gauche à droite)
-- Pour chaque donnée à extraire, indique le nom de la colonne utilisée
+- Pour chaque donnée à extraire, indique le nom de la colonne ET la valeur extraite pour la 1ère échéance
 
 ÉTAPE 2 - EXTRACTION :
 Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
@@ -177,10 +177,10 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
   "debug_colonnes": {
     "colonnes_tableau": ["Colonne1", "Colonne2", ...],
     "mapping": {
-      "montant_echeance": "Nom exact de la colonne utilisée",
-      "montant_capital": "Nom exact de la colonne utilisée",
-      "montant_interet": "Nom exact de la colonne utilisée",
-      "capital_restant_du": "Nom exact de la colonne utilisée"
+      "montant_echeance": {"colonne": "Nom exact", "premiere_valeur": 0.00},
+      "montant_capital": {"colonne": "Nom exact", "premiere_valeur": 0.00},
+      "montant_interet": {"colonne": "Nom exact", "premiere_valeur": 0.00},
+      "capital_restant_du": {"colonne": "Nom exact", "premiere_valeur": 250000.00}
     }
   },
   "pret": {
@@ -206,12 +206,31 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
   ]
 }
 
-⚠️ ATTENTION AU MAPPING :
-- montant_echeance = montant mensuel à payer (petit : 0-2000€)
-- montant_interet = intérêts PAYÉS ce mois (PAS les intérêts différés/cumulés)
-- capital_restant_du = capital encore dû (gros : 250000€→0€)
+⚠️ ATTENTION AU MAPPING - RÈGLES SÉMANTIQUES STRICTES :
 
-Si le tableau a plusieurs colonnes d'intérêts, utilise celle qui représente les intérêts PAYÉS ce mois, pas les intérêts différés ou accumulés.
+1. **montant_echeance** : C'est le MONTANT À PAYER ce mois
+   - Valeur typique : 0-2000€
+   - En franchise totale : 0€
+   - NE PAS confondre avec "TOTAL RESTANT DÛ" (250000€)
+
+2. **montant_interet** : Ce sont les INTÉRÊTS PAYÉS ce mois UNIQUEMENT
+   - En franchise totale : 0€ (car intérêts différés)
+   - NE PAS confondre avec :
+     • "TOTAL DES INTÉRÊTS DIFFÉRÉS" (intérêts cumulés non payés)
+     • "TOTAL DES INTÉRÊTS" (somme cumulative)
+   - Cherche une colonne comme "INTERETS PAYES", "INT. PAYÉS", "INTERETS", etc.
+
+3. **montant_capital** : Part de CAPITAL REMBOURSÉ ce mois
+   - Cherche colonne "AMORT", "AMORTISSEMENT", "CAPITAL REMBOURSE", etc.
+   - En franchise totale/partielle : 0€
+
+4. **capital_restant_du** : Capital ENCORE DÛ après cette échéance
+   - Valeur typique : 250000€ → 0€ (décroissant)
+   - Cherche "CAPITAL RESTANT DÛ", "CAPITAL RESTANT", etc.
+   - NE PAS confondre avec "TOTAL RESTANT DÛ" (capital + intérêts différés)
+
+⚠️ Si le tableau a plusieurs colonnes similaires (ex: plusieurs colonnes d'intérêts),
+utilise celle qui correspond à la DÉFINITION SÉMANTIQUE ci-dessus, pas juste au nom.
 
 EXTRACTION :
 
@@ -290,8 +309,14 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
                 print(f"[PARSEUR V7 DEBUG] Colonnes identifiées : {debug.get('colonnes_tableau', [])}", flush=True)
                 if 'mapping' in debug:
                     print(f"[PARSEUR V7 DEBUG] Mapping utilisé :", flush=True)
-                    for field, colonne in debug['mapping'].items():
-                        print(f"  • {field} ← {colonne}", flush=True)
+                    for field, info in debug['mapping'].items():
+                        if isinstance(info, dict):
+                            colonne = info.get('colonne', '?')
+                            valeur = info.get('premiere_valeur', '?')
+                            print(f"  • {field} ← {colonne} (1ère valeur: {valeur}€)", flush=True)
+                        else:
+                            # Ancien format (string seulement)
+                            print(f"  • {field} ← {info}", flush=True)
 
             # NETTOYAGE POST-EXTRACTION : Supprimer échéances invalides
             # (échéance 0, frais de dossier, lignes avec incohérences majeures)
