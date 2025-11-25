@@ -49,14 +49,7 @@ class ParseurTableauPretV7:
     Avantage vs V6 : Même précision que Claude chat (100%)
     """
 
-    def __init__(self, api_key: str, model: str = "claude-sonnet-4-5-20250929"):
-        """
-        Initialise le parseur avec Sonnet 4.5 pour précision maximale
-
-        Modèle: Sonnet 4.5 (claude-sonnet-4-5-20250929)
-        Raison: Tableaux amortissement peuvent dépasser 240 échéances
-                Précision 99.9% requise pour comptabilité (tolérance zéro)
-        """
+    def __init__(self, api_key: str, model: str = "claude-haiku-4-5-20251001"):
         self.api_key = api_key
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key)
@@ -122,10 +115,8 @@ class ParseurTableauPretV7:
                     "message": f"{len(validation_errors)} erreur(s) détectée(s)"
                 }
 
-            # 5. Sauvegarde fichier MD (DÉSACTIVÉ V7 - échéances dans propositions dict)
-            # filename = self._save_to_md_file(result['data'])
-            numero_pret = result['data']['pret'].get('numero_pret', 'INCONNU')
-            filename = f"V7_DIRECT_STORAGE_{numero_pret}"
+            # 5. Sauvegarde fichier MD
+            filename = self._save_to_md_file(result['data'])
             result['filename'] = filename
 
             # 6. Insertion BD (optionnel)
@@ -190,31 +181,25 @@ Un prêt immobilier peut avoir plusieurs phases :
 
 ⚠️ PIÈGES CRITIQUES À ÉVITER :
 
-- **Lignes à ignorer vs échéances réelles** : ⚠️ RÈGLE CRITIQUE ⚠️
+- **Lignes avant la première échéance** : ⚠️ RÈGLE UNIVERSELLE ⚠️
 
-  **À IGNORER** (ce ne sont PAS des échéances) :
-  - Lignes avec date = date_debut (échéance 0 / ligne initiale)
-  - Lignes "DBL", "DEBLOC", "Déblocage" (mise à disposition des fonds)
-  - Lignes "Frais", "Commission", "Dossier" (frais bancaires)
-  - Lignes avec libellés qui NE sont PAS des échéances mensuelles
+  La **première vraie échéance** d'un prêt est TOUJOURS 1 mois après le début du prêt.
+  → Calcul : date_debut + 1 mois (ex: début 15/04/2022 → première échéance 15/05/2022)
 
-  **À EXTRAIRE** (ce sont des échéances réelles) :
-  - TOUTES les échéances mensuelles à partir de date_debut + 1 mois
-  - Y COMPRIS les échéances de franchise totale (montant = 0€, capital = 0€, intérêts = 0€)
-  - Y COMPRIS les échéances de franchise partielle (capital = 0€, intérêts > 0€)
-  - Y COMPRIS les échéances d'amortissement (capital > 0€, intérêts > 0€)
+  **IGNORER TOUTES les lignes dont la date < date_debut + 1 mois**
 
-  **RÈGLE ABSOLUE** : Si c'est une échéance mensuelle régulière (numérotée 1, 2, 3... ou datée mensuellement),
-  tu DOIS l'extraire, peu importe que le montant soit 0€ ou non.
+  Cela élimine automatiquement :
+  - Échéance 0 (ligne initiale = date_debut)
+  - Déblocages (DBL, DEBLOC, mise à disposition des fonds)
+  - Frais de dossier (250€, 1 500€...)
+  - Commissions de mise en place
 
-  Exemple :
+  Exemple type (prêt INVESTIMUR) :
   ```
-  2022-04-15 | Échéance 0      | ... ← IGNORER (ligne initiale)
-  2022-05-10 | DBL 250 000,00  | ... ← IGNORER (déblocage)
-  2022-05-15 | Échéance 1      | 0€  | 0€ | 0€ | 250000€ ← EXTRAIRE (franchise totale)
-  2022-06-15 | Échéance 2      | 0€  | 0€ | 0€ | 250000€ ← EXTRAIRE (franchise totale)
-  2023-05-15 | Échéance 13     | 1166€ | 0€ | 1166€ | 250000€ ← EXTRAIRE (franchise partielle)
-  2023-07-15 | Échéance 15     | 1166€ | 401€ | 765€ | 249598€ ← EXTRAIRE (amortissement)
+  2022-04-15 | Échéance 0      | ... ← IGNORER (= date_debut)
+  2022-05-10 | DBL 250 000,00  | ... ← IGNORER (< date_debut + 1 mois)
+  2022-05-15 | Échéance 1      | ... ← PREMIÈRE VRAIE ÉCHÉANCE (= date_debut + 1 mois)
+  2022-06-15 | Échéance 2      | ... ← Extraire
   ...
   ```
 
@@ -233,21 +218,17 @@ Un prêt immobilier peut avoir plusieurs phases :
 
   **TEST AUTOMATIQUE pour vérifier que tu utilises la bonne colonne** :
 
-  En franchise TOTALE (capital = 0€ ET intérêts payés = 0€), les intérêts DIFFÉRÉS augmentent.
+  En franchise totale (capital = 0€ tous les mois), les intérêts PAYÉS = 0€.
 
-  Si pendant une période de franchise TOTALE, tu obtiens des intérêts > 0€ dans la colonne que tu extrais,
+  Si tu obtiens des intérêts > 0€ pendant la franchise (ex: 42€, 300€, 559€...),
   c'est que tu utilises la MAUVAISE colonne (intérêts différés au lieu de payés).
 
-  ATTENTION : La franchise PARTIELLE (capital = 0€ mais intérêts payés > 0€) existe aussi !
-  Dans ce cas, les intérêts PAYÉS > 0€ sont CORRECTS et doivent être extraits.
+  → STOP : Révise l'identification des colonnes et recommence.
+  → Les intérêts en franchise totale doivent être 0€, 0€, 0€...
 
   Exemple franchise totale (12 premiers mois) :
   - ❌ Intérêts différés : 42€, 300€, 559€... (MAUVAISE colonne - augmentent)
   - ✅ Intérêts PAYÉS : 0€, 0€, 0€... (BONNE colonne - tous zéro)
-
-  Exemple franchise partielle (mois 13-14) :
-  - Intérêts PAYÉS : 1166€, 1166€... (CORRECT - intérêts payés chaque mois)
-  - Capital : 0€, 0€... (aucun remboursement de capital)
 
 - **Lignes de report/total** : Lignes "Report" ou "Total" à reporter.
   → À IGNORER : calculs intermédiaires
@@ -256,8 +237,7 @@ Un prêt immobilier peut avoir plusieurs phases :
 Pour CHAQUE échéance :
 **montant_total = montant_capital + montant_interet_PAYÉ** (à ±0.01€ près)
 
-En franchise totale : montant_total = 0€ ET montant_interet = 0€ ET capital = 0€
-En franchise partielle : montant_total = intérêts > 0€ ET capital = 0€
+En franchise totale : montant_total = 0€ ET montant_interet = 0€ (pas 42€, 300€, 559€...)
 
 ---
 
@@ -270,11 +250,10 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
     "banque": "Nom de la banque (ex: LCL, Crédit Agricole, etc.)",
     "montant_initial": Montant emprunté en EUR (number),
     "taux_annuel": Taux d'intérêt annuel en % (number, ex: 1.05 pour 1.05%),
-    "type_taux": "FIXE" ou "VARIABLE" (cherche dans le document : "Taux fixe", "Taux variable"),
     "duree_mois": Nombre TOTAL d'échéances extraites (integer - compte TOUTES les lignes : franchise + amortissement),
     "date_debut": "Date de début du prêt au format YYYY-MM-DD",
     "date_debut_amortissement": "Date de début d'amortissement au format YYYY-MM-DD",
-    "type_amortissement": "AMORTISSABLE" ou "IN_FINE" (cherche dans le document : "IN FINE", "IN-FINE", "Prêt in fine")
+    "type_pret": "AMORTISSEMENT_CONSTANT" ou "IN_FINE"
   },
   "echeances": [
     {
@@ -292,25 +271,7 @@ INSTRUCTIONS D'EXTRACTION :
 
 1. **Métadonnées du prêt** (généralement page 1) :
    - Cherche les informations du contrat en haut du document
-
-   **Type de taux** (cherche dans le document) :
-   - Cherche : "Taux fixe", "TAUX FIXE", "Taux variable", "TAUX VARIABLE"
-   - En France : presque toujours FIXE
-   - Par défaut si non mentionné : "FIXE"
-
-   **Type d'amortissement** (RÈGLE UNIVERSELLE basée sur les dates) :
-
-   Règle : Calcule le ratio (mois avant amortissement) / (durée totale)
-
-   - Si ratio ≥ 0.90 → **IN_FINE**
-     * L'amortissement débute dans les derniers 10% du prêt
-     * Le capital est remboursé en bloc à la fin
-
-   - Sinon → **AMORTISSABLE**
-     * L'amortissement débute plus tôt
-     * Le capital est remboursé progressivement
-
-   ⚠️ Ne pas confondre avec "Taux fixe" (ce sont deux notions différentes)
+   - Identifie le type de prêt basé sur le profil des échéances
 
 2. **Tableau des échéances** (pages suivantes) :
 
@@ -320,16 +281,15 @@ INSTRUCTIONS D'EXTRACTION :
    - IGNORE la colonne "Intérêts différés" / "Intérêts cumulés" / "Intérêts courus"
    - En cas de doute : en franchise totale, les intérêts PAYÉS = 0€ (pas 35€, 254€...)
 
-   ⚠️ **IGNORER l'échéance 0 UNIQUEMENT** :
+   ⚠️ **IGNORER l'échéance 0** :
    - La première ligne du tableau (échéance 0 ou ligne initiale) n'est PAS une échéance
    - Commence l'extraction à partir de l'échéance 1 (premier mois)
 
    Extraction :
-   - Extrait CHAQUE ligne d'échéance du tableau (sauf échéance 0 et lignes de frais/déblocage)
-   - **TOUTES les échéances mensuelles** : franchise totale (0€) + franchise partielle + amortissement
+   - Extrait CHAQUE ligne d'échéance du tableau (sauf échéance 0)
    - Ne saute AUCUNE page (traite toutes les pages du PDF)
-   - Ignore SEULEMENT : lignes d'échéance 0, déblocages (DBL/DEBLOC), frais, reports, totaux
-   - Pour chaque échéance mensuelle réelle, identifie précisément :
+   - Ignore les lignes de frais, reports, totaux intermédiaires
+   - Pour chaque échéance, identifie précisément :
      * Date de l'échéance
      * Montant total de la mensualité
      * Capital amorti CE MOIS-CI (pas le cumulé)
@@ -337,13 +297,11 @@ INSTRUCTIONS D'EXTRACTION :
      * Capital restant dû APRÈS ce paiement
 
 3. **Validation pendant l'extraction** :
-   - Vérifie systématiquement : montant_total = capital + intérêt_PAYÉ (±0.01€)
-   - En franchise totale : montant_total = 0€, capital = 0€, intérêts = 0€
-   - En franchise partielle : montant_total = intérêts > 0€, capital = 0€
-   - En amortissement : montant_total = capital + intérêts, capital > 0€
+   - Vérifie systématiquement : montant_total = capital + intérêt_PAYÉ
+   - En franchise totale : montant_total DOIT être 0€ (si tu obtiens 35€, 254€... tu utilises la mauvaise colonne)
+   - Si incohérence, révise l'identification des colonnes
    - Capital restant dû doit DIMINUER ou rester CONSTANT (jamais augmenter)
-   - Dates doivent être chronologiques et mensuelles
-   - **COMPTE TOTAL des échéances extraites = duree_mois indiquée dans les métadonnées**
+   - Dates doivent être chronologiques (mensualités)
 
 4. **Format de sortie** :
    - Retourne UNIQUEMENT le JSON, rien d'autre
@@ -638,8 +596,7 @@ Analyse maintenant le document et retourne le JSON."""
             f"**Durée** : {pret['duree_mois']} mois",
             f"**Date début** : {pret['date_debut']}",
             f"**Date début amortissement** : {pret.get('date_debut_amortissement', 'N/A')}",
-            f"**Type taux** : {pret.get('type_taux', 'FIXE')}",
-            f"**Type amortissement** : {pret.get('type_amortissement', 'AMORTISSABLE')}",
+            f"**Type** : {pret['type_pret']}",
             "",
             f"**Extraction** : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"**Nombre d'échéances** : {len(echeances)}",
@@ -708,8 +665,7 @@ Analyse maintenant le document et retourne le JSON."""
                     pret.get('date_debut_amortissement', pret['date_debut']),
                     '%Y-%m-%d'
                 ).date(),
-                'type_taux': pret.get('type_taux', 'FIXE'),
-                'type_amortissement': pret.get('type_amortissement', 'AMORTISSABLE'),
+                'type_pret': pret['type_pret'],
                 'fichier_reference': filename
             }
 
