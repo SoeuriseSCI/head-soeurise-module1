@@ -304,16 +304,6 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
 
             print(f"[PARSEUR V7] JSON parsé : {len(data['echeances'])} échéances extraites", flush=True)
 
-            # LOG DÉTAILLÉ : Premières et dernières échéances pour debug
-            echeances = data['echeances']
-            if echeances:
-                print(f"[PARSEUR V7 DEBUG] Première échéance : {echeances[0].get('date_echeance')} - capital={echeances[0].get('montant_capital')}€, intérêts={echeances[0].get('montant_interet')}€, total={echeances[0].get('montant_echeance')}€", flush=True)
-                if len(echeances) > 1:
-                    print(f"[PARSEUR V7 DEBUG] 2ème échéance : {echeances[1].get('date_echeance')} - capital={echeances[1].get('montant_capital')}€, intérêts={echeances[1].get('montant_interet')}€, total={echeances[1].get('montant_echeance')}€", flush=True)
-                if len(echeances) > 2:
-                    print(f"[PARSEUR V7 DEBUG] 3ème échéance : {echeances[2].get('date_echeance')} - capital={echeances[2].get('montant_capital')}€, intérêts={echeances[2].get('montant_interet')}€, total={echeances[2].get('montant_echeance')}€", flush=True)
-                print(f"[PARSEUR V7 DEBUG] Dernière échéance : {echeances[-1].get('date_echeance')} - capital={echeances[-1].get('montant_capital')}€, intérêts={echeances[-1].get('montant_interet')}€, total={echeances[-1].get('montant_echeance')}€", flush=True)
-
             # Recalculer duree_mois automatiquement pour garantir la cohérence
             # (évite les erreurs si Claude compte mal les échéances)
             nb_echeances = len(data['echeances'])
