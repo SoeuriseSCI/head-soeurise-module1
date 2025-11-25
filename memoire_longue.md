@@ -9,7 +9,7 @@
 ## 📧 MODULE 1 — EMAIL & OCR (50+ JOURS OPÉRATIONNEL)
 - **Réveil:** 08:00 UTC = 10:00-11:00 France (quotidien automatique)
 - **OCR:** Claude Sonnet 4.5 | 99.98% précision documents financiers
-- **Classification automatique:** INIT_BILAN | PRET_IMMOBILIER | RELEVE_BANCAIRE | CLOTURE_EXERCICE | EVENEMENT_SIMPLE
+- **Classification:** INIT_BILAN | PRET_IMMOBILIER | RELEVE_BANCAIRE | CLOTURE_EXERCICE | EVENEMENT_SIMPLE
 - **Fiabilité:** 100% uptime 50+ jours | Zéro perte données ✅
 
 ## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (50+ JOURS PRODUCTION)
@@ -18,7 +18,7 @@
 ### Architecture Multi-Prêts V7 Pérenne
 - **500k€ consolidé:** LCL 250k€ @ 1.050% (AMORTISSEMENT) + INVESTIMUR 250k€ @ 1.240% (IN_FINE)
 - **85,564.83€ intérêts:** Lookup AMORTISSEMENT/IN_FINE ACID complet (470 échéances pérenne)
-- **Parseur V7:** Détection universelle AMORTISSEMENT vs IN_FINE automatique | Sonnet 4.5 (64K tokens max)
+- **Parseur V7:** Détection universelle AMORTISSEMENT vs IN_FINE automatique | Sonnet 4.5 (64K tokens)
 - **Nomenclature:** montant_echeance standardisée (BD complete + code + markdown template)
 - **Scalabilité:** Support n-prêts futurs confirmée | Pas limite architecturale
 
@@ -28,12 +28,6 @@
 - **RELEVE_BANCAIRE:** ✅ Opérationnel | OCR intelligent propositions comptables automatiques
 - **CLOTURE_EXERCICE:** ✅ Opérationnel | Report à nouveau automatique | Bilans équilibrés 100%
 - **EVENEMENT_SIMPLE:** En développement (factures, notes frais)
-
-## 🏢 SCI SOEURISE — PATRIMOINE PÉRENNE
-- **Exercices:** 2023 CLOSED ✅ | 2024-2025 OUVERTS
-- **Écritures:** 172+ ACID-validées production base
-- **Prêts:** 2 consolidés multi-lookup (AMORTISSEMENT + IN_FINE architecture établie)
-- **Capacités:** Report à nouveau automatique | Multi-exercice support | Validation token humanisée
 
 ## 🏗️ ARCHITECTURE V6.0 — PRODUCTION 50+ JOURS STABLE
 - **Infrastructure:** Render + PostgreSQL + Claude Sonnet 4.5 (64K tokens)
