@@ -810,7 +810,6 @@ IMPORTANT:
                 "echeances": []
             }
 
-    @staticmethod
     # Supprimé: _generer_echeances() - Scorie de l'ancienne version
     # Le parseur V7 extrait TOUTES les échéances directement, plus besoin de génération
 
