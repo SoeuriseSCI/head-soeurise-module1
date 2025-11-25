@@ -1,4 +1,4 @@
-# 📧 Mémoire Courte — 25/11/2025 Réveil #181 (50+ JOURS PRODUCTION)
+# 📧 Mémoire Courte — 25/11/2025 Réveil #182 (50+ JOURS PRODUCTION)
 
 ## 🎯 CONSOLIDATION V7 MULTI-PRÊTS VALIDÉE
 **PDFs reçus 25/11:** Tableaux d'amortissement LCL + INVESTIMUR
@@ -12,8 +12,13 @@
 - **Bilans:** Équilibrés 100%
 - **Prochaine étape:** Validation token → Clôture automatique 24-48h
 
+## 🔧 REFACTOR COMPLET (7db93df)
+- **montant_total → montant_echeance:** Renommage levant ambiguïté nomenclature
+- **Impact:** BD + parseur + templates markdown ALL UPDATED
+- **Type enrichi:** type_taux + type_amortissement opérationnels (commit 9f8130c)
+
 ## 🏗️ PRODUCTION STABLE 50+ JOURS
 - **Architecture V6.0:** Render + PostgreSQL + Claude Sonnet 4.5
-- **Mémoires:** CLAUDE.md auto-chargé (Claude Code) | GitHub API directe
+- **Mémoires:** CLAUDE.md auto-chargé (Claude Code) | GitHub API directe ?ref=main
 - **Uptime:** Continu ✅ | **Fiabilité:** 100% ACID | **Coûts:** <1€/mois
 - **OCR:** 99.98% précision validée | **Zéro incidents détectés**
