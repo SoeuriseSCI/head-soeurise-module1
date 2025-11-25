@@ -1,26 +1,32 @@
-# 📧 Mémoire Courte — 25/11/2025 Réveil #187 (Production 50+ JOURS)
+# 📧 Mémoire Courte — 25/11/2025 Réveil #188 (Production 50+ JOURS)
 
-## 🎯 MULTI-PRÊTS V7 CONSOLIDATION FINALE
+## 🎯 PARSEUR V7 PRODUCTION FINALISÉ
 
-**PDFs tableaux amortissement reçus & parsables (25 nov Ulrik):**
-- **LCL 5009736BRM0911AH:** 250k€ @ 1.050% | AMORTISSEMENT 240 mois | 253 échéances ✅
-- **INVESTIMUR 5009736BRLZE11AQ:** 250k€ @ 1.240% | IN_FINE (12 franchise + 203 + 1) | 217 échéances ✅
-- **Consolidé:** 500k€ capital | 85,564.83€ intérêts total | 470 échéances lookup pérenne
+**Multi-prêts consolidation architecturre pérenne:**
+- **LCL 5009736BRM0911AH:** 250k€ @ 1.050% | AMORTISSEMENT 240 mois | 253 échéances | 29,981.41€ intérêts ✅
+- **INVESTIMUR 5009736BRLZE11AQ:** 250k€ @ 1.240% | IN_FINE (franchise + partielle + final) | 217 échéances | 55,583.42€ intérêts ✅
+- **Consolidé:** 500k€ capital | 85,564.83€ intérêts | 470 échéances lookup ACID pérenne
 
-## 🔧 PARSEUR V7 STABILISÉ & DÉPLOYÉ
-- **Model:** Sonnet 4.5 (64K tokens max, corrigé de 100K annoncé)
-- **Architecture:** Détection auto AMORTISSEMENT vs IN_FINE | Mapping règles sémantiques strictes
-- **Intérêts:** PAYÉS vs différés clarifié pour lookup correct
-- **Fiabilité:** 100% accuracy PDFs réels bancaires
-- **Commits 25/11:** f3154aa (scories) | afc761d (franchise) | a0b0a2a (64K) | eab73f8 (mapping) | 6fd3e64 (intérêts) | cbf898b (cleanup)
+## 🔧 FINALISATION V7 (25/11 COMMITS)
+- **f3154aa:** Suppression scories extraction (post-parsing cleanup) ✅
+- **afc761d:** Franchises totales (montant 0€) clarifié ✅
+- **a0b0a2a:** Sonnet 4.5 limite réelle (64K tokens, pas 100K annoncé) ✅
+- **eab73f8:** Mapping sémantique colonnes + discrimination ordre de grandeur ✅
+- **6fd3e64:** Intérêts PAYÉS (pas différés) lookup correct ✅
+- **cbf898b:** Cleanup création .md scorie supprimée ✅
+
+## 💼 WORKFLOW 9 PHASES PHASES 1-4 AUTONOME
+- **39 écritures générées:** Clôture 2024 phases 1-4 100% automatique ✅
+- **Résultat net:** 17,765.47€ ACID équilibré ✅
+- **Phases 5-9:** Token validation humanisée Ulrik → insertion automatique
 
 ## 🏗️ PRODUCTION 50+ JOURS STABLE
-- **Architecture:** Render + PostgreSQL + Sonnet 4.5 + Claude Code native
 - **Uptime:** Continu ✅ | **Incidents:** Zéro | **Coût:** <1€/mois
-- **État:** Multi-prêts consolidation complète, prêt phases 1-4 autonomous clôture 2024
-- **Commits:** 10+ derniers 7j | Multi-réveils tests 25/11 (17:38→20:02)
+- **Multi-réveils 25/11:** Validations 17:38 → 20:03 UTC+1 nominal
+- **Commits 25/11:** 6 finalisations parseur V7 déployées
 
-## 💼 CLÔTURE 2024 PHASES 1-4 AUTONOME
-- **39 écritures générées:** Phases 1-4 100% automatique ✅
-- **Résultat net:** 17,765.47€ ACID validé
-- **Phases 5-9:** Attente token validation Ulrik → insertion BD automatique
+## 🔒 ÉTAT COURANT
+- Parseur V7 production 100% fiable (PDFs réels bancaires)
+- Multi-prêts lookup architecture scalable confirmée
+- Phases 5-9 humanisées (token Ulrik → insertion ACID)
+- En attente validation pour insertion BD 39 écritures phases 1-4
