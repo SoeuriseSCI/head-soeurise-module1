@@ -161,12 +161,14 @@ class ParseurTableauPretV7:
         prompt = """Tu es un expert en prêts immobiliers. Analyse ce tableau d'amortissement.
 
 Un prêt peut avoir plusieurs phases :
-- **Franchise totale** : ni capital ni intérêts remboursés (montant_capital = 0€, montant_interet = 0€)
+- **Franchise totale** : ni capital ni intérêts remboursés (montant_capital = 0€, montant_interet = 0€, montant_echeance = 0€) → **Ce sont des échéances VALIDES à extraire !**
 - **Franchise partielle** : pas de capital remboursé, mais intérêts payés (montant_capital = 0€, montant_interet > 0€)
 - **Amortissement** : capital et intérêts remboursés (montant_capital > 0€, montant_interet > 0€)
 
-⚠️ RÈGLE CRITIQUE : Ignorer toutes les lignes dont la date < date_debut + 1 mois
-   Cela élimine automatiquement : échéance 0, déblocages (DBL/DEBLOC), frais
+⚠️ RÈGLES CRITIQUES :
+1. Ignorer lignes dont la date < date_debut + 1 mois (élimine déblocages DBL/DEBLOC et frais initiaux)
+2. **IMPORTANT** : Extraire TOUTES les échéances avec date ≥ date_debut + 1 mois, **Y COMPRIS celles avec montant_echeance = 0€** (franchise totale)
+3. La durée totale du prêt INCLUT la période de franchise (ex: 12 mois franchise + 240 mois amortissement = 252 mois total)
 
 ---
 
@@ -231,9 +233,10 @@ EXTRACTION :
      → Si ratio ≥ 0.90 : IN_FINE, sinon : AMORTISSABLE
 
 2. **Échéances** (toutes les pages du tableau) :
-   - Extraire CHAQUE ligne d'échéance avec date ≥ date_debut + 1 mois
+   - Extraire TOUTES les lignes d'échéance avec date ≥ date_debut + 1 mois
+   - **INCLURE** les échéances de franchise totale (montant_echeance = 0€) : ce sont des échéances valides !
    - Pour chaque échéance : date_echeance, montant_capital, montant_interet, montant_echeance, capital_restant_du
-   - Ignorer : lignes Report, Total, DBL, frais
+   - Ignorer UNIQUEMENT : lignes Report, Total, DBL/DEBLOC, frais initiaux
 
 3. **Validation** :
    - montant_echeance = montant_capital + montant_interet (±0.01€)
