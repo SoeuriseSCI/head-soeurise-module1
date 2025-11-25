@@ -18,6 +18,11 @@ Avantages V7 :
 - Validation Python stricte post-extraction
 - Fonctionne avec n'importe quelle banque
 
+Modèle & Tokens :
+- Modèle par défaut : claude-sonnet-4-20250514 (Sonnet 4.5)
+- max_tokens : 100000 (100K output)
+- Raison : PDFs avec 250+ échéances nécessitent >64K tokens (limite Haiku)
+
 Insight clé (10/11/2025) :
 Claude en chat lit les PDFs nativement → extraction parfaite
 Claude API peut faire pareil avec type "document" → même résultat
@@ -49,7 +54,7 @@ class ParseurTableauPretV7:
     Avantage vs V6 : Même précision que Claude chat (100%)
     """
 
-    def __init__(self, api_key: str, model: str = "claude-haiku-4-5-20251001"):
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-20250514"):
         self.api_key = api_key
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key)
@@ -252,11 +257,11 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
 
         try:
             # Appel API SANS tools (réponse JSON directe)
-            print(f"[PARSEUR V7] Appel Claude API (max_tokens=64000)...", flush=True)
+            print(f"[PARSEUR V7] Appel Claude API (model={self.model}, max_tokens=100000)...", flush=True)
 
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=64000,  # Limite max Haiku 4.5 (vs V6: 20000)
+                max_tokens=100000,  # Limite Sonnet 4.5: 100K (vs Haiku 4.5: 64K)
                 messages=[{
                     "role": "user",
                     "content": [
