@@ -153,7 +153,7 @@ class ParseurTableauPretV7:
         """
 
         # Prompt UNIVERSEL avec contexte financier
-        prompt = """Analyse ce tableau d'amortissement de prêt immobilier.
+        prompt = """Tu es un expert en prêts immobiliers. Analyse ce tableau d'amortissement.
 
 Un prêt peut avoir plusieurs phases :
 - **Franchise totale** : ni capital ni intérêts remboursés (montant_capital = 0€, montant_interet = 0€)
@@ -162,8 +162,6 @@ Un prêt peut avoir plusieurs phases :
 
 ⚠️ RÈGLE CRITIQUE : Ignorer toutes les lignes dont la date < date_debut + 1 mois
    Cela élimine automatiquement : échéance 0, déblocages (DBL/DEBLOC), frais
-
-⚠️ Utiliser la colonne "Intérêts PAYÉS" (pas "Intérêts différés/cumulés")
 
 ---
 
@@ -185,7 +183,7 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
   "echeances": [
     {
       "date_echeance": "Date au format YYYY-MM-DD",
-      "montant_total": Montant de l'échéance mensuelle en EUR (number),
+      "montant_total": Montant de l'échéance mensuelle À PAYER en EUR (number) = capital + intérêts,
       "montant_capital": Part de capital remboursé ce mois-ci en EUR (number),
       "montant_interet": Part d'intérêts payés ce mois-ci en EUR (number),
       "capital_restant_du": Capital restant APRÈS cette échéance en EUR (number)
@@ -493,10 +491,11 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
             f"**Banque** : {pret['banque']}",
             f"**Montant initial** : {pret['montant_initial']:.2f} EUR",
             f"**Taux annuel** : {pret['taux_annuel']}%",
+            f"**Type de taux** : {pret['type_taux']}",
             f"**Durée** : {pret['duree_mois']} mois",
             f"**Date début** : {pret['date_debut']}",
             f"**Date début amortissement** : {pret.get('date_debut_amortissement', 'N/A')}",
-            f"**Type** : {pret['type_pret']}",
+            f"**Type amortissement** : {pret['type_amortissement']}",
             "",
             f"**Extraction** : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"**Nombre d'échéances** : {len(echeances)}",
@@ -559,13 +558,14 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
                 'banque': pret['banque'],
                 'montant_initial': Decimal(str(pret['montant_initial'])),
                 'taux_annuel': Decimal(str(pret['taux_annuel'])),
+                'type_taux': pret['type_taux'],
                 'duree_mois': pret['duree_mois'],
                 'date_debut': datetime.strptime(pret['date_debut'], '%Y-%m-%d').date(),
                 'date_debut_amortissement': datetime.strptime(
                     pret.get('date_debut_amortissement', pret['date_debut']),
                     '%Y-%m-%d'
                 ).date(),
-                'type_pret': pret['type_pret'],
+                'type_amortissement': pret['type_amortissement'],
                 'fichier_reference': filename
             }
 
