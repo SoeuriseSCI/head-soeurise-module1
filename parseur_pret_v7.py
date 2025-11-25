@@ -574,7 +574,7 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
             for ech in echeances:
                 echeances_data.append({
                     'date_echeance': ech['date_echeance'],
-                    'montant_total': float(ech['montant_echeance']),
+                    'montant_echeance': float(ech['montant_echeance']),
                     'montant_capital': float(ech['montant_capital']),
                     'montant_interet': float(ech['montant_interet']),
                     'capital_restant_du': float(ech['capital_restant_du'])

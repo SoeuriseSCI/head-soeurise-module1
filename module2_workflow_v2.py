@@ -461,7 +461,7 @@ class ParseurTableauPret:
                 {
                   "numero_echeance": 1,
                   "date_echeance": "2023-05-15",
-                  "montant_total": 1166.59,
+                  "montant_echeance": 1166.59,
                   "montant_interet": 218.75,
                   "montant_capital": 947.84,
                   "capital_restant_du": 249052.16
@@ -493,7 +493,7 @@ RETOURNE UN OBJET JSON VALIDE avec cette structure:
     {
       "numero_echeance": 1,
       "date_echeance": "2023-05-15",
-      "montant_total": 258.33,
+      "montant_echeance": 258.33,
       "montant_interet": 258.33,
       "montant_capital": 0.00,
       "capital_restant_du": 250000.00
@@ -538,7 +538,7 @@ VÉRIFICATION: Si tu n'as pas 24 échéances dans ta liste, CONTINUE À EXTRAIRE
 
 - numero_echeance: numéro séquentiel (1, 2, 3... pour toutes les lignes)
 - date_echeance: date de paiement (YYYY-MM-DD)
-- montant_total: montant total de l'échéance
+- montant_echeance: montant total de l'échéance
 - montant_interet: part intérêts
 - montant_capital: part capital (0 pendant franchise/ECH)
 - capital_restant_du: capital restant après paiement
@@ -844,7 +844,7 @@ IMPORTANT:
             echeances_precedentes: Liste des échéances déjà extraites (pour récupérer capital_restant)
 
         Returns:
-            Liste échéances avec: numero_echeance, date_echeance, montant_total, montant_interet,
+            Liste échéances avec: numero_echeance, date_echeance, montant_echeance, montant_interet,
             montant_capital, capital_restant_du
         """
         from datetime import datetime
@@ -907,13 +907,13 @@ IMPORTANT:
                 # PÉRIODE DE FRANCHISE: intérêts seulement, pas de capital
                 interet = (capital_restant * taux_mensuel).quantize(Decimal('0.01'), ROUND_HALF_UP)
                 capital = Decimal('0')
-                montant_total = interet
+                montant_echeance = interet
 
             elif type_amort == "FRANCHISE_PARTIELLE" and i == duree_mois:
                 # FRANCHISE PARTIELLE: Dernier mois = pic (tout le capital restant)
                 interet = (capital_restant * taux_mensuel).quantize(Decimal('0.01'), ROUND_HALF_UP)
                 capital = capital_restant
-                montant_total = interet + capital
+                montant_echeance = interet + capital
 
             else:
                 # AMORTISSEMENT CONSTANT: mensualité fixe
@@ -924,7 +924,7 @@ IMPORTANT:
                 if capital > capital_restant:
                     capital = capital_restant
 
-                montant_total = interet + capital
+                montant_echeance = interet + capital
 
             # Mise à jour capital restant
             capital_restant -= capital
@@ -936,7 +936,7 @@ IMPORTANT:
             echeances.append({
                 "numero_echeance": i,
                 "date_echeance": date_echeance.strftime('%Y-%m-%d'),
-                "montant_total": float(montant_total),
+                "montant_echeance": float(montant_echeance),
                 "montant_interet": float(interet),
                 "montant_capital": float(capital),
                 "capital_restant_du": float(capital_restant)
@@ -996,14 +996,14 @@ class ParseurReevalorationSCPI:
                 # Supposer 1000 parts par défaut
                 nb_parts = 1000
                 difference_unitaire = prix_marche - prix_comptable
-                montant_total = difference_unitaire * nb_parts
+                montant_echeance = difference_unitaire * nb_parts
                 
                 reevals.append({
                     "semestre": semestre_num,
                     "prix_marche": float(prix_marche),
                     "prix_comptable": float(prix_comptable),
-                    "montant": float(abs(montant_total)),
-                    "type": "GAIN" if montant_total > 0 else "PERTE"
+                    "montant": float(abs(montant_echeance)),
+                    "type": "GAIN" if montant_echeance > 0 else "PERTE"
                 })
                 
                 semestre_num = (semestre_num % 2) + 1

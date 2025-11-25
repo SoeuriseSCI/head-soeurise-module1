@@ -141,7 +141,7 @@ for ech in echeances:
         "pret_id": ech.pret_id,
         "numero_echeance": ech.numero_echeance,
         "date_echeance": str(ech.date_echeance),
-        "montant_total": str(ech.montant_total),
+        "montant_total": str(ech.montant_echeance),
         "montant_interet": str(ech.montant_interet),
         "montant_capital": str(ech.montant_capital),
         "capital_restant_du": str(ech.capital_restant_du),
