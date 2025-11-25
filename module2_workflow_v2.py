@@ -585,28 +585,16 @@ IMPORTANT:
 
         echeances_extraites = echeances_dedupliquees
 
-        # Générer les échéances restantes (mois 25+)
         print(f"[PARSING] Échéances extraites (après dédup): {len(echeances_extraites)}, duree_mois: {duree_mois}", flush=True)
         if len(echeances_extraites) > 0:
             print(f"[PARSING] Dernière échéance extraite: {echeances_extraites[-1].get('date_echeance')}", flush=True)
 
-        if len(echeances_extraites) < duree_mois:
-            start_month_calc = len(echeances_extraites) + 1
-            print(f"[PARSING] Génération depuis mois {start_month_calc} jusqu'à {duree_mois}", flush=True)
-            echeances_generees = self._generer_echeances(
-                contract_data,
-                start_month=start_month_calc,
-                echeances_precedentes=echeances_extraites
-            )
-            print(f"[PARSING] Échéances générées: {len(echeances_generees)}", flush=True)
-            # Combiner: extraites + générées
-            echeances_completes = echeances_extraites + echeances_generees
-        else:
-            echeances_completes = echeances_extraites
+        # Le parseur V7 extrait TOUTES les échéances, plus besoin de génération
+        # Supprimé: génération échéances mois 25+ (scorie de l'ancienne version)
 
         return {
             "pret": contract_data,
-            "echeances": echeances_completes
+            "echeances": echeances_extraites
         }
 
     @staticmethod
@@ -823,126 +811,8 @@ IMPORTANT:
             }
 
     @staticmethod
-    def _generer_echeances(contrat: Dict, start_month: int = 1, echeances_precedentes: List[Dict] = None) -> List[Dict]:
-        """
-        Génère les échéances mathématiquement selon formule amortissement
-
-        APPROCHE HYBRIDE (V8):
-        - Si start_month=1: génère toutes les échéances
-        - Si start_month>1: génère échéances à partir de start_month (complète les extraites)
-
-        Args:
-            contrat: Dict avec clés:
-                - montant_initial: Capital emprunté
-                - taux_annuel: Taux annuel décimal (ex: 0.0124 pour 1.24%)
-                - duree_mois: Durée totale en mois
-                - date_debut: Date première échéance (YYYY-MM-DD)
-                - mois_franchise: Nombre de mois franchise (0 si aucune)
-                - type_amortissement: "AMORTISSEMENT_CONSTANT" ou "FRANCHISE_PARTIELLE"
-                - echeance_mensuelle: Montant mensuel (optionnel, calculé si absent)
-            start_month: Numéro du premier mois à générer (défaut: 1)
-            echeances_precedentes: Liste des échéances déjà extraites (pour récupérer capital_restant)
-
-        Returns:
-            Liste échéances avec: numero_echeance, date_echeance, montant_echeance, montant_interet,
-            montant_capital, capital_restant_du
-        """
-        from datetime import datetime
-        from dateutil.relativedelta import relativedelta
-        from decimal import Decimal, ROUND_HALF_UP
-
-        # Extraire les paramètres
-        capital_initial = Decimal(str(contrat['montant_initial']))
-        taux_annuel = Decimal(str(contrat['taux_annuel']))
-        duree_mois = int(contrat['duree_mois'])
-        date_debut = datetime.strptime(contrat['date_debut'], '%Y-%m-%d')
-        mois_franchise = int(contrat.get('mois_franchise', 0))
-        type_amort = contrat.get('type_amortissement', 'AMORTISSEMENT_CONSTANT')
-
-        # Taux mensuel
-        taux_mensuel = taux_annuel / Decimal('12')
-
-        # Capital restant dû ET date de départ : récupérer de la dernière échéance extraite si existe
-        if echeances_precedentes and len(echeances_precedentes) > 0:
-            derniere = echeances_precedentes[-1]
-            capital_restant = Decimal(str(derniere.get('capital_restant_du', capital_initial)))
-            # Date de départ = date de la dernière échéance extraite
-            date_reference = datetime.strptime(derniere['date_echeance'], '%Y-%m-%d')
-        else:
-            capital_restant = capital_initial
-            date_reference = None  # Pas utilisé si pas de précédentes
-
-        # Calculer mensualité si non fournie (formule amortissement constant)
-        if 'echeance_mensuelle' in contrat and contrat['echeance_mensuelle'] > 0:
-            mensualite = Decimal(str(contrat['echeance_mensuelle']))
-        else:
-            # Formule: M = C × (t / (1 - (1 + t)^(-n)))
-            # Pour période amortissement uniquement (après franchise)
-            duree_amortissement = duree_mois - mois_franchise
-            if duree_amortissement > 0 and taux_mensuel > 0:
-                try:
-                    diviseur = Decimal('1') - (Decimal('1') + taux_mensuel) ** (-duree_amortissement)
-                    mensualite = capital_initial * (taux_mensuel / diviseur)
-                except:
-                    # Fallback: calculer simplement
-                    mensualite = capital_initial / Decimal(str(duree_amortissement))
-            else:
-                mensualite = Decimal('0')
-
-        echeances = []
-        compteur_mois = 1  # Compteur pour les mois à ajouter à date_reference
-
-        for i in range(start_month, duree_mois + 1):
-            # Date de l'échéance
-            if echeances_precedentes and len(echeances_precedentes) > 0:
-                # Partir de la dernière échéance extraite + compteur mois
-                date_echeance = date_reference + relativedelta(months=compteur_mois)
-                compteur_mois += 1
-            else:
-                # Partir de date_debut (génération complète)
-                date_echeance = date_debut + relativedelta(months=i-1)
-
-            # Calculer intérêt et capital selon période
-            if i <= mois_franchise:
-                # PÉRIODE DE FRANCHISE: intérêts seulement, pas de capital
-                interet = (capital_restant * taux_mensuel).quantize(Decimal('0.01'), ROUND_HALF_UP)
-                capital = Decimal('0')
-                montant_echeance = interet
-
-            elif type_amort == "FRANCHISE_PARTIELLE" and i == duree_mois:
-                # FRANCHISE PARTIELLE: Dernier mois = pic (tout le capital restant)
-                interet = (capital_restant * taux_mensuel).quantize(Decimal('0.01'), ROUND_HALF_UP)
-                capital = capital_restant
-                montant_echeance = interet + capital
-
-            else:
-                # AMORTISSEMENT CONSTANT: mensualité fixe
-                interet = (capital_restant * taux_mensuel).quantize(Decimal('0.01'), ROUND_HALF_UP)
-                capital = (mensualite - interet).quantize(Decimal('0.01'), ROUND_HALF_UP)
-
-                # S'assurer que capital ne dépasse pas capital_restant
-                if capital > capital_restant:
-                    capital = capital_restant
-
-                montant_echeance = interet + capital
-
-            # Mise à jour capital restant
-            capital_restant -= capital
-            # Éviter négatifs dus aux arrondis
-            if capital_restant < Decimal('0.01'):
-                capital_restant = Decimal('0')
-
-            # Ajouter l'échéance
-            echeances.append({
-                "numero_echeance": i,
-                "date_echeance": date_echeance.strftime('%Y-%m-%d'),
-                "montant_echeance": float(montant_echeance),
-                "montant_interet": float(interet),
-                "montant_capital": float(capital),
-                "capital_restant_du": float(capital_restant)
-            })
-
-        return echeances
+    # Supprimé: _generer_echeances() - Scorie de l'ancienne version
+    # Le parseur V7 extrait TOUTES les échéances directement, plus besoin de génération
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
