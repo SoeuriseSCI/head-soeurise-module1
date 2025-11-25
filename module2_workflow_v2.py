@@ -1786,51 +1786,73 @@ class WorkflowModule2V2:
                     "token": ""
                 }
 
-            # Parser le PDF avec V7 (auto_insert_bd=False pour générer propositions)
-            filepath = pdf_files[0].get('filepath')
-            result = parseur_v7.parse_from_pdf(filepath, auto_insert_bd=False)
+            # Parser TOUS les PDFs avec V7 (auto_insert_bd=False pour générer propositions)
+            all_propositions = []
+            all_markdowns = []
+            total_echeances = 0
+            prets_traites = []
 
-            if not result.get('success'):
-                return {
-                    "type_detecte": TypeEvenement.PRET_IMMOBILIER,
-                    "statut": "ERREUR",
-                    "message": result.get('message', 'Erreur parsing'),
-                    "markdown": "",
-                    "propositions": {},
-                    "token": ""
-                }
+            for pdf_file in pdf_files:
+                filepath = pdf_file.get('filepath')
+                result = parseur_v7.parse_from_pdf(filepath, auto_insert_bd=False)
 
-            # Extraire les données
-            filename = result.get('filename')
-            nb_echeances = result.get('nb_echeances', 0)
-            echeances = result.get('echeances', [])
+                if not result.get('success'):
+                    return {
+                        "type_detecte": TypeEvenement.PRET_IMMOBILIER,
+                        "statut": "ERREUR",
+                        "message": f"Erreur parsing {filepath}: {result.get('message', 'Erreur parsing')}",
+                        "markdown": "",
+                        "propositions": {},
+                        "token": ""
+                    }
 
-            # Utiliser directement les données du prêt retournées par le parseur V7
-            # (pas besoin de lire le fichier MD)
-            pret_data = result.get('pret')
+                # Extraire les données
+                filename = result.get('filename')
+                nb_echeances = result.get('nb_echeances', 0)
+                echeances = result.get('echeances', [])
 
-            if not pret_data:
-                return {
-                    "type_detecte": TypeEvenement.PRET_IMMOBILIER,
-                    "statut": "ERREUR",
-                    "message": "Impossible d'extraire les données du prêt",
-                    "markdown": "",
-                    "propositions": {},
-                    "token": ""
-                }
+                # Utiliser directement les données du prêt retournées par le parseur V7
+                pret_data = result.get('pret')
 
-            # Générer propositions (V7: passer les échéances directement)
-            markdown, props, token = GenerateurPropositions.generer_propositions_pret_immobilier(
-                pret_data, nb_echeances, filename, echeances
-            )
+                if not pret_data:
+                    return {
+                        "type_detecte": TypeEvenement.PRET_IMMOBILIER,
+                        "statut": "ERREUR",
+                        "message": f"Impossible d'extraire les données du prêt depuis {filepath}",
+                        "markdown": "",
+                        "propositions": {},
+                        "token": ""
+                    }
+
+                # Ajouter à la liste des propositions
+                all_propositions.append({
+                    "type": "PRET_IMMOBILIER",
+                    "action": "INSERER_PRET",
+                    "filename": filename,
+                    "pret": pret_data,
+                    "nb_echeances": nb_echeances,
+                    "echeances": echeances
+                })
+
+                # Générer markdown pour ce prêt
+                markdown_pret = GenerateurPropositions._generer_markdown_pret(
+                    pret_data, nb_echeances, filename
+                )
+                all_markdowns.append(markdown_pret)
+
+                total_echeances += nb_echeances
+                prets_traites.append(f"{pret_data.get('banque')} ({nb_echeances} échéances)")
+
+            # Combiner tous les markdowns
+            markdown_final = "\n\n---\n\n".join(all_markdowns)
 
             return {
                 "type_detecte": TypeEvenement.PRET_IMMOBILIER,
                 "statut": "OK",
-                "markdown": markdown,
-                "propositions": props,
-                "token": token,
-                "message": f"Prêt {pret_data.get('numero_pret')} : {nb_echeances} échéances extraites"
+                "markdown": markdown_final,
+                "propositions": {"propositions": all_propositions},
+                "token": None,  # Sera généré par propositions_manager
+                "message": f"{len(all_propositions)} prêts traités: {', '.join(prets_traites)} (Total: {total_echeances} échéances)"
             }
 
         except Exception as e:
