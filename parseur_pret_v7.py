@@ -183,7 +183,7 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
   "echeances": [
     {
       "date_echeance": "Date au format YYYY-MM-DD",
-      "montant_total": Montant de l'échéance mensuelle À PAYER en EUR (number) = capital + intérêts,
+      "montant_echeance": Montant de l'échéance mensuelle À PAYER en EUR (number) = capital + intérêts,
       "montant_capital": Part de capital remboursé ce mois-ci en EUR (number),
       "montant_interet": Part d'intérêts payés ce mois-ci en EUR (number),
       "capital_restant_du": Capital restant APRÈS cette échéance en EUR (number)
@@ -201,11 +201,11 @@ EXTRACTION :
 
 2. **Échéances** (toutes les pages du tableau) :
    - Extraire CHAQUE ligne d'échéance avec date ≥ date_debut + 1 mois
-   - Pour chaque échéance : date_echeance, montant_capital, montant_interet, montant_total, capital_restant_du
+   - Pour chaque échéance : date_echeance, montant_capital, montant_interet, montant_echeance, capital_restant_du
    - Ignorer : lignes Report, Total, DBL, frais
 
 3. **Validation** :
-   - montant_total = montant_capital + montant_interet (±0.01€)
+   - montant_echeance = montant_capital + montant_interet (±0.01€)
    - Nombre d'échéances extraites = duree_mois indiquée dans les métadonnées
 
 Retourne le JSON (sans texte avant/après, sans ```json```)."""
@@ -310,7 +310,7 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
         → Ignore TOUTES les lignes avant cette date (échéance 0, DBL, frais...)
 
         Critères supplémentaires :
-        - Incohérences : |montant_total - (capital + intérêt)| > 1€
+        - Incohérences : |montant_echeance - (capital + intérêt)| > 1€
 
         Returns:
             Liste des échéances valides
@@ -349,14 +349,14 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
 
             # Critère secondaire : Ignorer si incohérence majeure (>1€)
             if not skip:
-                montant_total = ech.get('montant_total', 0)
+                montant_echeance = ech.get('montant_echeance', 0)
                 montant_capital = ech.get('montant_capital', 0)
                 montant_interet = ech.get('montant_interet', 0)
                 total_calc = montant_capital + montant_interet
 
-                if abs(total_calc - montant_total) > 1.0:
+                if abs(total_calc - montant_echeance) > 1.0:
                     skip = True
-                    raison = f"incohérence montant (total={montant_total:.2f}€ vs calc={total_calc:.2f}€)"
+                    raison = f"incohérence montant (echeance={montant_echeance:.2f}€ vs calc={total_calc:.2f}€)"
 
             # Log et décision
             if skip:
@@ -444,16 +444,16 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
                 continue
 
             # Vérif cohérence montant (tolérance 0.01€ pour arrondis)
-            montant_total = ech.get('montant_total', 0)
+            montant_echeance = ech.get('montant_echeance', 0)
             montant_capital = ech.get('montant_capital', 0)
             montant_interet = ech.get('montant_interet', 0)
 
             total_calc = montant_capital + montant_interet
 
-            if abs(total_calc - montant_total) > 0.01:
+            if abs(total_calc - montant_echeance) > 0.01:
                 errors.append(
                     f"Échéance {i+1} ({ech['date_echeance']}) : "
-                    f"incohérence montant (total={montant_total:.2f} != capital+intérêt={total_calc:.2f})"
+                    f"incohérence montant (echeance={montant_echeance:.2f} != capital+intérêt={total_calc:.2f})"
                 )
 
             # Vérif capital restant diminue (ou constant pour IN_FINE)
@@ -502,7 +502,7 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
             "",
             "---",
             "",
-            "**Format** : date_echeance:montant_total:montant_capital:montant_interet:capital_restant_du",
+            "**Format** : date_echeance:montant_echeance:montant_capital:montant_interet:capital_restant_du",
             ""
         ]
 
@@ -510,7 +510,7 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
         for ech in echeances:
             line = (
                 f"{ech['date_echeance']}:"
-                f"{ech['montant_total']:.2f}:"
+                f"{ech['montant_echeance']:.2f}:"
                 f"{ech['montant_capital']:.2f}:"
                 f"{ech['montant_interet']:.2f}:"
                 f"{ech['capital_restant_du']:.2f}"
@@ -574,7 +574,7 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
             for ech in echeances:
                 echeances_data.append({
                     'date_echeance': ech['date_echeance'],
-                    'montant_total': float(ech['montant_total']),
+                    'montant_total': float(ech['montant_echeance']),
                     'montant_capital': float(ech['montant_capital']),
                     'montant_interet': float(ech['montant_interet']),
                     'capital_restant_du': float(ech['capital_restant_du'])
