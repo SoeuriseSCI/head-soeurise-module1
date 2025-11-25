@@ -208,7 +208,10 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
 
 ⚠️ ATTENTION AU MAPPING :
 - montant_echeance = montant mensuel à payer (petit : 0-2000€)
+- montant_interet = intérêts PAYÉS ce mois (PAS les intérêts différés/cumulés)
 - capital_restant_du = capital encore dû (gros : 250000€→0€)
+
+Si le tableau a plusieurs colonnes d'intérêts, utilise celle qui représente les intérêts PAYÉS ce mois, pas les intérêts différés ou accumulés.
 
 EXTRACTION :
 
