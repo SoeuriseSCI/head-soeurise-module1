@@ -165,8 +165,11 @@ Un prêt peut avoir plusieurs phases :
 - **Amortissement** : capital et intérêts remboursés (montant_capital > 0€, montant_interet > 0€)
 
 ⚠️ RÈGLES CRITIQUES :
-1. Ignorer lignes dont la date < date_debut + 1 mois (élimine déblocages DBL/DEBLOC et frais initiaux)
-2. **IMPORTANT** : Extraire TOUTES les échéances avec date ≥ date_debut + 1 mois, **Y COMPRIS celles avec montant_echeance = 0€** (franchise totale)
+1. **DATE PREMIÈRE ÉCHÉANCE** : Prendre UNIQUEMENT les lignes avec date >= (date_debut + 1 mois EXACT)
+   - Si date_debut = 15/03/2023 → Première échéance = 15/04/2023
+   - Ignorer TOUTE ligne avant cette date (déblocages DBL/DEBLOC, frais initiaux, etc.)
+   - Ignorer lignes de header, total, report, sous-total
+2. **IMPORTANTE** : Extraire TOUTES les échéances réelles, **Y COMPRIS celles avec montant_echeance = 0€** (franchise totale)
 3. La durée totale du prêt INCLUT la période de franchise (ex: 12 mois franchise + 240 mois amortissement = 252 mois total)
 
 ---
@@ -232,14 +235,16 @@ EXTRACTION :
      → Si ratio ≥ 0.90 : IN_FINE, sinon : AMORTISSABLE
 
 2. **Échéances** (toutes les pages du tableau) :
-   - Extraire TOUTES les lignes d'échéance avec date ≥ date_debut + 1 mois
+   - Extraire TOUTES les lignes d'échéance réelles (lignes de données, pas headers/totals)
+   - Commencer à partir de : date >= (date_debut + 1 mois EXACT)
    - **INCLURE** les échéances de franchise totale (montant_echeance = 0€) : ce sont des échéances valides !
    - Pour chaque échéance : date_echeance, montant_capital, montant_interet, montant_echeance, capital_restant_du
-   - Ignorer UNIQUEMENT : lignes Report, Total, DBL/DEBLOC, frais initiaux
+   - Ignorer : lignes header, Report, Total, Sous-total, DBL/DEBLOC, frais initiaux, lignes vides
 
 3. **Validation** :
    - montant_echeance = montant_capital + montant_interet (±0.01€)
-   - Nombre d'échéances extraites = duree_mois indiquée dans les métadonnées
+   - Vérifier que la première échéance a date_echeance = date_debut + 1 mois EXACT
+   - Vérifier que les dates sont mensuelles consécutives (pas de saut, pas de doublon)
 
 Retourne le JSON (sans texte avant/après, sans ```json```)."""
 
