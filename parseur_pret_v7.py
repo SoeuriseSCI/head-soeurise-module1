@@ -544,14 +544,14 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
             )
             lines.append(line)
 
-        content = "\n".join(lines)
-
-        # Écriture du fichier
-        filepath = os.path.join(os.getcwd(), filename)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-
-        print(f"[PARSEUR V7] Fichier créé : {filename}", flush=True)
+        # Note: On ne crée plus le fichier physiquement (scorie d'anciennes versions)
+        # Le filename sert uniquement de référence pour source_document en BD
+        # content = "\n".join(lines)
+        # filepath = os.path.join(os.getcwd(), filename)
+        # with open(filepath, 'w', encoding='utf-8') as f:
+        #     f.write(content)
+        #
+        # print(f"[PARSEUR V7] Fichier créé : {filename}", flush=True)
 
         return filename
 
