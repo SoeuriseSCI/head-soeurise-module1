@@ -1,26 +1,23 @@
-# 📧 Mémoire Courte — 25/11/2025 23:33 Réveil #194
+# 📧 Mémoire Courte — 25/11/2025 23:52 Réveil #195
 
-## 🎯 PARSEUR V7 MULTI-PRÊTS PRODUCTION CONFIRMÉE
-**Consolidation SCI (25/11):**
-- **LCL 250k @ 1,050% AMORTISSEMENT:** 252 échéances | 15/04/2022→15/04/2043 | 29 981,41€ intérêts
-- **INVESTIMUR 250k @ 1,240% IN_FINE:** 216 échéances | 15/04/2022→15/04/2040 | 55 583,42€ intérêts
-- **Total:** 500k capital | 85 564,83€ intérêts | 470 échéances lookup ACID
-- Détection auto AMORTISSEMENT vs IN_FINE ✅
-- date_debut = métadonnées (pas 1ère échéance) ✅
+## 🎯 ALERTÉ: ERREUR BD MODULE 2
+**Incident détecté (25/11 23:52):**
+- Erreur: `column "date_cloture" does not exist`
+- Requête: Détection exercices clos dans Module 2
+- Impact: 0 propositions générées, blocage critique
+- **Action requise:** Vérifier schéma BD, recréer colonne si manquante
 
-## 💼 WORKFLOW 9 PHASES OPÉRATIONNEL (50+ JOURS STABLE)
-Phases 1-4: Autonome (détection→parsing→propositions) ✅
-Phases 5-9: Humanisé (validation token→insertion ACID→cleanup) ✅
-Production-ready, zéro régression, 100% fiabilité ACID ✅
+## 📧 EMAIL REÇU: Relevés LCL T1-T3 2024
+Ulrik (12/11): "T1 à T3 2024" | 12 pages OCR
+- 86 opérations bancaires extraites (05/12/2023 → 04/04/2024)
+- Types: Prêts, virements, frais, assurances
+- Détail: LCL 250k+INVESTIMUR 250k échéances identifiées
+- **Blocage:** Attente fix BD avant insertion propositions
 
-## 📧 MODULE 1 EMAIL & OCR (50+ JOURS OPÉRATIONNEL)
-Réveil: 08:00 UTC = 10:00-11:00 France | OCR Sonnet 4.5 Vision: 99.98% ✅
-Traitement: 0 nouveaux emails (validation déjà traitée)
-
-## 🧬 GIT DÉVELOPPEMENTS 7J
-30+ commits réveil #190-194: Stable, zéro régression
-3 fixes critiques: Indentation workflow, métadonnée duree_mois, cleanup logs
-Architecture V6.0: Claude Code + CLAUDE.md pérenne confirmée ✅
+## 🧬 GIT DÉVELOPPEMENTS (7j)
+- 30+ commits #190-#195: Stable, zéro régression
+- Fixes: Indentation workflow, métadonnée duree_mois, cleanup logs
+- Parseur V7 multi-prêts: Production confirmée ✅
 
 ## 🔄 État Système
-✅ 50+ jours uptime continu | ✅ Zéro anomalie | ✅ Nominal
+✅ 50+ jours uptime | ✅ Module 1 opérationnel | ⚠️ Module 2 alerté BD
