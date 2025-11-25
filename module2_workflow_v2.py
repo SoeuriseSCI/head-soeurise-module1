@@ -1269,9 +1269,10 @@ class GenerateurPropositions:
 | Banque | {pret_data.get('banque', 'N/A')} |
 | Montant initial | {pret_data.get('montant_initial', 0):,.2f} € |
 | Taux annuel | {pret_data.get('taux_annuel', 0):.4f} % |
+| Type taux | {pret_data.get('type_taux', 'FIXE')} |
+| Type amortissement | {pret_data.get('type_amortissement', 'AMORTISSABLE')} |
 | Durée | {pret_data.get('duree_mois', 0)} mois |
 | Date début | {pret_data.get('date_debut', 'N/A')} |
-| Type | {pret_data.get('type_pret', 'N/A')} |
 
 ## 📊 Échéances Extraites
 
