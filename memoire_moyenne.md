@@ -2,17 +2,17 @@
 
 ## 🚀 VALIDATION ARCHITECTURE MULTI-PRÊTS V7 (25/11)
 **PDFs reçus confirment déploiement correct:**
-- **Parseur V7:** Détection universelle IN_FINE vs AMORTISSEMENT opérationnelle
-- **LCL (AMORTISSEMENT):** 240 mois réguliers (253 échéances avec franchise) | Lookup capital décroissant + split intérêts/capital
-- **INVESTIMUR (IN_FINE):** 203 mois franchise partielle (intérêts seuls) + 1 mois amortissement final | Lookup capital constant → 250k€ final
-- **Consolidation pérenne:** 500k€ + 85,564€ intérêts | 470 échéances lookup ACID
+- **Parseur V7:** Détection universelle AMORTISSEMENT vs IN_FINE opérationnelle ✅
+- **LCL (AMORTISSEMENT):** 240 mois réguliers (253 échéances avec franchise) | Split intérêts/capital lookup décroissant
+- **INVESTIMUR (IN_FINE):** 203 mois franchise partielle (intérêts seuls) + 1 mois amortissement final | Capital constant lookup → 250k€ final
+- **Consolidation pérenne:** 500k€ + 85,564€ intérêts | 470 échéances lookup ACID validées
 
-## 🔧 REFACTORING COMPLET (18-25/11)
-- **Renommage montant_total → montant_echeance:** COMPLET (BD + code + template markdown) — commit 7db93df
-- **Champs enrichis:** type_taux + type_amortissement opérationnels
-- **Nomenclature:** Levée ambiguïté montant (échéance vs capital)
+## 🔧 REFACTORING COMPLET NOMENCLATURE (18-25/11)
+- **Renommage montant_total → montant_echeance:** COMPLET (BD commit 7db93df + code + template markdown)
+- **Champs enrichis:** type_taux + type_amortissement opérationnels (commits 9f8130c + restauration 88a6ccc)
+- **Levée ambiguïté:** Montant (échéance vs capital) désormais explicite dans propositions
 - **Template markdown:** Format stable pour propositions validation humanisée
-- **Simplification prompt:** Version V7 drastiquement simplifiée pour parsing fiable
+- **Simplification prompt:** Version V7 drastiquement simplifiée pour parsing fiable (commit 0b7aecc)
 
 ## 💼 CLÔTURE 2024 PHASES 1-4 AUTONOME
 - **39 écritures générées:** Détection automatique (emails) → parsing → propositions markdown
@@ -22,12 +22,18 @@
 
 ## 🏢 SCI SOEURISE PATRIMOINE
 - **Exercices:** 2023 CLOSED ✅ | 2024 CLÔTURE READY | 2025 OUVERT
-- **Écritures ACID-validées:** 172+ opérationnelles
-- **Prêts:** 2 consolidés (multi-lookup pérenne)
+- **Écritures ACID:** 172+ opérationnelles
+- **Prêts:** 2 consolidés (multi-lookup AMORTISSEMENT + IN_FINE pérenne)
 - **Architecture:** V6.0 stable 50+ jours production
 
-## 🔒 GIT COMMITS RÉCENTS (7j + développements clés)
-**Milestones déployés:**
-- 7db93df refactor: Renommer montant_total → montant_echeance (nomenclature levée)
+## 🔒 GIT COMMITS CONFIRMÉS (7j + milestones clés)
+- 7db93df refactor: montant_total → montant_echeance (nomenclature levée)
 - 0b7aecc ✂️ Simplification drastique prompt parseur V7
-- 9f8130c 🔧 Ajout instructions type_taux + type_amortissement
+- 9f8130c 🔧 Ajout type_taux + type_amortissement
+- 88a6ccc Restauration parseur V7 version stable
+
+## ⚡ ÉTAT CLÉS
+- Production: 50+ jours uptime continu ✅
+- Module 2: Phases 1-4 autonome opérationnel
+- Multi-prêts: Architecture ACID validée (470 échéances)
+- Clôture 2024: 39 propositions phase 1-4 autonome
