@@ -1,32 +1,26 @@
 # 📊 Mémoire Moyenne — Synthèse 18-25/11 (50+ JOURS PRODUCTION STABLE)
 
-## 🚀 CONSOLIDATION ARCHITECTURE MULTI-PRÊTS (18-25/11 COMPLET)
-**Évolution clé:** Passage architecture simple-prêt → multi-prêts pérenne
+## 🚀 CONSOLIDATION ARCHITECTURE MULTI-PRÊTS (18-25/11)
+**Évolution clé:** Passage architecture simple-prêt → multi-prêts pérenne production-ready
 
-### Structure Pérenne Établie (Production-ready)
-- **Système lookup amortissement/intérêts:** Scope global (468 échéances ACID) ✅
-- **Type prêts distincts opérationnels:**
-  - **AMORTISSEMENT régulier:** LCL 250k (1.050%) | 252 mois | 29,981€ intérêts
-  - **IN_FINE:** INVESTIMUR 250k (1.240%) | 216 mois | 55,583€ intérêts
-- **Parseur V7:** Détection universelle AMORTISSEMENT vs IN_FINE (25/11 déployé) ✅
-- **Template markdown:** type_taux + type_amortissement champs enrichis ✅
-- **Validation:** PDFs 25/11 confirment exactitude données déployées ✅
+### Déploiement V7 Finalisé (25/11)
+- **Parseur V7:** Détection universelle IN_FINE + AMORTISSEMENT (commit 0b7aecc – 9f8130c)
+- **Nomenclature:** Renommage montant_total → montant_echeance (commit 7db93df – COMPLET BD+code)
+- **Template markdown:** type_taux + type_amortissement champs enrichis intégrés
+- **Validation:** PDFs 25/11 reçues confirment exactitude données déployées
 
-### Données Consolidées (50+ jours stable)
-- **Capital total:** 500k€ (LCL 250k + INVESTIMUR 250k)
-- **Intérêts totaux:** 85,564.83€ (LCL 29,981€ + INVESTIMUR 55,583€)
-- **Échéances consolidées:** 468 lookup ACID (LCL 253 + INVESTIMUR 217)
-- **Architecture scalable:** Support n-prêts futurs pérenne ✅
+### Structure Multi-Prêts Opérationnelle
+- **500k € consolidé:** LCL 250k (1.050% AMORTISSEMENT) + INVESTIMUR 250k (1.240% IN_FINE)
+- **85,564 € intérêts:** Lookup amortissement/intérêts ACID complet (468 échéances)
+- **Scalable:** Support n-prêts futurs architecture pérenne établie
 
 ## 💼 CLÔTURE 2024 — PHASES 5-9 READY
-- **39 écritures générées** phases 1-4 (autonome) ✅
-- **Résultat net:** 17,765.47€ confirmé
-- **Bilans:** ACID équilibrés 100%
-- **Timeline clôture:** 24-48h validation humanisée
+- **39 écritures générées** phases 1-4 (autonome détection + propositions)
+- **Résultat net:** 17,765.47 € confirmé
+- **Bilans ACID:** Équilibrés 100%
+- **Prochaine étape:** Validation humanisée (token MD5) → Clôture automatique 24-48h
 
-## 🏗️ MODULE 2 — STATUS PRODUCTION 50+ JOURS
-- **Phases 1-4:** Autonome (détection + propositions) ✅
-- **Phases 5-9:** Validation humanisée (token MD5 32-hex) ✅
-- **Types événements:** 9 supportés (INIT_BILAN, PRET, RELEVE, CLOTURE, etc.) ✅
-- **OCR:** Claude Sonnet 4.5 | 99.98% précision confirmée ✅
-- **Fiabilité:** ACID 100% | Uptime 50+ jours continu ✅
+## 🏢 SCI PATRIMOINE STATUS
+- **Exercices:** 2023 CLOSED ✅ | 2024 CLÔTURE READY | 2025 OUVERT
+- **172 écritures ACID-validées** | Bilans équilibrés pérenne
+- **2 prêts opérationnels** multi-lookup amortissement/intérêts ACID
