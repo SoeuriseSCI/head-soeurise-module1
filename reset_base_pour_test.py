@@ -42,7 +42,7 @@ def sauvegarder_avant_reset(session):
     backup_file = f"backups/AVANT_RESET_{timestamp}.json"
 
     print(f"\n🔄 Exécution sauvegarder_base.py...")
-    exit_code = os.system(f"python sauvegarder_base.py")
+    exit_code = os.system(f"python3 sauvegarder_base.py")
 
     if exit_code != 0:
         print("\n❌ ERREUR lors de la sauvegarde !")
