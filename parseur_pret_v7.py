@@ -250,10 +250,11 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
     "banque": "Nom de la banque (ex: LCL, Crédit Agricole, etc.)",
     "montant_initial": Montant emprunté en EUR (number),
     "taux_annuel": Taux d'intérêt annuel en % (number, ex: 1.05 pour 1.05%),
+    "type_taux": "FIXE" ou "VARIABLE" (cherche dans le document : "Taux fixe", "Taux variable"),
     "duree_mois": Nombre TOTAL d'échéances extraites (integer - compte TOUTES les lignes : franchise + amortissement),
     "date_debut": "Date de début du prêt au format YYYY-MM-DD",
     "date_debut_amortissement": "Date de début d'amortissement au format YYYY-MM-DD",
-    "type_pret": "AMORTISSEMENT_CONSTANT" ou "IN_FINE"
+    "type_amortissement": "AMORTISSABLE" ou "IN_FINE" (voir instructions ci-dessous)
   },
   "echeances": [
     {
@@ -271,7 +272,25 @@ INSTRUCTIONS D'EXTRACTION :
 
 1. **Métadonnées du prêt** (généralement page 1) :
    - Cherche les informations du contrat en haut du document
-   - Identifie le type de prêt basé sur le profil des échéances
+
+   **Type de taux** (cherche dans le document) :
+   - Cherche : "Taux fixe", "TAUX FIXE", "Taux variable", "TAUX VARIABLE"
+   - En France : presque toujours FIXE
+   - Par défaut si non mentionné : "FIXE"
+
+   **Type d'amortissement** (RÈGLE UNIVERSELLE basée sur les dates) :
+
+   Règle : Calcule le ratio (mois avant amortissement) / (durée totale)
+
+   - Si ratio ≥ 0.90 → **IN_FINE**
+     * L'amortissement débute dans les derniers 10% du prêt
+     * Le capital est remboursé en bloc à la fin
+
+   - Sinon → **AMORTISSABLE**
+     * L'amortissement débute plus tôt
+     * Le capital est remboursé progressivement
+
+   ⚠️ Ne pas confondre avec "Taux fixe" (ce sont deux notions différentes)
 
 2. **Tableau des échéances** (pages suivantes) :
 
