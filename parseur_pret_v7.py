@@ -20,8 +20,8 @@ Avantages V7 :
 
 Modèle & Tokens :
 - Modèle par défaut : claude-sonnet-4-20250514 (Sonnet 4.5)
-- max_tokens : 100000 (100K output)
-- Raison : PDFs avec 250+ échéances nécessitent >64K tokens (limite Haiku)
+- max_tokens : 64000 (limite max Sonnet 4.5)
+- Note : Haiku 4.5 et Sonnet 4.5 ont la même limite (64K output)
 
 Insight clé (10/11/2025) :
 Claude en chat lit les PDFs nativement → extraction parfaite
@@ -170,24 +170,10 @@ Un prêt peut avoir plusieurs phases :
 
 ---
 
-ÉTAPE 1 - DIAGNOSTIC DES COLONNES (pour debugging) :
-Identifie les colonnes du tableau d'amortissement et retourne dans "debug_colonnes" :
-- Liste des noms de colonnes (de gauche à droite)
-- Pour chaque donnée à extraire, indique le nom de la colonne ET la valeur extraite pour la 1ère échéance
-
-ÉTAPE 2 - EXTRACTION :
+EXTRACTION :
 Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
 
 {
-  "debug_colonnes": {
-    "colonnes_tableau": ["Colonne1", "Colonne2", ...],
-    "mapping": {
-      "montant_echeance": {"colonne": "Nom exact", "premiere_valeur": 0.00},
-      "montant_capital": {"colonne": "Nom exact", "premiere_valeur": 0.00},
-      "montant_interet": {"colonne": "Nom exact", "premiere_valeur": 0.00},
-      "capital_restant_du": {"colonne": "Nom exact", "premiere_valeur": 250000.00}
-    }
-  },
   "pret": {
     "numero_pret": "Numéro du contrat (string)",
     "intitule": "Nom du produit (ex: SOLUTION P IMMO, INVESTIMUR, etc.)",
@@ -257,11 +243,11 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
 
         try:
             # Appel API SANS tools (réponse JSON directe)
-            print(f"[PARSEUR V7] Appel Claude API (model={self.model}, max_tokens=100000)...", flush=True)
+            print(f"[PARSEUR V7] Appel Claude API (model={self.model}, max_tokens=64000)...", flush=True)
 
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=100000,  # Limite Sonnet 4.5: 100K (vs Haiku 4.5: 64K)
+                max_tokens=64000,  # Limite max Haiku 4.5 et Sonnet 4.5
                 messages=[{
                     "role": "user",
                     "content": [
@@ -307,21 +293,6 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
                 }
 
             print(f"[PARSEUR V7] JSON parsé : {len(data['echeances'])} échéances extraites", flush=True)
-
-            # DEBUG : Logger le diagnostic des colonnes
-            if 'debug_colonnes' in data:
-                debug = data['debug_colonnes']
-                print(f"[PARSEUR V7 DEBUG] Colonnes identifiées : {debug.get('colonnes_tableau', [])}", flush=True)
-                if 'mapping' in debug:
-                    print(f"[PARSEUR V7 DEBUG] Mapping utilisé :", flush=True)
-                    for field, info in debug['mapping'].items():
-                        if isinstance(info, dict):
-                            colonne = info.get('colonne', '?')
-                            valeur = info.get('premiere_valeur', '?')
-                            print(f"  • {field} ← {colonne} (1ère valeur: {valeur}€)", flush=True)
-                        else:
-                            # Ancien format (string seulement)
-                            print(f"  • {field} ← {info}", flush=True)
 
             # NETTOYAGE POST-EXTRACTION : Supprimer échéances invalides
             # (échéance 0, frais de dossier, lignes avec incohérences majeures)
