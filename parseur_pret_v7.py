@@ -115,10 +115,8 @@ class ParseurTableauPretV7:
                     "message": f"{len(validation_errors)} erreur(s) détectée(s)"
                 }
 
-            # 5. Sauvegarde fichier MD (DÉSACTIVÉ V7 - échéances dans propositions dict)
-            # filename = self._save_to_md_file(result['data'])
-            numero_pret = result['data']['pret'].get('numero_pret', 'INCONNU')
-            filename = f"V7_DIRECT_STORAGE_{numero_pret}"
+            # 5. Sauvegarde fichier MD
+            filename = self._save_to_md_file(result['data'])
             result['filename'] = filename
 
             # 6. Insertion BD (optionnel)
@@ -183,27 +181,54 @@ Un prêt immobilier peut avoir plusieurs phases :
 
 ⚠️ PIÈGES CRITIQUES À ÉVITER :
 
-- **Échéance initiale (échéance 0)** : Première ligne du tableau = date de début du prêt.
-  → À IGNORER COMPLÈTEMENT : ce n'est pas une échéance de remboursement
-  → Commence l'extraction à partir de l'échéance 1 (premier mois)
+- **Lignes avant la première échéance** : ⚠️ RÈGLE UNIVERSELLE ⚠️
+
+  La **première vraie échéance** d'un prêt est TOUJOURS 1 mois après le début du prêt.
+  → Calcul : date_debut + 1 mois (ex: début 15/04/2022 → première échéance 15/05/2022)
+
+  **IGNORER TOUTES les lignes dont la date < date_debut + 1 mois**
+
+  Cela élimine automatiquement :
+  - Échéance 0 (ligne initiale = date_debut)
+  - Déblocages (DBL, DEBLOC, mise à disposition des fonds)
+  - Frais de dossier (250€, 1 500€...)
+  - Commissions de mise en place
+
+  Exemple type (prêt INVESTIMUR) :
+  ```
+  2022-04-15 | Échéance 0      | ... ← IGNORER (= date_debut)
+  2022-05-10 | DBL 250 000,00  | ... ← IGNORER (< date_debut + 1 mois)
+  2022-05-15 | Échéance 1      | ... ← PREMIÈRE VRAIE ÉCHÉANCE (= date_debut + 1 mois)
+  2022-06-15 | Échéance 2      | ... ← Extraire
+  ...
+  ```
 
 - **Intérêts DIFFÉRÉS vs PAYÉS** : ⚠️ CONFUSION FRÉQUENTE ⚠️
-  Le tableau peut avoir 2 colonnes différentes :
+
+  **CRITIQUE** : Le tableau a 2 colonnes d'intérêts différentes. Tu DOIS identifier la bonne.
 
   * "Intérêts différés" / "Intérêts cumulés" / "Intérêts courus"
-    → Intérêts qui COURENT mais NON prélevés (ex: 35€, 254€, 473€...)
-    → À IGNORER : ce ne sont PAS les intérêts payés
+    → Intérêts qui COURENT mais NON prélevés
+    → Ces valeurs AUGMENTENT chaque mois (ex: 42€, 300€, 559€, 817€...)
+    → À IGNORER ABSOLUMENT
 
   * "Intérêts payés" / "Intérêts prélevés" / "Intérêts de la période"
     → Intérêts EFFECTIVEMENT prélevés ce mois-ci
     → À UTILISER : c'est cette valeur qu'on veut
 
-  Exemple franchise totale (12 premiers mois) :
-  - Intérêts différés : 35€, 254€, 473€... (augmentent)
-  - Intérêts PAYÉS : 0€, 0€, 0€... (tous à zéro) ← UTILISER CES VALEURS
+  **TEST AUTOMATIQUE pour vérifier que tu utilises la bonne colonne** :
 
-- **Frais de dossier** : Ligne pour frais de mise en place (ex: 250€).
-  → À IGNORER : ce n'est pas une échéance de remboursement
+  En franchise totale (capital = 0€ tous les mois), les intérêts PAYÉS = 0€.
+
+  Si tu obtiens des intérêts > 0€ pendant la franchise (ex: 42€, 300€, 559€...),
+  c'est que tu utilises la MAUVAISE colonne (intérêts différés au lieu de payés).
+
+  → STOP : Révise l'identification des colonnes et recommence.
+  → Les intérêts en franchise totale doivent être 0€, 0€, 0€...
+
+  Exemple franchise totale (12 premiers mois) :
+  - ❌ Intérêts différés : 42€, 300€, 559€... (MAUVAISE colonne - augmentent)
+  - ✅ Intérêts PAYÉS : 0€, 0€, 0€... (BONNE colonne - tous zéro)
 
 - **Lignes de report/total** : Lignes "Report" ou "Total" à reporter.
   → À IGNORER : calculs intermédiaires
@@ -212,7 +237,7 @@ Un prêt immobilier peut avoir plusieurs phases :
 Pour CHAQUE échéance :
 **montant_total = montant_capital + montant_interet_PAYÉ** (à ±0.01€ près)
 
-En franchise totale : montant_total = 0€ (car capital = 0€ ET intérêts PAYÉS = 0€)
+En franchise totale : montant_total = 0€ ET montant_interet = 0€ (pas 42€, 300€, 559€...)
 
 ---
 
@@ -225,7 +250,7 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
     "banque": "Nom de la banque (ex: LCL, Crédit Agricole, etc.)",
     "montant_initial": Montant emprunté en EUR (number),
     "taux_annuel": Taux d'intérêt annuel en % (number, ex: 1.05 pour 1.05%),
-    "duree_mois": Durée totale en mois (integer),
+    "duree_mois": Nombre TOTAL d'échéances extraites (integer - compte TOUTES les lignes : franchise + amortissement),
     "date_debut": "Date de début du prêt au format YYYY-MM-DD",
     "date_debut_amortissement": "Date de début d'amortissement au format YYYY-MM-DD",
     "type_pret": "AMORTISSEMENT_CONSTANT" ou "IN_FINE"
@@ -340,6 +365,24 @@ Analyse maintenant le document et retourne le JSON."""
 
             print(f"[PARSEUR V7] JSON parsé : {len(data['echeances'])} échéances extraites", flush=True)
 
+            # NETTOYAGE POST-EXTRACTION : Supprimer échéances invalides
+            # (échéance 0, frais de dossier, lignes avec incohérences majeures)
+            echeances_nettoyees = self._nettoyer_echeances(data['pret'], data['echeances'])
+            nb_supprimees = len(data['echeances']) - len(echeances_nettoyees)
+
+            if nb_supprimees > 0:
+                print(f"[PARSEUR V7] Nettoyage : {nb_supprimees} échéance(s) invalide(s) supprimée(s)", flush=True)
+                data['echeances'] = echeances_nettoyees
+
+            # Recalculer duree_mois automatiquement pour garantir la cohérence
+            # (évite les erreurs si Claude compte mal les échéances)
+            nb_echeances = len(data['echeances'])
+            duree_mois_declaree = data['pret'].get('duree_mois', 0)
+
+            if nb_echeances != duree_mois_declaree:
+                print(f"[PARSEUR V7] Correction duree_mois : {duree_mois_declaree} → {nb_echeances} (nombre réel d'échéances)", flush=True)
+                data['pret']['duree_mois'] = nb_echeances
+
             return {
                 "success": True,
                 "data": data
@@ -359,6 +402,71 @@ Analyse maintenant le document et retourne le JSON."""
                 "error": str(e),
                 "message": f"Erreur lors de l'appel Claude : {str(e)}"
             }
+
+    def _nettoyer_echeances(self, pret: Dict, echeances: List[Dict]) -> List[Dict]:
+        """
+        Nettoie les échéances extraites en supprimant les lignes invalides
+
+        RÈGLE UNIVERSELLE (principe financier) :
+        La première vraie échéance = date_debut + 1 mois
+        → Ignore TOUTES les lignes avant cette date (échéance 0, DBL, frais...)
+
+        Critères supplémentaires :
+        - Incohérences : |montant_total - (capital + intérêt)| > 1€
+
+        Returns:
+            Liste des échéances valides
+        """
+        from datetime import datetime
+        from dateutil.relativedelta import relativedelta
+
+        date_debut_str = pret.get('date_debut', '')
+
+        try:
+            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date() if date_debut_str else None
+        except:
+            date_debut = None
+
+        # Calculer date première échéance (date_debut + 1 mois)
+        if date_debut:
+            premiere_echeance = date_debut + relativedelta(months=1)
+        else:
+            premiere_echeance = None
+
+        echeances_valides = []
+
+        for i, ech in enumerate(echeances):
+            skip = False
+            raison = None
+
+            # CRITÈRE PRINCIPAL : Ignorer si date < date_debut + 1 mois
+            if premiere_echeance:
+                try:
+                    date_ech = datetime.strptime(ech.get('date_echeance', ''), '%Y-%m-%d').date()
+                    if date_ech < premiere_echeance:
+                        skip = True
+                        raison = f"avant première échéance (< {premiere_echeance})"
+                except:
+                    pass  # Date invalide : on laisse passer pour validation ultérieure
+
+            # Critère secondaire : Ignorer si incohérence majeure (>1€)
+            if not skip:
+                montant_total = ech.get('montant_total', 0)
+                montant_capital = ech.get('montant_capital', 0)
+                montant_interet = ech.get('montant_interet', 0)
+                total_calc = montant_capital + montant_interet
+
+                if abs(total_calc - montant_total) > 1.0:
+                    skip = True
+                    raison = f"incohérence montant (total={montant_total:.2f}€ vs calc={total_calc:.2f}€)"
+
+            # Log et décision
+            if skip:
+                print(f"[PARSEUR V7] Échéance {i+1} ({ech.get('date_echeance', 'N/A')}) ignorée : {raison}", flush=True)
+            else:
+                echeances_valides.append(ech)
+
+        return echeances_valides
 
     def _validate_pret_data(self, data: Dict) -> List[str]:
         """
@@ -395,6 +503,34 @@ Analyse maintenant le document et retourne le JSON."""
 
         if len(echeances) > 500:
             errors.append(f"Trop d'échéances : {len(echeances)} (attendu 200-300)")
+
+        # VALIDATION CRITIQUE : Détecter confusion colonnes intérêts (différés vs payés)
+        # En franchise totale (capital=0), les intérêts PAYÉS = 0€
+        # Si intérêts > 0€ et augmentent → Utilise mauvaise colonne (intérêts différés)
+        echeances_franchise = []
+        for i, ech in enumerate(echeances[:20]):  # Vérifier les 20 premières (franchise probable)
+            if ech.get('montant_capital', 0) == 0:
+                echeances_franchise.append((i, ech.get('montant_interet', 0)))
+
+        if len(echeances_franchise) >= 3:
+            # Au moins 3 échéances en franchise
+            interets_franchise = [interets for _, interets in echeances_franchise]
+
+            # Vérifier si les intérêts augmentent (pattern intérêts différés)
+            if all(interets > 0 for interets in interets_franchise):
+                # Tous > 0 (devrait être 0 en franchise totale)
+                if interets_franchise[1] > interets_franchise[0] and interets_franchise[2] > interets_franchise[1]:
+                    # Augmentent progressivement → C'est les intérêts différés
+                    errors.append(
+                        f"⚠️ ERREUR CRITIQUE : Confusion colonnes intérêts détectée\n"
+                        f"   → En franchise (capital=0), les intérêts PAYÉS doivent être 0€\n"
+                        f"   → Valeurs extraites : {interets_franchise[0]:.2f}€, {interets_franchise[1]:.2f}€, {interets_franchise[2]:.2f}€ (augmentent)\n"
+                        f"   → Tu utilises la colonne 'Intérêts différés/cumulés' (MAUVAISE)\n"
+                        f"   → Utilise la colonne 'Intérêts payés/prélevés' (BONNE)\n"
+                        f"   → Les intérêts en franchise totale doivent être 0€, 0€, 0€..."
+                    )
+                    # Retourner immédiatement, pas besoin d'autres validations
+                    return errors
 
         # Validation ligne par ligne (max 10 erreurs pour ne pas surcharger)
         nb_errors_max = 10
