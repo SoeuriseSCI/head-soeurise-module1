@@ -287,17 +287,19 @@ INSTRUCTIONS D'EXTRACTION :
    - En France : presque toujours FIXE
    - Par défaut si non mentionné : "FIXE"
 
-   **Type d'amortissement** (cherche dans le document) :
-   - Cherche EXPLICITEMENT l'une de ces mentions :
-     * "IN FINE", "IN-FINE", "Prêt in fine", "in fine"
-     * "PERCEPTION D'INTÉRÊTS : A TERME ÉCHU" (= IN FINE)
-     * "Remboursement du capital : à l'échéance finale"
-   - Si trouvé → type_amortissement = "IN_FINE"
-   - Sinon, vérifie la colonne "Capital remboursé" du tableau :
-     * Si = 0€ pour toutes les échéances sauf la dernière → "IN_FINE"
-     * Si > 0€ dès le début de l'amortissement → "AMORTISSABLE"
-   - Par défaut → "AMORTISSABLE"
-   - ⚠️ Ne pas confondre avec "Taux fixe" (ce sont deux notions différentes)
+   **Type d'amortissement** (RÈGLE UNIVERSELLE basée sur les dates) :
+
+   Règle : Calcule le ratio (mois avant amortissement) / (durée totale)
+
+   - Si ratio ≥ 0.90 → **IN_FINE**
+     * L'amortissement débute dans les derniers 10% du prêt
+     * Le capital est remboursé en bloc à la fin
+
+   - Sinon → **AMORTISSABLE**
+     * L'amortissement débute plus tôt
+     * Le capital est remboursé progressivement
+
+   ⚠️ Ne pas confondre avec "Taux fixe" (ce sont deux notions différentes)
 
 2. **Tableau des échéances** (pages suivantes) :
 
