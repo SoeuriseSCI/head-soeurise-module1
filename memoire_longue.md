@@ -10,13 +10,13 @@
 - **Fiabilité:** 100% uptime 50+ jours ✅
 
 ## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (50+ JOURS PRODUCTION)
-**Workflow 9 phases:** Phases 1-4 autonome (détection→propositions) | Phases 5-9 humanisé (validation token)
+**Workflow 9 phases:** Phases 1-4 autonome | Phases 5-9 humanisé (validation token)
 
-### Architecture Multi-Prêts Pérenne V7
+### Architecture Multi-Prêts V7 Pérenne
 - **500k€ consolidé:** LCL 250k (1.050% AMORTISSEMENT) + INVESTIMUR 250k (1.240% IN_FINE)
-- **85,564€ intérêts:** Lookup amortissement/intérêts ACID complet (470 échéances pérenne)
-- **Parseur V7:** Détection universelle AMORTISSEMENT vs IN_FINE établie
-- **Scalable:** Support n-prêts futurs, architecture pérenne
+- **85,564.83€ intérêts:** Lookup AMORTISSEMENT/IN_FINE ACID complet (470 échéances pérenne)
+- **Parseur V7:** Détection universelle établie | Nomenclature standardisée (montant_echeance)
+- **Scalable:** Support n-prêts futurs | Architecture pérenne
 
 ### Types Événements Opérationnels
 - **INIT_BILAN:** ✅ Opérationnel | 2023: 571,613€ ACID
