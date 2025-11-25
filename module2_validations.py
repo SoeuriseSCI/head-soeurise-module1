@@ -500,39 +500,48 @@ class ProcesseurInsertion:
             (success, message, [pret_id])
         """
         try:
-            # Vérifier qu'il y a exactement 1 proposition
-            if len(propositions) != 1:
-                return False, f"Attendu 1 proposition PRET, recu {len(propositions)}", []
+            # Vérifier qu'il y a au moins 1 proposition
+            if len(propositions) < 1:
+                return False, "Aucune proposition PRET trouvée", []
 
-            prop = propositions[0]
+            # Traiter TOUS les prêts (support multi-PDFs)
+            prets_inseres = []
+            messages = []
 
-            # Extraire les données (V7: échéances dans le dict, pas de fichier MD)
-            filename = prop.get('filename', '')
-            pret_data = prop.get('pret', {})
-            nb_echeances = prop.get('nb_echeances', 0)
-            echeances_data = prop.get('echeances', [])
+            for i, prop in enumerate(propositions, 1):
+                # Extraire les données (V7: échéances dans le dict, pas de fichier MD)
+                filename = prop.get('filename', '')
+                pret_data = prop.get('pret', {})
+                nb_echeances = prop.get('nb_echeances', 0)
+                echeances_data = prop.get('echeances', [])
 
-            if not pret_data:
-                return False, "Données prêt manquantes dans proposition", []
+                if not pret_data:
+                    return False, f"Données prêt manquantes dans proposition {i}", []
 
-            if not echeances_data:
-                return False, "Échéances manquantes dans proposition", []
+                if not echeances_data:
+                    return False, f"Échéances manquantes dans proposition {i}", []
 
-            # Insérer le prêt et ses échéances via PretsManager
-            success, message, pret_id = self.prets_manager.inserer_pret_et_echeances(
-                pret_data=pret_data,
-                echeances_data=echeances_data
-            )
+                # Insérer le prêt et ses échéances via PretsManager
+                success, message, pret_id = self.prets_manager.inserer_pret_et_echeances(
+                    pret_data=pret_data,
+                    echeances_data=echeances_data
+                )
 
-            if not success:
-                return False, f"Erreur insertion prêt: {message}", []
+                if not success:
+                    # Rollback si un prêt échoue
+                    self.session.rollback()
+                    return False, f"Erreur insertion prêt {i}: {message}", []
 
-            # Retourner le pret_id dans une liste pour cohérence avec autres insertions
-            return True, f"Prêt {pret_data.get('numero_pret', '?')} inséré avec {len(echeances_data)} échéances", [pret_id] if pret_id else []
+                prets_inseres.append(pret_id)
+                messages.append(f"Prêt {pret_data.get('numero_pret', '?')} ({len(echeances_data)} échéances)")
+
+            # Message récapitulatif
+            message_final = f"{len(prets_inseres)} prêt(s) inséré(s): {', '.join(messages)}"
+            return True, message_final, prets_inseres
 
         except Exception as e:
             self.session.rollback()
-            return False, f"Erreur insertion prêt: {str(e)[:100]}", []
+            return False, f"Erreur insertion prêts: {str(e)[:100]}", []
 
 
 # ORCHESTRATOR VALIDATIONS
