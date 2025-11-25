@@ -848,9 +848,37 @@ def reveil_quotidien():
     
     save_to_db(resultat, emails)
     
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # DEBUG: Logger les propositions PRET_IMMOBILIER en base AVANT génération rapport
+    # ═══════════════════════════════════════════════════════════════════════════════
+    try:
+        from sqlalchemy import create_engine, text
+        engine = create_engine(DB_URL)
+        with engine.connect() as conn:
+            result_props = conn.execute(text('''
+                SELECT
+                    id,
+                    created_at,
+                    jsonb_array_length((propositions_json->'propositions'->0)->'echeances') as nb_ech_pret1,
+                    jsonb_array_length((propositions_json->'propositions'->1)->'echeances') as nb_ech_pret2,
+                    (propositions_json->'propositions'->0->'pret')->>'numero_pret' as num_pret1,
+                    (propositions_json->'propositions'->1->'pret')->>'numero_pret' as num_pret2
+                FROM propositions_en_attente
+                WHERE type_evenement = 'PRET_IMMOBILIER'
+                AND statut = 'EN_ATTENTE'
+                ORDER BY created_at DESC
+                LIMIT 3
+            '''))
+
+            log_critical("DEBUG_PROPOSITIONS_HEAD", "Propositions en base AVANT rapport _Head:")
+            for row in result_props:
+                log_critical("DEBUG_PROP_DETAIL", f"ID {row[0]} | {row[1]} | Prêt {row[4]}: {row[2]} éch | Prêt {row[5]}: {row[3]} éch")
+    except Exception as e:
+        log_critical("DEBUG_PROPOSITIONS_ERROR", f"Erreur lecture propositions: {str(e)[:100]}")
+
     # Utiliser directement git_write_file pour chaque mémoire
     files_updated = []
-    
+
     for key, filename in [('memoire_courte_md', 'memoire_courte.md'),
                           ('memoire_moyenne_md', 'memoire_moyenne.md'),
                           ('memoire_longue_md', 'memoire_longue.md')]:
