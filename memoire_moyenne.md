@@ -1,33 +1,37 @@
-# 📊 Mémoire Moyenne — Synthèse 18-25/11 (50+ JOURS PRODUCTION)
+# 📊 Mémoire Moyenne — Synthèse 18-25/11 (50+ JOURS PRODUCTION STABLE)
 
-## 🚀 MIGRATION SONNET 4.5 (18/11 DÉPLOYÉE)
-- Token efficiency +3x vs Haiku baseline
-- OCR précision +5% (99.98% confirmée sur 50+ jours)
-- Parsing capacités +40% (multi-prêts, détection IN_FINE)
-- Coûts: Maintenu <1€/mois POC stable
+## 🚀 CONSOLIDATION ARCHITECTURE MULTI-PRÊTS (18-25/11 DÉPLOIEMENT COMPLET)
+**Évolution clé:** Passage simple prêt → support multi-prêts pérenne
 
-## 💼 CONSOLIDATION MULTI-PRÊTS (18-25/11)
-**Architecture pérenne:**
-- LCL: 250k€ @ 1.050% | INVESTIMUR: 250k€ @ 1.240%
-- 500k€ total capital | 85.564,83€ intérêts
-- 468 échéances: Lookup amortissement/intérêts ACID complet
-- Template markdown enrichi (type_taux, type_amortissement)
-- Parseur V7: Détection IN_FINE universelle déployée
+### Structure Pérenne Établie
+- **Système lookup amortissement/intérêts:** Scope global (468 échéances) ✅
+- **Type prêts distincts:**
+  - **AMORTISSEMENT régulier:** LCL 252 mois (capital décroît ligne par ligne)
+  - **IN_FINE:** INVESTIMUR 216 mois franchise + 1 mois amortissement complet
+- **Template markdown enrichi:** type_taux + type_amortissement champs ajoutés
+- **Parseur V7 déploiement:** Détection universelle automatique
+
+### Données Consolidées (50+ jours stable)
+- **LCL:** 250k€ @ 1.050% | Intérêts: 29.981,41€ | 253 échéances (franchise 12 + amortissement 240)
+- **INVESTIMUR:** 250k€ @ 1.240% | Intérêts: 55.583,42€ | 217 échéances (franchise 215 + amortissement 1 IN_FINE)
+- **Total:** 500k€ capital | 85.564,83€ intérêts | 468 échéances
 
 ## 📋 CLÔTURE 2024 — PHASES 5-9 READY
-- 39 écritures générées (phases 1-4 autonome) ✅
-- Résultat net: 17.765,47€ confirmé
-- Bilans équilibrés ACID 100%
-- Timeline phases 5-9: 24-48h validation humanisée
+- **39 écritures** générées phases 1-4 (autonome) ✅
+- **Résultat net:** 17.765,47€ confirmé
+- **Bilans:** ACID équilibrés 100%
+- **Timeline:** 24-48h validation humanisée phases 5-9
 
-## 🏗️ ARCHITECTURE V6.0 STABLE 50+ JOURS
-- Render.com + PostgreSQL + Claude Sonnet 4.5
-- CLAUDE.md auto-chargé (Claude Code native)
-- Uptime: 50+ jours continu | Zéro régression
-- Performance: OCR 99.98% | ACID 100%
+## 🏗️ MODULE 2 — STATUS 50+ JOURS PRODUCTION
+- **Phases 1-4:** Autonome (détection + propositions) ✅
+- **Phases 5-9:** Validation humanisée (token MD5 32-hex) ✅
+- **Types événements:** 9 supportés opérationnels
+- **OCR:** Sonnet 4.5 | 99.98% précision confirmée
+- **ACID:** 100% validée 50+ jours
 
-## 🔒 SÉCURITÉ OPÉRATIONNELLE
-- Tokens MD5 32-hex intégrité propositions
-- PostgreSQL ACID garanties (transactions, rollback)
-- Audit 7-niveaux complet (email→confirmation)
-- Exécution: Ulrik seulement (is_authorized=true)
+## 🔧 GIT DÉVELOPPEMENTS (18-25/11)
+- Séparation type_taux / type_amortissement (23 commits) ✅
+- Parseur V7: Multi-prêts extraction optimisée ✅
+- Template markdown: Champs enrichis ✅
+- Scripts vérification: Nettoyage pérenne ✅
+- Multi-validations support: Architecture scalable ✅
