@@ -186,7 +186,7 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
     "taux_annuel": Taux d'intérêt annuel en % (number, ex: 1.05 pour 1.05%),
     "type_taux": "FIXE" ou "VARIABLE" (cherche dans le document : "Taux fixe", "Taux variable"),
     "duree_mois": Nombre TOTAL d'échéances extraites (integer - compte TOUTES les lignes : franchise + amortissement),
-    "date_debut": "Date de début du prêt au format YYYY-MM-DD",
+    "date_debut": "Date de SIGNATURE/DEPART du prêt (cherche 'DATE DE DEPART DU PRET', 'DATE SIGNATURE', etc. dans métadonnées) au format YYYY-MM-DD",
     "date_debut_amortissement": "Date de début d'amortissement au format YYYY-MM-DD",
     "type_amortissement": "AMORTISSABLE" ou "IN_FINE" (voir instructions ci-dessous)
   },
@@ -229,7 +229,10 @@ utilise celle qui correspond à la DÉFINITION SÉMANTIQUE ci-dessus, pas juste 
 
 EXTRACTION :
 
-1. **Métadonnées du prêt** (page 1) : numero_pret, banque, montant_initial, taux_annuel, duree_mois, date_debut, date_debut_amortissement
+1. **Métadonnées du prêt** (page 1) :
+   - numero_pret, banque, montant_initial, taux_annuel, duree_mois
+   - **date_debut** : Extraire "DATE DE DEPART DU PRET" ou "DATE SIGNATURE" des métadonnées (PAS la date de première échéance)
+   - date_debut_amortissement : Date de début d'amortissement
    - type_taux : cherche "Taux fixe"/"Taux variable" dans le document (par défaut : FIXE)
    - type_amortissement : calcule ratio = (mois avant amortissement) / (durée totale)
      → Si ratio ≥ 0.90 : IN_FINE, sinon : AMORTISSABLE
