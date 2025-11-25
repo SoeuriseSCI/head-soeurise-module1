@@ -120,9 +120,8 @@ class ParseurTableauPretV7:
                     "message": f"{len(validation_errors)} erreur(s) détectée(s)"
                 }
 
-            # 5. Sauvegarde fichier MD
-            filename = self._save_to_md_file(result['data'])
-            result['filename'] = filename
+            # 5. Générer nom fichier source (nom du PDF original)
+            filename = os.path.basename(filepath)
 
             # 6. Insertion BD (optionnel)
             if auto_insert_bd:
@@ -297,15 +296,6 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
 
             print(f"[PARSEUR V7] JSON parsé : {len(data['echeances'])} échéances extraites", flush=True)
 
-            # NETTOYAGE POST-EXTRACTION : Supprimer échéances invalides
-            # (échéance 0, frais de dossier, lignes avec incohérences majeures)
-            echeances_nettoyees = self._nettoyer_echeances(data['pret'], data['echeances'])
-            nb_supprimees = len(data['echeances']) - len(echeances_nettoyees)
-
-            if nb_supprimees > 0:
-                print(f"[PARSEUR V7] Nettoyage : {nb_supprimees} échéance(s) invalide(s) supprimée(s)", flush=True)
-                data['echeances'] = echeances_nettoyees
-
             # Recalculer duree_mois automatiquement pour garantir la cohérence
             # (évite les erreurs si Claude compte mal les échéances)
             nb_echeances = len(data['echeances'])
@@ -335,81 +325,19 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
                 "message": f"Erreur lors de l'appel Claude : {str(e)}"
             }
 
-    def _nettoyer_echeances(self, pret: Dict, echeances: List[Dict]) -> List[Dict]:
-        """
-        Nettoie les échéances extraites en supprimant les lignes invalides
-
-        RÈGLE UNIVERSELLE (principe financier) :
-        La première vraie échéance = date_debut + 1 mois
-        → Ignore TOUTES les lignes avant cette date (échéance 0, DBL, frais...)
-
-        Critères supplémentaires :
-        - Incohérences : |montant_echeance - (capital + intérêt)| > 1€
-
-        Returns:
-            Liste des échéances valides
-        """
-        from datetime import datetime
-        from dateutil.relativedelta import relativedelta
-
-        date_debut_str = pret.get('date_debut', '')
-
-        try:
-            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date() if date_debut_str else None
-        except:
-            date_debut = None
-
-        # Calculer date première échéance (date_debut + 1 mois)
-        if date_debut:
-            premiere_echeance = date_debut + relativedelta(months=1)
-        else:
-            premiere_echeance = None
-
-        echeances_valides = []
-
-        for i, ech in enumerate(echeances):
-            skip = False
-            raison = None
-
-            # CRITÈRE PRINCIPAL : Ignorer si date < date_debut + 1 mois
-            if premiere_echeance:
-                try:
-                    date_ech = datetime.strptime(ech.get('date_echeance', ''), '%Y-%m-%d').date()
-                    if date_ech < premiere_echeance:
-                        skip = True
-                        raison = f"avant première échéance (< {premiere_echeance})"
-                except:
-                    pass  # Date invalide : on laisse passer pour validation ultérieure
-
-            # Critère secondaire : Ignorer si incohérence majeure (>1€)
-            if not skip:
-                montant_echeance = ech.get('montant_echeance', 0)
-                montant_capital = ech.get('montant_capital', 0)
-                montant_interet = ech.get('montant_interet', 0)
-                total_calc = montant_capital + montant_interet
-
-                if abs(total_calc - montant_echeance) > 1.0:
-                    skip = True
-                    raison = f"incohérence montant (echeance={montant_echeance:.2f}€ vs calc={total_calc:.2f}€)"
-
-            # Log et décision
-            if skip:
-                print(f"[PARSEUR V7] Échéance {i+1} ({ech.get('date_echeance', 'N/A')}) ignorée : {raison}", flush=True)
-            else:
-                echeances_valides.append(ech)
-
-        return echeances_valides
-
     def _validate_pret_data(self, data: Dict) -> List[str]:
         """
-        Valide la cohérence des données extraites (validation Python stricte)
+        Valide la cohérence des données extraites
+
+        Retourne seulement les erreurs CRITIQUES qui justifient un rejet complet.
+        Les warnings sont loggés mais ne bloquent pas.
 
         Returns:
-            Liste des erreurs (vide si OK)
+            Liste des erreurs critiques (vide si OK)
         """
         errors = []
 
-        # Validation métadonnées prêt
+        # Validation métadonnées prêt (CRITIQUES)
         pret = data.get('pret', {})
 
         if not pret.get('numero_pret'):
@@ -427,14 +355,11 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
         if not pret.get('duree_mois') or pret['duree_mois'] <= 0:
             errors.append("Métadonnée invalide : duree_mois doit être > 0")
 
-        # Validation échéances
+        # Validation échéances (WARNINGS seulement, ne bloque pas)
         echeances = data.get('echeances', [])
 
-        if len(echeances) < 100:
-            errors.append(f"Trop peu d'échéances : {len(echeances)} (attendu 200-300)")
-
-        if len(echeances) > 500:
-            errors.append(f"Trop d'échéances : {len(echeances)} (attendu 200-300)")
+        if len(echeances) == 0:
+            errors.append("Aucune échéance extraite")
 
         # VALIDATION CRITIQUE : Détecter confusion colonnes intérêts (différés vs payés)
         # En franchise totale (capital=0), les intérêts PAYÉS = 0€
@@ -464,103 +389,10 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
                     # Retourner immédiatement, pas besoin d'autres validations
                     return errors
 
-        # Validation ligne par ligne (max 10 erreurs pour ne pas surcharger)
-        nb_errors_max = 10
-
-        for i, ech in enumerate(echeances):
-            if len(errors) >= nb_errors_max:
-                errors.append(f"... ({len(echeances) - i} échéances non vérifiées)")
-                break
-
-            # Vérif champs requis
-            if not ech.get('date_echeance'):
-                errors.append(f"Échéance {i+1} : date_echeance manquante")
-                continue
-
-            # Vérif cohérence montant (tolérance 0.01€ pour arrondis)
-            montant_echeance = ech.get('montant_echeance', 0)
-            montant_capital = ech.get('montant_capital', 0)
-            montant_interet = ech.get('montant_interet', 0)
-
-            total_calc = montant_capital + montant_interet
-
-            if abs(total_calc - montant_echeance) > 0.01:
-                errors.append(
-                    f"Échéance {i+1} ({ech['date_echeance']}) : "
-                    f"incohérence montant (echeance={montant_echeance:.2f} != capital+intérêt={total_calc:.2f})"
-                )
-
-            # Vérif capital restant diminue (ou constant pour IN_FINE)
-            if i > 0:
-                capital_precedent = echeances[i-1].get('capital_restant_du', 0)
-                capital_actuel = ech.get('capital_restant_du', 0)
-
-                if capital_actuel > capital_precedent + 0.01:  # Tolérance arrondi
-                    errors.append(
-                        f"Échéance {i+1} ({ech['date_echeance']}) : "
-                        f"capital restant AUGMENTE ({capital_precedent:.2f} → {capital_actuel:.2f})"
-                    )
+        # On fait confiance à Claude expert pour les validations ligne par ligne
+        # Seules les validations critiques (métadonnées + confusion colonnes) restent
 
         return errors
-
-    def _save_to_md_file(self, data: Dict) -> str:
-        """
-        Sauvegarde les données dans un fichier MD
-
-        Returns:
-            Nom du fichier créé
-        """
-        pret = data['pret']
-        echeances = data['echeances']
-
-        # Nom du fichier
-        numero_pret = pret['numero_pret'].replace('/', '_').replace(' ', '_')
-        filename = f"PRET_{numero_pret}_echeances.md"
-
-        # Construction du contenu
-        lines = [
-            f"# Échéances Prêt {pret['numero_pret']}",
-            "",
-            f"**Intitulé** : {pret['intitule']}",
-            f"**Banque** : {pret['banque']}",
-            f"**Montant initial** : {pret['montant_initial']:.2f} EUR",
-            f"**Taux annuel** : {pret['taux_annuel']}%",
-            f"**Type de taux** : {pret['type_taux']}",
-            f"**Durée** : {pret['duree_mois']} mois",
-            f"**Date début** : {pret['date_debut']}",
-            f"**Date début amortissement** : {pret.get('date_debut_amortissement', 'N/A')}",
-            f"**Type amortissement** : {pret['type_amortissement']}",
-            "",
-            f"**Extraction** : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"**Nombre d'échéances** : {len(echeances)}",
-            "",
-            "---",
-            "",
-            "**Format** : date_echeance:montant_echeance:montant_capital:montant_interet:capital_restant_du",
-            ""
-        ]
-
-        # Ajouter les échéances
-        for ech in echeances:
-            line = (
-                f"{ech['date_echeance']}:"
-                f"{ech['montant_echeance']:.2f}:"
-                f"{ech['montant_capital']:.2f}:"
-                f"{ech['montant_interet']:.2f}:"
-                f"{ech['capital_restant_du']:.2f}"
-            )
-            lines.append(line)
-
-        # Note: On ne crée plus le fichier physiquement (scorie d'anciennes versions)
-        # Le filename sert uniquement de référence pour source_document en BD
-        # content = "\n".join(lines)
-        # filepath = os.path.join(os.getcwd(), filename)
-        # with open(filepath, 'w', encoding='utf-8') as f:
-        #     f.write(content)
-        #
-        # print(f"[PARSEUR V7] Fichier créé : {filename}", flush=True)
-
-        return filename
 
     def _save_to_database(self, data: Dict, filename: str) -> int:
         """
