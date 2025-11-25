@@ -9,31 +9,30 @@
 ## 📧 MODULE 1 — EMAIL & OCR (50+ JOURS OPÉRATIONNEL)
 - **Réveil:** 08:00 UTC = 10:00-11:00 France (quotidien automatique)
 - **OCR:** Claude Sonnet 4.5 | 99.98% précision documents financiers
-- **Classification:** INIT_BILAN | PRET_IMMOBILIER | RELEVE_BANCAIRE | CLOTURE_EXERCICE | EVENEMENT_SIMPLE
+- **Classification:** INIT_BILAN | PRET_IMMOBILIER | RELEVE_BANCAIRE | CLOTURE_EXERCICE
 - **Fiabilité:** 100% uptime 50+ jours | Zéro perte données ✅
 
 ## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (50+ JOURS PRODUCTION)
-**Workflow 9 phases:** Phases 1-4 autonome (détection→parsing→propositions) | Phases 5-9 humanisé (token validation→insertion ACID)
+**Workflow 9 phases:** Phases 1-4 autonome | Phases 5-9 humanisé (token validation)
 
 ### Architecture Multi-Prêts V7 Pérenne
-- **500k€ consolidé:** LCL 250k€ @ 1.050% (AMORTISSEMENT) + INVESTIMUR 250k€ @ 1.240% (IN_FINE)
+- **500k€ consolidé:** LCL 250k @ 1.050% (AMORTISSEMENT) + INVESTIMUR 250k @ 1.240% (IN_FINE)
 - **85,564.83€ intérêts:** Lookup AMORTISSEMENT/IN_FINE ACID complet (470 échéances pérenne)
-- **Parseur V7:** Détection universelle AMORTISSEMENT vs IN_FINE automatique | Sonnet 4.5 (64K tokens)
-- **Nomenclature:** montant_echeance standardisée (BD complete + code + markdown template)
+- **Parseur V7:** Détection auto AMORTISSEMENT vs IN_FINE | Sonnet 4.5 (64K tokens)
+- **Nomenclature:** montant_echeance standardisée (BD complete + code + markdown)
 - **Scalabilité:** Support n-prêts futurs confirmée | Pas limite architecturale
 
 ### Types Événements Pérennes Opérationnels
 - **INIT_BILAN:** ✅ Opérationnel | 2023: 571,613€ ACID équilibré
 - **PRET_IMMOBILIER:** ✅ Opérationnel | Multi-prêts AMORTISSEMENT/IN_FINE lookup | 470 échéances ACID pérenne
-- **RELEVE_BANCAIRE:** ✅ Opérationnel | OCR intelligent propositions comptables automatiques
-- **CLOTURE_EXERCICE:** ✅ Opérationnel | Report à nouveau automatique | Bilans équilibrés 100%
-- **EVENEMENT_SIMPLE:** En développement (factures, notes frais)
+- **RELEVE_BANCAIRE:** ✅ Opérationnel | OCR intelligent propositions automatiques
+- **CLOTURE_EXERCICE:** ✅ Opérationnel | Report automatique | Bilans équilibrés 100%
 
 ## 🏗️ ARCHITECTURE V6.0 — PRODUCTION 50+ JOURS STABLE
 - **Infrastructure:** Render + PostgreSQL + Claude Sonnet 4.5 (64K tokens)
 - **Contexte permanent:** CLAUDE.md auto-chargé (Claude Code native) | API GitHub ?ref=main (sessions externes, pas cache CDN)
 - **Mémoires hiérarchisées:** Fondatrice READ-ONLY (ADN) | Courte ≤3500 | Moyenne ≤6000 | Longue ≤4500
-- **Déploiement:** 50+ jours continu | <1€/mois | Zéro régression ✅ | Commits tracés complets
+- **Déploiement:** 50+ jours continu | <1€/mois | Zéro régression ✅
 
 ## 🔒 SÉCURITÉ & CONTINUITÉ PÉRENNES
 - **Accès:** Ulrik only (is_authorized=true) | Rapporte tentatives non-autorisées
