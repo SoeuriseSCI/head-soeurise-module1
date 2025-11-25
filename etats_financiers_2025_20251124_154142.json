@@ -1,0 +1,76 @@
+{
+  "date_generation": "2025-11-24T15:41:42.076427",
+  "exercice": {
+    "annee": 2025,
+    "date_debut": "2025-01-01",
+    "date_fin": "2025-12-31",
+    "statut": "OUVERT"
+  },
+  "compte_resultat": {
+    "charges": {
+      "661": {
+        "libelle": "Charges d'intérêts",
+        "montant": 0.0
+      },
+      "6226": {
+        "libelle": "Honoraires",
+        "montant": 0.0
+      }
+    },
+    "produits": {
+      "761": {
+        "libelle": "Produits de participations",
+        "montant": 0.0
+      }
+    },
+    "total_charges": -861.16,
+    "total_produits": -6755.0,
+    "resultat": -5893.84
+  },
+  "bilan": {
+    "actif": {
+      "119": {
+        "libelle": "Report à nouveau (solde débiteur)",
+        "montant": 18382.53
+      },
+      "271": {
+        "libelle": "Titres immobilisés (autres que TIAP)",
+        "montant": 500032.0
+      },
+      "273": {
+        "libelle": "Titres immobilisés",
+        "montant": 25759.63
+      },
+      "512": {
+        "libelle": "Banque",
+        "montant": 2320.35
+      }
+    },
+    "passif": {
+      "101": {
+        "libelle": "Capital social",
+        "montant": 1000.0
+      },
+      "1688": {
+        "libelle": "Intérêts courus",
+        "montant": -244.34
+      },
+      "164": {
+        "libelle": "Emprunts auprès des établissements de crédit",
+        "montant": 486509.69
+      },
+      "290": {
+        "libelle": "Provision SCPI",
+        "montant": 50003.0
+      },
+      "455": {
+        "libelle": "Associés - Comptes courants",
+        "montant": 15120.0
+      }
+    },
+    "resultat_exercice": -5893.84,
+    "total_actif": 552388.35,
+    "total_passif": 552388.35,
+    "equilibre": true
+  }
+}
