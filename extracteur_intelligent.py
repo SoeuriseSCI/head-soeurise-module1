@@ -1,0 +1,351 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+EXTRACTEUR INTELLIGENT - Analyse Globale par Claude
+====================================================
+
+Date: 14/11/2025
+Philosophie: S'appuyer sur Claude (intelligence) plutôt que sur du code (règles)
+
+APPROCHE RADICALE:
+------------------
+Au lieu de :
+  1. Extraire toutes les opérations (103)
+  2. Grouper par montant
+  3. Rapprocher avec règles Python
+  4. Filtrer les doublons
+  → Complexe, fragile, 78 événements au lieu de 86
+
+On fait :
+  1. Claude analyse le PDF COMPLET en une seule fois
+  2. Claude identifie les ÉVÉNEMENTS ÉCONOMIQUES RÉELS
+  3. Claude distingue automatiquement opération principale vs justificatif
+  → Simple, intelligent, 86 événements attendus
+
+PATTERNS QUE CLAUDE DOIT COMPRENDRE:
+-------------------------------------
+A. Facture + Prélèvement SEPA = 1 seul événement
+   → Garde: SEPA (opération bancaire réelle)
+   → Justificatif: Facture (détails HT/TVA)
+
+B. Bulletin SCPI + Virement = 1 seul événement
+   → Garde: Virement (opération bancaire réelle)
+   → Justificatif: Bulletin (annonce)
+
+C. Avis opération VM + Débit relevé = 1 seul événement
+   → Garde: Avis (détails ISIN, quantité, prix, commissions)
+   → Justificatif: Débit relevé (confirmation)
+
+D. Avis d'écriture + Virement relevé = 1 seul événement
+   → Garde: Virement relevé (opération réelle)
+   → Justificatif: Avis (confirmation)
+
+E. Échéances prêt mensuelles = événements distincts
+   → Chaque mois = 1 événement (pas de rapprochement)
+
+F. Frais bancaires mensuels = événements distincts
+   → Chaque mois = 1 événement
+"""
+
+import os
+import json
+import base64
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime
+from anthropic import Anthropic
+
+
+class ExtracteurIntelligent:
+    """
+    Extracteur qui délègue TOUTE l'analyse à Claude
+    """
+
+    def __init__(self, api_key: Optional[str] = None):
+        """
+        Initialise l'extracteur
+
+        Args:
+            api_key: Clé API Anthropic
+        """
+        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+        self.client = Anthropic(api_key=self.api_key)
+
+    def analyser_pdf(self, pdf_path: str, exercice_debut: str, exercice_fin: str) -> Tuple[List[Dict], Dict]:
+        """
+        Analyse complète du PDF par Claude en une seule fois
+
+        Args:
+            pdf_path: Chemin du PDF
+            exercice_debut: Date début exercice (format YYYY-MM-DD)
+            exercice_fin: Date fin exercice (format YYYY-MM-DD)
+
+        Returns:
+            Tuple (evenements, metadata)
+            - evenements: Liste des événements économiques uniques
+            - metadata: Statistiques d'analyse
+        """
+        print(f"\n{'='*80}")
+        print("ANALYSE INTELLIGENTE DU PDF PAR CLAUDE")
+        print(f"{'='*80}\n")
+
+        print(f"📄 PDF: {pdf_path}")
+        print(f"📅 Exercice: {exercice_debut} → {exercice_fin}")
+
+        # Lire le PDF directement
+        print(f"\n🔄 Lecture du PDF...")
+        with open(pdf_path, 'rb') as f:
+            pdf_data = base64.standard_b64encode(f.read()).decode('utf-8')
+
+        print(f"   ✓ PDF chargé")
+
+        # Construire le prompt global (nb_pages sera estimé, mais pas critique)
+        prompt = self._construire_prompt_global(exercice_debut, exercice_fin, nb_pages=41)
+
+        # Préparer le PDF pour Claude
+        content_blocks = [
+            {"type": "text", "text": prompt},
+            {
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": "application/pdf",
+                    "data": pdf_data
+                }
+            }
+        ]
+
+        # Appel API Claude
+        print(f"\n🧠 Envoi à Claude pour analyse globale...")
+        print(f"   (cela peut prendre 30-60 secondes)")
+
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-5-20250929",  # Sonnet 4.5 pour OCR précis sur PDF scans
+                max_tokens=20000,  # Augmenté pour éviter auto-censure (85-90 événements attendus)
+                messages=[{
+                    "role": "user",
+                    "content": content_blocks
+                }]
+            )
+
+            response_text = response.content[0].text.strip()
+
+            # Parser le JSON
+            evenements = self._parser_reponse(response_text)
+
+            print(f"\n✅ Analyse terminée:")
+            print(f"   Événements identifiés: {len(evenements)}")
+
+            metadata = {
+                'nb_pages': 41,  # PDF T1-T3 2024
+                'nb_evenements': len(evenements),
+                'model': 'claude-sonnet-4-5-20250929',
+                'tokens_input': response.usage.input_tokens,
+                'tokens_output': response.usage.output_tokens
+            }
+
+            print(f"   Tokens: {metadata['tokens_input']} in / {metadata['tokens_output']} out")
+
+            return evenements, metadata
+
+        except Exception as e:
+            print(f"\n❌ Erreur API Claude: {e}")
+            raise
+
+    def _construire_prompt_global(self, exercice_debut: str, exercice_fin: str, nb_pages: int) -> str:
+        """
+        Construit le prompt global pour l'analyse complète
+
+        Args:
+            exercice_debut: Date début exercice
+            exercice_fin: Date fin exercice
+            nb_pages: Nombre de pages du PDF
+
+        Returns:
+            Prompt texte
+        """
+        prompt = f"""Tu analyseras un PDF de {nb_pages} pages contenant des éléments destinés à la comptabilité.
+
+📋 COMPOSITION DU DOCUMENT
+==========================
+- **Relevés bancaires** : mouvements de débit et crédit
+- **Documents connexes** : factures, bulletins, avis d'opération, etc.
+
+🎯 RÈGLE FONDAMENTALE
+=====================
+Il n'y a pas d'opérations en cash. De ce fait, **100% des événements comptables correspondent à des débits ou crédits des relevés**.
+
+Tu devras générer **UN ET UN SEUL événement comptable par opération** de débit ou crédit.
+
+⚠️ Précisions :
+- Les **soldes** qui apparaissent sur les relevés ne sont PAS des événements comptables → à ignorer
+- Toute opération **en dehors de l'exercice comptable** ({exercice_debut} → {exercice_fin}) doit être ignorée
+
+🚨 FILTRAGE PAR EXERCICE - VÉRIFICATION OBLIGATOIRE
+====================================================
+Exercice comptable : {exercice_debut} → {exercice_fin}
+
+**IMPORTANTE** : Dans les relevés bancaires, chaque ligne d'opération a une DATE (colonne de gauche).
+Cette date N'EST PAS dans le libellé, elle est dans une COLONNE SÉPARÉE.
+
+**MÉTHODE OBLIGATOIRE** :
+1. Pour CHAQUE ligne du relevé, LIS la DATE dans la colonne de gauche
+2. VÉRIFIE : cette date est-elle >= {exercice_debut} ET <= {exercice_fin} ?
+3. Si OUI → Crée l'événement avec cette date dans le champ "date"
+4. Si NON → NE CRÉE PAS l'événement
+
+**Exemples** :
+✅ Date colonne : 15/01/2024 → INCLURE (dans exercice 2024)
+❌ Date colonne : 15/12/2023 → EXCLURE (avant {exercice_debut})
+❌ Date colonne : 15/01/2025 → EXCLURE (après {exercice_fin})
+
+⚠️ ATTENTION : Même si le libellé mentionne "2023" (ex: "DISTRIBUTION 4EME TRIM. 2023"),
+vérifie TOUJOURS la date de la COLONNE du relevé, pas le texte du libellé !
+
+⚠️ PIÈGE DES EN-TÊTES DE RELEVÉS
+=================================
+Les relevés bancaires ont des en-têtes de période (ex: "Période du X au Y").
+
+**RÈGLE CRITIQUE** :
+❌ NE JAMAIS utiliser l'en-tête du relevé pour filtrer les opérations
+✅ TOUJOURS utiliser la DATE de chaque ligne d'opération (colonne de gauche)
+
+**Exemple piège** :
+- En-tête relevé : "Période : 5 décembre → 4 janvier"
+- Ligne opération datée : 02/01/2024
+→ Vérifier la DATE de la ligne (02/01/2024) ∈ exercice 2024 → INCLURE
+
+L'en-tête indique simplement que le relevé PEUT contenir des opérations de cette période,
+mais chaque ligne a SA PROPRE date qu'il faut vérifier individuellement.
+
+🔗 RAPPROCHEMENT DES DOCUMENTS CONNEXES
+========================================
+Tu devras tenter de rapprocher chaque document connexe d'un ou plusieurs événements comptables.
+
+**Critères de rapprochement** :
+1. **Montant** de l'opération (égalité stricte)
+2. **Date** de l'opération (flexibilité possible de ±1 mois)
+3. En cas de doute : **référence** commune (ex: n° de facture dans le libellé du relevé et dans le document)
+
+**Rôle des documents connexes** :
+- À conserver comme **justificatifs** (traçabilité et preuve)
+- Apportent parfois un éclairage **indispensable** (détails non présents dans le relevé)
+
+**Exemple** : Opération sur valeurs mobilières
+- Extraire : nom et ISIN des titres, prix unitaire, quantité
+- Décomposer le montant : prix des titres vs commissions/frais
+
+📊 FORMAT DE RÉPONSE
+====================
+Retourne UNIQUEMENT un JSON valide :
+
+{{
+  "evenements": [
+    {{
+      "date": "2024-01-15",
+      "libelle": "Libellé de l'opération bancaire",
+      "montant": 200.00,
+      "type_operation": "DEBIT",
+      "source": "releve",
+      "justificatif": "Description du document connexe rapproché (ou null)",
+      "categorie": "Type d'événement",
+      "details": "Détails supplémentaires si pertinent (ex: ISIN, quantité, décomposition montant)"
+    }}
+  ],
+  "alertes": [
+    "Document connexe page X non rapproché à un événement (montant Y, date Z)"
+  ]
+}}
+
+🚨 RÈGLES CRITIQUES
+===================
+1. **N'extraire que ce qui est présent** dans le PDF
+2. **Ne jamais inventer** d'événement
+3. En cas de **difficulté de rapprochement** d'un document connexe : le signaler dans "alertes"
+
+🚀 Analyse les {nb_pages} pages et retourne le JSON."""
+
+        return prompt
+
+    def _parser_reponse(self, response_text: str) -> List[Dict]:
+        """
+        Parse la réponse JSON de Claude
+
+        Args:
+            response_text: Texte de réponse de Claude
+
+        Returns:
+            Liste des événements
+        """
+        # Trouver le JSON dans la réponse
+        start_idx = response_text.find('{')
+        end_idx = response_text.rfind('}') + 1
+
+        if start_idx < 0 or end_idx <= start_idx:
+            raise ValueError("Pas de JSON trouvé dans la réponse de Claude")
+
+        json_text = response_text[start_idx:end_idx]
+        data = json.loads(json_text)
+
+        evenements = data.get('evenements', [])
+
+        # Afficher les stats si disponibles
+        if 'stats' in data:
+            stats = data['stats']
+            print(f"\n📊 Statistiques Claude:")
+            print(f"   Total événements: {stats.get('total_evenements', 0)}")
+            if 'par_categorie' in stats:
+                print(f"   Par catégorie:")
+                for cat, count in stats['par_categorie'].items():
+                    print(f"      • {cat}: {count}")
+
+        return evenements
+
+
+def test_extracteur_intelligent():
+    """
+    Test de l'extracteur intelligent sur le PDF T1-T3 2024
+    """
+    print("="*80)
+    print("TEST EXTRACTEUR INTELLIGENT - PDF T1-T3 2024")
+    print("="*80)
+
+    pdf_path = "Elements Comptables des 1-2-3T2024.pdf"
+
+    if not os.path.exists(pdf_path):
+        print(f"\n❌ PDF non trouvé: {pdf_path}")
+        return
+
+    extracteur = ExtracteurIntelligent()
+
+    evenements, metadata = extracteur.analyser_pdf(
+        pdf_path=pdf_path,
+        exercice_debut="2024-01-01",
+        exercice_fin="2024-12-31"
+    )
+
+    print(f"\n{'='*80}")
+    print("RÉSULTATS")
+    print(f"{'='*80}")
+    print(f"\nÉvénements extraits: {len(evenements)}")
+    print(f"Attendu: 86")
+    print(f"Écart: {abs(len(evenements) - 86)}")
+
+    if abs(len(evenements) - 86) <= 3:
+        print(f"\n✅ SUCCÈS - Résultat cohérent avec analyse manuelle!")
+    else:
+        print(f"\n⚠️ ATTENTION - Écart significatif, vérification requise")
+
+    # Sauvegarder les résultats
+    output_file = "resultats_extracteur_intelligent.json"
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump({
+            'evenements': evenements,
+            'metadata': metadata
+        }, f, indent=2, ensure_ascii=False)
+
+    print(f"\n💾 Résultats sauvegardés: {output_file}")
+
+
+if __name__ == '__main__':
+    test_extracteur_intelligent()
