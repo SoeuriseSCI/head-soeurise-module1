@@ -378,14 +378,17 @@ class PretImmobilier(Base):
     montant_initial = Column(Numeric(15, 2), nullable=False)  # Ex: 250000.00
     taux_annuel = Column(Numeric(6, 4), nullable=False)  # Ex: 0.0105 (1.05%)
 
+    # Type de taux (indépendant du type d'amortissement)
+    type_taux = Column(String(20), default='FIXE')  # FIXE | VARIABLE
+
     # Durée
     duree_mois = Column(Integer, nullable=False)  # Ex: 240 mois
     date_debut = Column(Date, nullable=False)  # Ex: 2023-04-15
     date_fin = Column(Date, nullable=False)  # Ex: 2043-04-15
 
-    # Type amortissement
-    type_amortissement = Column(String(50), nullable=False)  # AMORTISSEMENT_CONSTANT | FRANCHISE_PARTIELLE | FRANCHISE_TOTALE
-    mois_franchise = Column(Integer, default=0)  # Ex: 180 mois (15 ans) pour prêt BRLZE
+    # Type amortissement (indépendant du type de taux)
+    type_amortissement = Column(String(50), nullable=False)  # AMORTISSABLE | IN_FINE
+    mois_franchise = Column(Integer, default=0)  # Ex: 12 mois franchise totale avant début amortissement
 
     # Montants mensuels
     echeance_mensuelle = Column(Numeric(15, 2))  # Ex: 1166.59 (prêt BRM)
