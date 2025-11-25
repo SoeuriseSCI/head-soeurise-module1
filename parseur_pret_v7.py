@@ -183,14 +183,18 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
   "echeances": [
     {
       "date_echeance": "Date au format YYYY-MM-DD",
-      "montant_echeance": Montant de l'échéance mensuelle À PAYER en EUR (number) = capital + intérêts,
-      "montant_capital": Part de capital remboursé ce mois-ci en EUR (number),
-      "montant_interet": Part d'intérêts payés ce mois-ci en EUR (number),
-      "capital_restant_du": Capital restant APRÈS cette échéance en EUR (number)
-    },
-    // ... toutes les échéances (généralement 200-300 lignes)
+      "montant_echeance": Montant À PAYER ce mois (number),
+      "montant_capital": Part de capital remboursé ce mois-ci (number),
+      "montant_interet": Part d'intérêts payés ce mois-ci (number),
+      "capital_restant_du": Capital restant APRÈS cette échéance (number)
+    }
   ]
 }
+
+⚠️ ORDRE DE GRANDEUR CRITIQUE :
+- montant_echeance : 0€ à 2000€ (petit montant mensuel)
+- capital_restant_du : 250000€ à 0€ (gros montant qui décroît)
+→ Si tu extrais 250000€ pour montant_echeance, c'est FAUX (tu lis la mauvaise colonne)
 
 EXTRACTION :
 
