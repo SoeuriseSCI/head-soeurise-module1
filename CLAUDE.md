@@ -252,6 +252,44 @@ Bash git add . && git commit -m "Description" && git push origin main
 
 ---
 
+## 🔧 RÈGLES CRITIQUES - GESTION DES BUGS
+
+### ⚠️ Correction complète avant continuation
+
+**IMPORTANT** : Quand un bug est détecté, **TOUJOURS** corriger à la source et relancer le processus complet.
+
+**Workflow correct (OBLIGATOIRE) :**
+1. 🛑 **STOP** - Bug détecté
+2. 🔍 **ANALYSER** la cause racine (pas seulement le symptôme)
+3. 🔧 **CORRIGER** le bug dans le code
+4. 🧹 **NETTOYER** les données corrompues/partielles en base
+5. 🔄 **RELANCER** le processus complet depuis le début
+6. ✅ **VÉRIFIER** zéro régression sur fonctionnalités existantes
+7. 🚀 **DÉPLOYER** et tester
+
+**Erreurs INTERDITES :**
+❌ "Je patch le résultat et on continue" → **FAUX - corruption de données**
+❌ "J'ajoute un fix pour contourner" → **FAUX - dette technique**
+❌ "On valide quand même avec les données partielles" → **FAUX - système incohérent**
+
+**Règle d'or :**
+> **Bug détecté = STOP → Corriger → Nettoyer → Relancer. Jamais de patch sur données corrompues.**
+
+**Pourquoi c'est critique :**
+- ✅ Garantit l'intégrité des données comptables
+- ✅ Évite la dette technique
+- ✅ Maintient la confiance dans le système
+- ✅ Respecte ACID (Atomicité, Cohérence, Isolation, Durabilité)
+
+**Exemple correct :**
+```
+Bug: 2 prêts envoyés, 1 seul traité
+❌ Mauvais: "Traite le 2ème séparément"
+✅ Correct: "Corriger le code → Supprimer proposition partielle → Renvoyer les 2 PDFs"
+```
+
+---
+
 ## 🎯 Comportement Attendu de Claude Code
 
 Lors des interactions :
