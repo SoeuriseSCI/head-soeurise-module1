@@ -259,10 +259,11 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
     "banque": "Nom de la banque (ex: LCL, Crédit Agricole, etc.)",
     "montant_initial": Montant emprunté en EUR (number),
     "taux_annuel": Taux d'intérêt annuel en % (number, ex: 1.05 pour 1.05%),
+    "type_taux": "FIXE" ou "VARIABLE" (cherche dans le document : "Taux fixe", "Taux variable"),
     "duree_mois": Nombre TOTAL d'échéances extraites (integer - compte TOUTES les lignes : franchise + amortissement),
     "date_debut": "Date de début du prêt au format YYYY-MM-DD",
     "date_debut_amortissement": "Date de début d'amortissement au format YYYY-MM-DD",
-    "type_pret": "AMORTISSEMENT_CONSTANT" ou "IN_FINE"
+    "type_amortissement": "AMORTISSABLE" ou "IN_FINE" (cherche dans le document : "IN FINE", "IN-FINE", "Prêt in fine")
   },
   "echeances": [
     {
@@ -280,7 +281,17 @@ INSTRUCTIONS D'EXTRACTION :
 
 1. **Métadonnées du prêt** (généralement page 1) :
    - Cherche les informations du contrat en haut du document
-   - Identifie le type de prêt basé sur le profil des échéances
+
+   **Type de taux** (cherche dans le document) :
+   - Cherche : "Taux fixe", "TAUX FIXE", "Taux variable", "TAUX VARIABLE"
+   - En France : presque toujours FIXE
+   - Par défaut si non mentionné : "FIXE"
+
+   **Type d'amortissement** (cherche dans le document) :
+   - Cherche EXPLICITEMENT : "IN FINE", "IN-FINE", "Prêt in fine", "in fine"
+   - Si trouvé → type_amortissement = "IN_FINE"
+   - Sinon → type_amortissement = "AMORTISSABLE"
+   - ⚠️ Ne pas confondre avec "Taux fixe" (ce sont deux notions différentes)
 
 2. **Tableau des échéances** (pages suivantes) :
 
@@ -605,7 +616,8 @@ Analyse maintenant le document et retourne le JSON."""
             f"**Durée** : {pret['duree_mois']} mois",
             f"**Date début** : {pret['date_debut']}",
             f"**Date début amortissement** : {pret.get('date_debut_amortissement', 'N/A')}",
-            f"**Type** : {pret['type_pret']}",
+            f"**Type taux** : {pret.get('type_taux', 'FIXE')}",
+            f"**Type amortissement** : {pret.get('type_amortissement', 'AMORTISSABLE')}",
             "",
             f"**Extraction** : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"**Nombre d'échéances** : {len(echeances)}",
@@ -674,7 +686,8 @@ Analyse maintenant le document et retourne le JSON."""
                     pret.get('date_debut_amortissement', pret['date_debut']),
                     '%Y-%m-%d'
                 ).date(),
-                'type_pret': pret['type_pret'],
+                'type_taux': pret.get('type_taux', 'FIXE'),
+                'type_amortissement': pret.get('type_amortissement', 'AMORTISSABLE'),
                 'fichier_reference': filename
             }
 
