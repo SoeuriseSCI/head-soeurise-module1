@@ -434,7 +434,7 @@ class EcheancePret(Base):
     date_echeance = Column(Date, nullable=False)  # Ex: 2023-05-15, 2023-06-15...
 
     # Ventilation financière
-    montant_total = Column(Numeric(15, 2), nullable=False)  # Montant prélevé
+    montant_echeance = Column(Numeric(15, 2), nullable=False)  # Montant échéance mensuelle (capital + intérêts)
     montant_interet = Column(Numeric(15, 2), nullable=False)  # Partie intérêts (compte 661)
     montant_capital = Column(Numeric(15, 2), nullable=False)  # Partie capital (compte 164)
     capital_restant_du = Column(Numeric(15, 2), nullable=False)  # Capital restant après échéance
@@ -461,7 +461,7 @@ class EcheancePret(Base):
     )
 
     def __repr__(self):
-        return f"<EcheancePret(Prêt #{self.pret_id} #{self.numero_echeance} {self.date_echeance} {self.montant_total}€)>"
+        return f"<EcheancePret(Prêt #{self.pret_id} #{self.numero_echeance} {self.date_echeance} {self.montant_echeance}€)>"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

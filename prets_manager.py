@@ -162,7 +162,7 @@ class PretsManager:
                     pret_id=pret.id,
                     numero_echeance=numero_ech,
                     date_echeance=self._parse_date(ech_data.get('date_echeance')),
-                    montant_total=Decimal(str(ech_data.get('montant_total', 0))),
+                    montant_echeance=Decimal(str(ech_data.get('montant_echeance', 0))),
                     montant_interet=Decimal(str(ech_data.get('montant_interet', 0))),
                     montant_capital=Decimal(str(ech_data.get('montant_capital', 0))),
                     capital_restant_du=Decimal(str(ech_data.get('capital_restant_du', 0))),
@@ -211,7 +211,7 @@ class PretsManager:
               "numero_pret": "5009736BRM0911AH",
               "numero_echeance": 5,
               "date_echeance": date(2023, 9, 15),
-              "montant_total": 1166.59,
+              "montant_echeance": 1166.59,
               "montant_interet": 215.32,
               "montant_capital": 951.27,
               "capital_restant_du": 245234.89,
@@ -267,7 +267,7 @@ class PretsManager:
             "numero_pret": pret.numero_pret,
             "numero_echeance": echeance.numero_echeance,
             "date_echeance": echeance.date_echeance,
-            "montant_total": float(echeance.montant_total),
+            "montant_echeance": float(echeance.montant_echeance),
             "montant_interet": float(echeance.montant_interet),
             "montant_capital": float(echeance.montant_capital),
             "capital_restant_du": float(echeance.capital_restant_du),
@@ -385,7 +385,7 @@ class PretsManager:
         capital_restant = derniere_echeance.capital_restant_du
         date_courante = derniere_echeance.date_echeance
         numero_echeance = derniere_echeance.numero_echeance
-        mensualite = pret.echeance_mensuelle if pret.echeance_mensuelle else derniere_echeance.montant_total
+        mensualite = pret.echeance_mensuelle if pret.echeance_mensuelle else derniere_echeance.montant_echeance
 
         print(f"[PRETS_MGR] Génération auto depuis {date_courante} (capital restant: {capital_restant}€)", flush=True)
         print(f"[PRETS_MGR] Taux mensuel: {taux_mensuel}, Mensualité: {mensualite}€", flush=True)
@@ -410,10 +410,10 @@ class PretsManager:
             # Si capital > capital_restant, c'est la dernière échéance
             if montant_capital >= capital_restant:
                 montant_capital = capital_restant
-                montant_total = montant_interet + montant_capital
+                montant_echeance = montant_interet + montant_capital
                 capital_restant = Decimal('0')
             else:
-                montant_total = mensualite
+                montant_echeance = mensualite
                 capital_restant -= montant_capital
 
             # Créer échéance
@@ -422,7 +422,7 @@ class PretsManager:
                 pret_id=pret.id,
                 numero_echeance=numero_echeance,
                 date_echeance=date_courante,
-                montant_total=montant_total,
+                montant_echeance=montant_echeance,
                 montant_interet=montant_interet,
                 montant_capital=montant_capital,
                 capital_restant_du=capital_restant,

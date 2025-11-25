@@ -1,0 +1,554 @@
+{
+  "metadata": {
+    "timestamp": "20251125_154205",
+    "date": "2025-11-25T15:42:05.678778",
+    "database": "soeurise_sci",
+    "version": "V6.0"
+  },
+  "exercices": [
+    {
+      "id": 1,
+      "annee": 2023,
+      "date_debut": "2023-01-01",
+      "date_fin": "2023-12-31",
+      "statut": "CLOTURE",
+      "description": null
+    },
+    {
+      "id": 2,
+      "annee": 2024,
+      "date_debut": "2024-01-01",
+      "date_fin": "2024-12-31",
+      "statut": "OUVERT",
+      "description": "Exercice fiscal 2024\nClôturé le 21/11/2025 - [en pièce jointe]\nClôturé le 21/11/2025 - [en pièce jointe]"
+    }
+  ],
+  "plan_comptable": [
+    {
+      "id": 2,
+      "numero_compte": "89",
+      "libelle": "Bilan ouverture",
+      "type_compte": "CAPITAUX"
+    },
+    {
+      "id": 3,
+      "numero_compte": "101",
+      "libelle": "Capital social",
+      "type_compte": "CAPITAUX"
+    },
+    {
+      "id": 4,
+      "numero_compte": "120",
+      "libelle": "Résultat de l'exercice (bénéfice)",
+      "type_compte": "CAPITAUX"
+    },
+    {
+      "id": 5,
+      "numero_compte": "130",
+      "libelle": "Résultat exercice",
+      "type_compte": "CAPITAUX"
+    },
+    {
+      "id": 6,
+      "numero_compte": "161",
+      "libelle": "Emprunts obligataires convertibles (OBSOLETE - Utiliser 164)",
+      "type_compte": "CAPITAUX"
+    },
+    {
+      "id": 7,
+      "numero_compte": "280",
+      "libelle": "SCPI Epargne Pierre",
+      "type_compte": "IMMOBILISATIONS"
+    },
+    {
+      "id": 8,
+      "numero_compte": "290",
+      "libelle": "Provision SCPI",
+      "type_compte": "IMMOBILISATIONS"
+    },
+    {
+      "id": 9,
+      "numero_compte": "401",
+      "libelle": "Fournisseurs (OBSOLETE pour factures non parvenues - Utiliser 4081)",
+      "type_compte": "TIERS"
+    },
+    {
+      "id": 10,
+      "numero_compte": "412",
+      "libelle": "Créances diverses",
+      "type_compte": "TIERS"
+    },
+    {
+      "id": 11,
+      "numero_compte": "444",
+      "libelle": "État - Impôts sur les bénéfices",
+      "type_compte": "TIERS"
+    },
+    {
+      "id": 12,
+      "numero_compte": "502",
+      "libelle": "Actions",
+      "type_compte": "FINANCIERS"
+    },
+    {
+      "id": 13,
+      "numero_compte": "512",
+      "libelle": "Banque",
+      "type_compte": "FINANCIERS"
+    },
+    {
+      "id": 14,
+      "numero_compte": "106",
+      "libelle": "Réserves",
+      "type_compte": "PASSIF"
+    },
+    {
+      "id": 15,
+      "numero_compte": "129",
+      "libelle": "Résultat de l'exercice (perte)",
+      "type_compte": "PASSIF"
+    },
+    {
+      "id": 16,
+      "numero_compte": "164",
+      "libelle": "Emprunts auprès des établissements de crédit",
+      "type_compte": "PASSIF"
+    },
+    {
+      "id": 17,
+      "numero_compte": "211",
+      "libelle": "Terrains",
+      "type_compte": "ACTIF"
+    },
+    {
+      "id": 18,
+      "numero_compte": "213",
+      "libelle": "Constructions",
+      "type_compte": "ACTIF"
+    },
+    {
+      "id": 19,
+      "numero_compte": "2731",
+      "libelle": "Titres immobilisés - actions",
+      "type_compte": "ACTIF"
+    },
+    {
+      "id": 20,
+      "numero_compte": "273",
+      "libelle": "Titres immobilisés",
+      "type_compte": "ACTIF"
+    },
+    {
+      "id": 21,
+      "numero_compte": "2813",
+      "libelle": "Amortissements des constructions",
+      "type_compte": "ACTIF"
+    },
+    {
+      "id": 22,
+      "numero_compte": "455",
+      "libelle": "Associés - Comptes courants",
+      "type_compte": "PASSIF"
+    },
+    {
+      "id": 23,
+      "numero_compte": "467",
+      "libelle": "Autres comptes débiteurs ou créditeurs",
+      "type_compte": "PASSIF"
+    },
+    {
+      "id": 24,
+      "numero_compte": "503",
+      "libelle": "Actions",
+      "type_compte": "ACTIF"
+    },
+    {
+      "id": 25,
+      "numero_compte": "506",
+      "libelle": "Obligations",
+      "type_compte": "ACTIF"
+    },
+    {
+      "id": 26,
+      "numero_compte": "601",
+      "libelle": "Achats stockés - Matières premières",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 27,
+      "numero_compte": "606",
+      "libelle": "Achats non stockés de matières et fournitures",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 28,
+      "numero_compte": "613",
+      "libelle": "Locations",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 29,
+      "numero_compte": "616",
+      "libelle": "Primes d'assurance",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 30,
+      "numero_compte": "622",
+      "libelle": "Rémunérations intermédiaires et honoraires (OBSOLETE - Utiliser 6226)",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 31,
+      "numero_compte": "623",
+      "libelle": "Publicité, publications, relations publiques",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 32,
+      "numero_compte": "625",
+      "libelle": "Déplacements, missions et réceptions",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 33,
+      "numero_compte": "626",
+      "libelle": "Frais postaux et de télécommunications",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 34,
+      "numero_compte": "627",
+      "libelle": "Services bancaires et assimilés",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 35,
+      "numero_compte": "6354",
+      "libelle": "Cotisations sociales personnelles",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 36,
+      "numero_compte": "661",
+      "libelle": "Charges d'intérêts",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 37,
+      "numero_compte": "6811",
+      "libelle": "Dotations aux amortissements sur immobilisations incorporelles et corporelles",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 38,
+      "numero_compte": "701",
+      "libelle": "Ventes de produits finis",
+      "type_compte": "PRODUIT"
+    },
+    {
+      "id": 39,
+      "numero_compte": "706",
+      "libelle": "Prestations de services",
+      "type_compte": "PRODUIT"
+    },
+    {
+      "id": 40,
+      "numero_compte": "752",
+      "libelle": "Revenus des immeubles non affectés à l'exploitation",
+      "type_compte": "PRODUIT"
+    },
+    {
+      "id": 41,
+      "numero_compte": "761",
+      "libelle": "Produits de participations",
+      "type_compte": "PRODUIT"
+    },
+    {
+      "id": 42,
+      "numero_compte": "764",
+      "libelle": "Revenus des valeurs mobilières de placement",
+      "type_compte": "PRODUIT"
+    },
+    {
+      "id": 43,
+      "numero_compte": "768",
+      "libelle": "Autres produits financiers",
+      "type_compte": "PRODUIT"
+    },
+    {
+      "id": 44,
+      "numero_compte": "4551",
+      "libelle": "Associé 1 - Compte courant Ulrik",
+      "type_compte": "PASSIF"
+    },
+    {
+      "id": 45,
+      "numero_compte": "4552",
+      "libelle": "Associé 2 - Compte courant Emma",
+      "type_compte": "PASSIF"
+    },
+    {
+      "id": 46,
+      "numero_compte": "4553",
+      "libelle": "Associé 3 - Compte courant Pauline",
+      "type_compte": "PASSIF"
+    },
+    {
+      "id": 47,
+      "numero_compte": "271",
+      "libelle": "Titres immobilisés (autres que TIAP)",
+      "type_compte": "ACTIF"
+    },
+    {
+      "id": 48,
+      "numero_compte": "119",
+      "libelle": "Report à nouveau (solde débiteur)",
+      "type_compte": "CAPITAUX"
+    },
+    {
+      "id": 49,
+      "numero_compte": "110",
+      "libelle": "Report à nouveau (solde créditeur)",
+      "type_compte": "CAPITAUX"
+    },
+    {
+      "id": 50,
+      "numero_compte": "4181",
+      "libelle": "Produits à recevoir",
+      "type_compte": "ACTIF"
+    },
+    {
+      "id": 52,
+      "numero_compte": "6226",
+      "libelle": "Honoraires",
+      "type_compte": "CHARGE"
+    },
+    {
+      "id": 53,
+      "numero_compte": "4081",
+      "libelle": "Fournisseurs - Factures non parvenues",
+      "type_compte": "PASSIF"
+    },
+    {
+      "id": 54,
+      "numero_compte": "1688",
+      "libelle": "Intérêts courus",
+      "type_compte": "PASSIF"
+    }
+  ],
+  "ecritures": [
+    {
+      "id": 361,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-001",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - Report à nouveau",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "119",
+      "compte_credit": "89",
+      "montant": "36148.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 362,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-002",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - SCPI Epargne Pierre",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "271",
+      "compte_credit": "89",
+      "montant": "500032.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 363,
+      "exercice_id": 1,
+      "numero_ecriture": "INIT-2024-003",
+      "date_ecriture": "2023-12-31",
+      "libelle_ecriture": "Cutoff 31/12/2023 - Produits à recevoir SCPI (T4 2023)",
+      "type_ecriture": "CUTOFF_PRODUIT_A_RECEVOIR",
+      "compte_debit": "4181",
+      "compte_credit": "761",
+      "montant": "7356.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 364,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-004",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - Actions",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "273",
+      "compte_credit": "89",
+      "montant": "4140.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 365,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-005",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - Banque",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "512",
+      "compte_credit": "89",
+      "montant": "2093.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 366,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-006",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - Capital social",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "89",
+      "compte_credit": "101",
+      "montant": "1000.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 368,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-008",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - Emprunts",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "89",
+      "compte_credit": "164",
+      "montant": "497993.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 369,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-009",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - Provision SCPI",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "89",
+      "compte_credit": "290",
+      "montant": "50003.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 370,
+      "exercice_id": 1,
+      "numero_ecriture": "INIT-2024-010",
+      "date_ecriture": "2023-12-31",
+      "libelle_ecriture": "Cutoff 31/12/2023 - Honoraires à payer",
+      "type_ecriture": "CUTOFF_HONORAIRES",
+      "compte_debit": "6226",
+      "compte_credit": "4081",
+      "montant": "653.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 371,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-011",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - Compte courant associés",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "89",
+      "compte_credit": "455",
+      "montant": "120.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 511,
+      "exercice_id": 1,
+      "numero_ecriture": "2023-1231-INT-001",
+      "date_ecriture": "2023-12-31",
+      "libelle_ecriture": "Cutoff intérêts LCL",
+      "type_ecriture": "CUTOFF_INTERETS_COURUS",
+      "compte_debit": "661",
+      "compte_credit": "1688",
+      "montant": "133.33",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": "Calcul proportionnel: 258,33€ × (16/31 jours). Période: 2023-12-16 → 2023-12-31"
+    },
+    {
+      "id": 513,
+      "exercice_id": 1,
+      "numero_ecriture": "2023-1231-INT-002",
+      "date_ecriture": "2023-12-31",
+      "libelle_ecriture": "Cutoff intérêts LCL",
+      "type_ecriture": "CUTOFF_INTERETS_COURUS",
+      "compte_debit": "661",
+      "compte_credit": "1688",
+      "montant": "111.01",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": "Calcul proportionnel: 215,08€ × (16/31 jours). Période: 2023-12-16 → 2023-12-31"
+    },
+    {
+      "id": 517,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-4181",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - Produits à recevoir",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "4181",
+      "compte_credit": "89",
+      "montant": "7356.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    },
+    {
+      "id": 518,
+      "exercice_id": 2,
+      "numero_ecriture": "INIT-2024-4081",
+      "date_ecriture": "2024-01-01",
+      "libelle_ecriture": "Bilan ouverture 2024 - Factures non parvenues",
+      "type_ecriture": "BILAN_OUVERTURE",
+      "compte_debit": "89",
+      "compte_credit": "4081",
+      "montant": "653.00",
+      "source_email_id": null,
+      "source_email_from": null,
+      "validee_at": null,
+      "notes": null
+    }
+  ],
+  "prets": [],
+  "echeances": []
+}

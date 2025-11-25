@@ -359,12 +359,12 @@ class DetecteurRemboursementPret(DetecteurBase):
         try:
             result = self.session.execute(
                 text("""
-                    SELECT ep.montant_interet, ep.montant_capital, ep.montant_total,
+                    SELECT ep.montant_interet, ep.montant_capital, ep.montant_echeance,
                            pi.numero_pret, pi.banque, ep.numero_echeance
                     FROM echeances_prets ep
                     JOIN prets_immobiliers pi ON ep.pret_id = pi.id
                     WHERE ep.date_echeance = :date_op
-                      AND ABS(ep.montant_total - :montant) < 0.10
+                      AND ABS(ep.montant_echeance - :montant) < 0.10
                     LIMIT 1
                 """),
                 {'date_op': date_op, 'montant': montant}
@@ -374,7 +374,7 @@ class DetecteurRemboursementPret(DetecteurBase):
                 echeance = {
                     'montant_interet': float(row[0]),
                     'montant_capital': float(row[1]),
-                    'montant_total': float(row[2]),
+                    'montant_echeance': float(row[2]),
                     'numero_pret': row[3],
                     'banque': row[4],
                     'numero_echeance': row[5]
@@ -1247,7 +1247,7 @@ class DetecteurAchatValeursMobilieres(DetecteurBase):
         1. Extraites de l'avis d'opération (champ 'commission' dans evenement)
         2. Estimées selon le courtier (DEGIRO, Interactive Brokers)
         """
-        montant_total = float(evenement.get('montant', 0))
+        montant_echeance = float(evenement.get('montant', 0))
         date_op = evenement.get('date_operation')
         libelle = evenement.get('libelle', '')
 
@@ -1256,10 +1256,10 @@ class DetecteurAchatValeursMobilieres(DetecteurBase):
 
         # Si pas de commission explicite, essayer d'estimer selon le courtier
         if commission == 0:
-            commission = self._estimer_commission(evenement, montant_total)
+            commission = self._estimer_commission(evenement, montant_echeance)
 
         # Montant net des titres = total - commission
-        montant_titres = montant_total - commission
+        montant_titres = montant_echeance - commission
 
         # Identifier le type de valeur mobilière
         import re
@@ -1321,7 +1321,7 @@ class DetecteurAchatValeursMobilieres(DetecteurBase):
             'ecritures': ecritures
         }
 
-    def _estimer_commission(self, evenement: Dict, montant_total: float) -> float:
+    def _estimer_commission(self, evenement: Dict, montant_echeance: float) -> float:
         """
         Estime la commission de courtage selon le courtier.
 
