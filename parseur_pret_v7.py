@@ -185,7 +185,7 @@ Extrait et retourne UN SEUL objet JSON avec cette structure exacte :
     "montant_initial": Montant emprunté en EUR (number),
     "taux_annuel": Taux d'intérêt annuel en % (number, ex: 1.05 pour 1.05%),
     "type_taux": "FIXE" ou "VARIABLE" (cherche dans le document : "Taux fixe", "Taux variable"),
-    "duree_mois": Nombre TOTAL d'échéances extraites (integer - compte TOUTES les lignes : franchise + amortissement),
+    "duree_mois": Durée INDIQUÉE dans les métadonnées (cherche 'DUREE TOTALE DU PRET', 'DUREE', etc. - NE PAS compter les échéances, LIRE la valeur),
     "date_debut": "Date de SIGNATURE/DEPART du prêt (cherche 'DATE DE DEPART DU PRET', 'DATE SIGNATURE', etc. dans métadonnées) au format YYYY-MM-DD",
     "date_debut_amortissement": "Date de début d'amortissement au format YYYY-MM-DD",
     "type_amortissement": "AMORTISSABLE" ou "IN_FINE" (voir instructions ci-dessous)
@@ -230,7 +230,8 @@ utilise celle qui correspond à la DÉFINITION SÉMANTIQUE ci-dessus, pas juste 
 EXTRACTION :
 
 1. **Métadonnées du prêt** (page 1) :
-   - numero_pret, banque, montant_initial, taux_annuel, duree_mois
+   - numero_pret, banque, montant_initial, taux_annuel
+   - **duree_mois** : LIRE "DUREE TOTALE DU PRET : XXX MOIS" (NE PAS compter les échéances)
    - **date_debut** : Extraire "DATE DE DEPART DU PRET" ou "DATE SIGNATURE" des métadonnées (PAS la date de première échéance)
    - date_debut_amortissement : Date de début d'amortissement
    - type_taux : cherche "Taux fixe"/"Taux variable" dans le document (par défaut : FIXE)
@@ -304,14 +305,20 @@ Retourne le JSON (sans texte avant/après, sans ```json```)."""
 
             print(f"[PARSEUR V7] JSON parsé : {len(data['echeances'])} échéances extraites", flush=True)
 
-            # Recalculer duree_mois automatiquement pour garantir la cohérence
-            # (évite les erreurs si Claude compte mal les échéances)
+            # Validation : duree_mois (métadonnée) doit correspondre au nombre d'échéances extraites
             nb_echeances = len(data['echeances'])
             duree_mois_declaree = data['pret'].get('duree_mois', 0)
 
             if nb_echeances != duree_mois_declaree:
-                print(f"[PARSEUR V7] Correction duree_mois : {duree_mois_declaree} → {nb_echeances} (nombre réel d'échéances)", flush=True)
-                data['pret']['duree_mois'] = nb_echeances
+                print(f"[PARSEUR V7 ERROR] Incohérence détectée !", flush=True)
+                print(f"  - Durée métadonnée (DUREE TOTALE DU PRET) : {duree_mois_declaree} mois", flush=True)
+                print(f"  - Échéances extraites du tableau : {nb_echeances}", flush=True)
+                print(f"  - Différence : {nb_echeances - duree_mois_declaree:+d} échéances", flush=True)
+                return {
+                    "success": False,
+                    "error": "Incohérence duree_mois vs échéances extraites",
+                    "message": f"Métadonnée duree_mois={duree_mois_declaree} mais {nb_echeances} échéances extraites ({nb_echeances - duree_mois_declaree:+d})"
+                }
 
             return {
                 "success": True,
