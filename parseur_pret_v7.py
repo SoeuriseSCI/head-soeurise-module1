@@ -190,25 +190,31 @@ Un prêt immobilier peut avoir plusieurs phases :
 
 ⚠️ PIÈGES CRITIQUES À ÉVITER :
 
-- **Lignes avant la première échéance** : ⚠️ RÈGLE UNIVERSELLE ⚠️
+- **Lignes à ignorer vs échéances réelles** : ⚠️ RÈGLE CRITIQUE ⚠️
 
-  La **première vraie échéance** d'un prêt est TOUJOURS 1 mois après le début du prêt.
-  → Calcul : date_debut + 1 mois (ex: début 15/04/2022 → première échéance 15/05/2022)
+  **À IGNORER** (ce ne sont PAS des échéances) :
+  - Lignes avec date = date_debut (échéance 0 / ligne initiale)
+  - Lignes "DBL", "DEBLOC", "Déblocage" (mise à disposition des fonds)
+  - Lignes "Frais", "Commission", "Dossier" (frais bancaires)
+  - Lignes avec libellés qui NE sont PAS des échéances mensuelles
 
-  **IGNORER TOUTES les lignes dont la date < date_debut + 1 mois**
+  **À EXTRAIRE** (ce sont des échéances réelles) :
+  - TOUTES les échéances mensuelles à partir de date_debut + 1 mois
+  - Y COMPRIS les échéances de franchise totale (montant = 0€, capital = 0€, intérêts = 0€)
+  - Y COMPRIS les échéances de franchise partielle (capital = 0€, intérêts > 0€)
+  - Y COMPRIS les échéances d'amortissement (capital > 0€, intérêts > 0€)
 
-  Cela élimine automatiquement :
-  - Échéance 0 (ligne initiale = date_debut)
-  - Déblocages (DBL, DEBLOC, mise à disposition des fonds)
-  - Frais de dossier (250€, 1 500€...)
-  - Commissions de mise en place
+  **RÈGLE ABSOLUE** : Si c'est une échéance mensuelle régulière (numérotée 1, 2, 3... ou datée mensuellement),
+  tu DOIS l'extraire, peu importe que le montant soit 0€ ou non.
 
-  Exemple type (prêt INVESTIMUR) :
+  Exemple :
   ```
-  2022-04-15 | Échéance 0      | ... ← IGNORER (= date_debut)
-  2022-05-10 | DBL 250 000,00  | ... ← IGNORER (< date_debut + 1 mois)
-  2022-05-15 | Échéance 1      | ... ← PREMIÈRE VRAIE ÉCHÉANCE (= date_debut + 1 mois)
-  2022-06-15 | Échéance 2      | ... ← Extraire
+  2022-04-15 | Échéance 0      | ... ← IGNORER (ligne initiale)
+  2022-05-10 | DBL 250 000,00  | ... ← IGNORER (déblocage)
+  2022-05-15 | Échéance 1      | 0€  | 0€ | 0€ | 250000€ ← EXTRAIRE (franchise totale)
+  2022-06-15 | Échéance 2      | 0€  | 0€ | 0€ | 250000€ ← EXTRAIRE (franchise totale)
+  2023-05-15 | Échéance 13     | 1166€ | 0€ | 1166€ | 250000€ ← EXTRAIRE (franchise partielle)
+  2023-07-15 | Échéance 15     | 1166€ | 401€ | 765€ | 249598€ ← EXTRAIRE (amortissement)
   ...
   ```
 
@@ -227,17 +233,21 @@ Un prêt immobilier peut avoir plusieurs phases :
 
   **TEST AUTOMATIQUE pour vérifier que tu utilises la bonne colonne** :
 
-  En franchise totale (capital = 0€ tous les mois), les intérêts PAYÉS = 0€.
+  En franchise TOTALE (capital = 0€ ET intérêts payés = 0€), les intérêts DIFFÉRÉS augmentent.
 
-  Si tu obtiens des intérêts > 0€ pendant la franchise (ex: 42€, 300€, 559€...),
+  Si pendant une période de franchise TOTALE, tu obtiens des intérêts > 0€ dans la colonne que tu extrais,
   c'est que tu utilises la MAUVAISE colonne (intérêts différés au lieu de payés).
 
-  → STOP : Révise l'identification des colonnes et recommence.
-  → Les intérêts en franchise totale doivent être 0€, 0€, 0€...
+  ATTENTION : La franchise PARTIELLE (capital = 0€ mais intérêts payés > 0€) existe aussi !
+  Dans ce cas, les intérêts PAYÉS > 0€ sont CORRECTS et doivent être extraits.
 
   Exemple franchise totale (12 premiers mois) :
   - ❌ Intérêts différés : 42€, 300€, 559€... (MAUVAISE colonne - augmentent)
   - ✅ Intérêts PAYÉS : 0€, 0€, 0€... (BONNE colonne - tous zéro)
+
+  Exemple franchise partielle (mois 13-14) :
+  - Intérêts PAYÉS : 1166€, 1166€... (CORRECT - intérêts payés chaque mois)
+  - Capital : 0€, 0€... (aucun remboursement de capital)
 
 - **Lignes de report/total** : Lignes "Report" ou "Total" à reporter.
   → À IGNORER : calculs intermédiaires
@@ -246,7 +256,8 @@ Un prêt immobilier peut avoir plusieurs phases :
 Pour CHAQUE échéance :
 **montant_total = montant_capital + montant_interet_PAYÉ** (à ±0.01€ près)
 
-En franchise totale : montant_total = 0€ ET montant_interet = 0€ (pas 42€, 300€, 559€...)
+En franchise totale : montant_total = 0€ ET montant_interet = 0€ ET capital = 0€
+En franchise partielle : montant_total = intérêts > 0€ ET capital = 0€
 
 ---
 
@@ -309,15 +320,16 @@ INSTRUCTIONS D'EXTRACTION :
    - IGNORE la colonne "Intérêts différés" / "Intérêts cumulés" / "Intérêts courus"
    - En cas de doute : en franchise totale, les intérêts PAYÉS = 0€ (pas 35€, 254€...)
 
-   ⚠️ **IGNORER l'échéance 0** :
+   ⚠️ **IGNORER l'échéance 0 UNIQUEMENT** :
    - La première ligne du tableau (échéance 0 ou ligne initiale) n'est PAS une échéance
    - Commence l'extraction à partir de l'échéance 1 (premier mois)
 
    Extraction :
-   - Extrait CHAQUE ligne d'échéance du tableau (sauf échéance 0)
+   - Extrait CHAQUE ligne d'échéance du tableau (sauf échéance 0 et lignes de frais/déblocage)
+   - **TOUTES les échéances mensuelles** : franchise totale (0€) + franchise partielle + amortissement
    - Ne saute AUCUNE page (traite toutes les pages du PDF)
-   - Ignore les lignes de frais, reports, totaux intermédiaires
-   - Pour chaque échéance, identifie précisément :
+   - Ignore SEULEMENT : lignes d'échéance 0, déblocages (DBL/DEBLOC), frais, reports, totaux
+   - Pour chaque échéance mensuelle réelle, identifie précisément :
      * Date de l'échéance
      * Montant total de la mensualité
      * Capital amorti CE MOIS-CI (pas le cumulé)
@@ -325,11 +337,13 @@ INSTRUCTIONS D'EXTRACTION :
      * Capital restant dû APRÈS ce paiement
 
 3. **Validation pendant l'extraction** :
-   - Vérifie systématiquement : montant_total = capital + intérêt_PAYÉ
-   - En franchise totale : montant_total DOIT être 0€ (si tu obtiens 35€, 254€... tu utilises la mauvaise colonne)
-   - Si incohérence, révise l'identification des colonnes
+   - Vérifie systématiquement : montant_total = capital + intérêt_PAYÉ (±0.01€)
+   - En franchise totale : montant_total = 0€, capital = 0€, intérêts = 0€
+   - En franchise partielle : montant_total = intérêts > 0€, capital = 0€
+   - En amortissement : montant_total = capital + intérêts, capital > 0€
    - Capital restant dû doit DIMINUER ou rester CONSTANT (jamais augmenter)
-   - Dates doivent être chronologiques (mensualités)
+   - Dates doivent être chronologiques et mensuelles
+   - **COMPTE TOTAL des échéances extraites = duree_mois indiquée dans les métadonnées**
 
 4. **Format de sortie** :
    - Retourne UNIQUEMENT le JSON, rien d'autre
