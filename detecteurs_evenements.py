@@ -1119,6 +1119,213 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
         }
 
 
+class DetecteurCutoffsMultiples(DetecteurBase):
+    """
+    Détecte emails demandant PLUSIEURS cutoffs simultanés (SCPI + honoraires)
+
+    PRIORITÉ: Ce détecteur doit être testé AVANT les détecteurs individuels
+
+    PRINCIPE:
+    - Un email peut demander plusieurs cutoffs en une seule fois
+    - Génère UNE SEULE proposition avec TOUTES les écritures
+    - Évite la confusion entre les montants
+
+    CRITÈRES DE DÉTECTION:
+    1. Email contient "cutoff" (ou variantes)
+    2. Email contient PLUSIEURS items numérotés (1), 2), etc.) ou listés
+    3. Chaque item a un type identifiable (SCPI, honoraires, etc.)
+    4. Chaque item a un montant
+
+    EXEMPLE:
+    Email: "Bonjour _Head, Peux-tu créer des cutoffs pour:
+            1) les honoraires comptables de clôture (622€)
+            2) les produits SCPI du 4e trimestre (6755€)"
+
+    Génère UNE proposition avec 4 écritures:
+    - Cutoff honoraires 31/12/N (622€)
+    - Extourne honoraires 01/01/N+1 (622€)
+    - Cutoff SCPI 31/12/N (6755€)
+    - Extourne SCPI 01/01/N+1 (6755€)
+
+    Date création: 26/11/2025
+    """
+
+    def detecter(self, evenement: Dict) -> bool:
+        """Détecte une demande de cutoffs multiples"""
+        email_subject = evenement.get('email_subject')
+        if not email_subject:
+            return False
+
+        objet = email_subject.lower()
+        corps = evenement.get('email_body', '').lower()
+        texte_complet = f"{objet} {corps}"
+
+        # Vérifier présence "cutoff"
+        if not any(mot in texte_complet for mot in ['cutoff', 'cut-off', 'cut off']):
+            return False
+
+        # Vérifier présence de numérotation/liste (1), 2) ou 1. 2. ou - item1 - item2
+        import re
+        patterns_liste = [
+            r'\b[12]\)',           # 1) 2)
+            r'\b[12]\.',           # 1. 2.
+            r'\n\s*-.*\n\s*-',     # - item\n- item
+        ]
+
+        has_liste = any(re.search(pattern, texte_complet) for pattern in patterns_liste)
+        if not has_liste:
+            return False
+
+        # Vérifier présence d'au moins 2 montants différents
+        pattern_montant = r'(\d{1,3}(?:\s?\d{3})*(?:[,\.]\d{2})?)\s*€'
+        montants = re.findall(pattern_montant, texte_complet)
+
+        # Normaliser les montants pour comparaison
+        montants_normalises = set()
+        for m in montants:
+            m_clean = m.replace(' ', '').replace(',', '.').replace('.', '')
+            montants_normalises.add(m_clean)
+
+        if len(montants_normalises) < 2:
+            return False
+
+        # Vérifier présence de différents types de cutoffs
+        has_scpi = any(mot in texte_complet for mot in ['scpi', 'epargne pierre', 'produit'])
+        has_honoraires = any(mot in texte_complet for mot in ['honoraire', 'comptable', 'expert'])
+
+        return has_scpi and has_honoraires
+
+    def generer_proposition(self, evenement: Dict) -> Dict:
+        """Génère UNE proposition avec TOUS les cutoffs demandés"""
+        import re
+        from datetime import date
+        from sqlalchemy import text
+
+        objet = evenement.get('email_subject', '')
+        corps = evenement.get('email_body', '')
+        texte_complet = f"{objet} {corps}"
+
+        # Déterminer l'exercice
+        result = self.session.execute(
+            text("""
+                SELECT annee
+                FROM exercices_comptables
+                WHERE statut = 'OUVERT'
+                ORDER BY annee DESC
+                LIMIT 1
+            """)
+        ).fetchone()
+
+        annee = result[0] if result else date.today().year
+        annee_suivante = annee + 1
+        date_cutoff = f"{annee}-12-31"
+        date_extourne = f"{annee_suivante}-01-01"
+
+        # Vérifier/créer exercice N+1
+        self._assurer_exercice_existe(annee_suivante)
+
+        # Extraire les items avec regex avancée
+        # Pattern: cherche lignes avec numérotation + contexte + montant
+        items = []
+
+        # Essayer pattern 1) texte montant€
+        pattern1 = r'(\d)\)\s*([^€\n]{5,80}?)\s*(?:\(?\s*)?(\d{1,3}(?:\s?\d{3})*(?:[,\.]\d{2})?)\s*€'
+        matches1 = re.finditer(pattern1, texte_complet, re.IGNORECASE)
+
+        for match in matches1:
+            numero = match.group(1)
+            description = match.group(2).strip()
+            montant_str = match.group(3)
+
+            # Normaliser montant
+            montant_str_clean = montant_str.replace(' ', '')
+            if ',' in montant_str_clean:
+                montant = float(montant_str_clean.replace(',', '.'))
+            else:
+                montant = float(montant_str_clean)
+
+            # Déterminer le type
+            desc_lower = description.lower()
+            if 'scpi' in desc_lower or 'produit' in desc_lower or 'epargne' in desc_lower:
+                type_item = 'SCPI'
+            elif 'honoraire' in desc_lower or 'comptable' in desc_lower:
+                type_item = 'HONORAIRES'
+            else:
+                type_item = 'AUTRE'
+
+            items.append({
+                'numero': numero,
+                'type': type_item,
+                'description': description,
+                'montant': montant
+            })
+
+        # Générer les écritures pour chaque item
+        ecritures = []
+
+        for item in items:
+            if item['type'] == 'HONORAIRES':
+                # Cutoff honoraires
+                ecritures.append({
+                    'date_ecriture': date_cutoff,
+                    'libelle_ecriture': f'Cutoff {annee} - Honoraires comptables (clôture)',
+                    'compte_debit': '6226',
+                    'compte_credit': '4081',
+                    'montant': item['montant'],
+                    'type_ecriture': 'CUTOFF_HONORAIRES',
+                    'notes': f'Cutoff fin exercice {annee} - Honoraires comptables {item["montant"]}€. Extourne automatique au 01/01/{annee_suivante}.'
+                })
+                # Extourne honoraires
+                ecritures.append({
+                    'date_ecriture': date_extourne,
+                    'libelle_ecriture': f'Extourne - Cutoff {annee} - Honoraires comptables',
+                    'compte_debit': '4081',
+                    'compte_credit': '6226',
+                    'montant': item['montant'],
+                    'type_ecriture': 'EXTOURNE_CUTOFF_HONORAIRES',
+                    'notes': f'Contre-passation automatique du cutoff {annee}. Annule charge pour ré-enregistrement lors facture réelle.'
+                })
+
+            elif item['type'] == 'SCPI':
+                # Cutoff SCPI
+                ecritures.append({
+                    'date_ecriture': date_cutoff,
+                    'libelle_ecriture': f'Cutoff {annee} - Revenus SCPI T4',
+                    'compte_debit': '4181',
+                    'compte_credit': '761',
+                    'montant': item['montant'],
+                    'type_ecriture': 'CUTOFF_PRODUIT_A_RECEVOIR_SCPI',
+                    'notes': f'Cutoff fin exercice {annee} - Revenus SCPI T4 {item["montant"]}€. Extourne automatique au 01/01/{annee_suivante}.'
+                })
+                # Extourne SCPI
+                ecritures.append({
+                    'date_ecriture': date_extourne,
+                    'libelle_ecriture': f'Extourne - Cutoff {annee} - Revenus SCPI T4',
+                    'compte_debit': '761',
+                    'compte_credit': '4181',
+                    'montant': item['montant'],
+                    'type_ecriture': 'EXTOURNE_CUTOFF_SCPI',
+                    'notes': f'Contre-passation automatique du cutoff {annee}. Annule produit pour ré-enregistrement lors paiement réel.'
+                })
+
+        # Construire description
+        items_desc = ' + '.join([f'{item["type"]} {item["montant"]}€' for item in items])
+
+        return {
+            'type_evenement': 'CUTOFF',
+            'description': f'Cutoffs multiples exercice {annee}: {items_desc} (+ extournes {annee_suivante})',
+            'confiance': 0.95,
+            'ecritures': ecritures,
+            'metadata': {
+                'email_date': evenement.get('email_date', ''),
+                'annee': annee,
+                'annee_extourne': annee_suivante,
+                'nb_items': len(items),
+                'items': items
+            }
+        }
+
+
 class DetecteurApportAssocie(DetecteurBase):
     """
     Détecte les apports en compte courant des associés (Ulrik Bergsten)
@@ -1629,11 +1836,15 @@ class FactoryDetecteurs:
             DetecteurRemboursementPret(session),  # Lookup table echeances_prets
             DetecteurFraisBancaires(session),
             DetecteurFraisAdministratifs(session),  # LEI, certificats, etc.
-            DetecteurAnnonceCutoffHonoraires(session),  # EMAIL: Annonce cutoff honoraires (AVANT DetecteurHonorairesComptable)
+
+            # Détecteurs de cutoffs (ORDRE IMPORTANT: multiples AVANT individuels)
+            DetecteurCutoffsMultiples(session),  # EMAIL: Cutoffs multiples SCPI+honoraires (PRIORITÉ 1)
+            DetecteurAnnonceCutoffHonoraires(session),  # EMAIL: Annonce cutoff honoraires seul (PRIORITÉ 2)
+            DetecteurAnnonceProduitARecevoir(session),  # EMAIL: Annonce cutoff SCPI seul (PRIORITÉ 3)
+
             DetecteurHonorairesComptable(session),
 
             # Détecteurs d'investissements (priorité moyenne - patterns multiples)
-            DetecteurAnnonceProduitARecevoir(session),  # EMAIL: Annonce revenus T4 à recevoir (cut-off)
             DetecteurDistributionSCPI(session),  # CRÉDIT: Revenus 761
             DetecteurAchatSCPI(session),  # DÉBIT: Achats 273
             DetecteurAchatValeursMobilieres(session),  # ETF + Amazon + autres VM
