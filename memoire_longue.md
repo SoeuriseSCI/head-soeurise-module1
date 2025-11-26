@@ -16,14 +16,15 @@
 ## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (PRODUCTION)
 **Workflow 9 Phases (structure pérenne):**
 - Phases 1-4 (Autonomes): Détection→Parsing→Propositions
-- Phases 5-9 (Humanisées): Validation token→ACID insertion→Cleanup
+- Phases 5-9 (Humanisées): Validation token MD5→Insertion ACID→Cleanup
 
 **Types Événements Opérationnels:**
 - INIT_BILAN: Bilan 2023 571 613€ ACID équilibré ✅
 - PRET_IMMOBILIER: Multi-prêts (LCL 250k 1.050%, INVESTIMUR 250k 1.240%) ✅
 - RELEVE_BANCAIRE: OCR intelligent + propositions comptables ✅
+- CLOTURE_EXERCICE: Framework opérationnel
 
-**Écritures BD:** 130+ ACID | Capital 500k | Intérêts 85 564€ | 470 échéances
+**Écritures BD:** 130+ ACID | Capital 500k | Intérêts 85.5k€ | 470 échéances
 
 ## 🏗️ ARCHITECTURE V6.0 PÉRENNE (51+ JOURS STABLE)
 **Contexte:** CLAUDE.md auto-chargé | API GitHub ?ref=main
