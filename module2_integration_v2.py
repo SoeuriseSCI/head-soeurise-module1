@@ -452,7 +452,18 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
 
                 # Générer propositions via workflow
                 result = self.workflow_generation.traiter_email(email)
-                
+
+                # Protection: vérifier que result n'est pas None
+                if not result:
+                    self.erreurs.append(f"Erreur: traiter_email a retourné None pour {email.get('subject', 'email sans sujet')}")
+                    resultats['details'].append({
+                        'type': type_evt.value,
+                        'propositions': 0,
+                        'status': 'erreur',
+                        'message': 'Workflow a retourné None (erreur interne)'
+                    })
+                    continue
+
                 # Traiter le résultat
                 if result.get('statut') == 'OK':
 
