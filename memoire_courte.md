@@ -1,30 +1,29 @@
-# 📧 Mémoire Courte — 26/11/2025 15:15 | Réveil #203
+# 📧 Mémoire Courte — 26/11/2025 15:23 | Réveil #204
 
-## 🔴 INCIDENT BD CRITIQUE (BLOQUANT 4J)
-**Depuis 25/11 23:52 - ENCORE ACTIF:**
-- Colonne `date_cloture` MANQUANTE en schéma SQL
-- 86 propositions RELEVE_BANCAIRE LCL T1-T3 2024 BLOQUÉES phases 1-4
-- Workflow 9 phases arrêt complet
-- **Priorité:** IMMÉDIATE FIX BD par Ulrik
+## 🔴 INCIDENT BD BLOQUANT (4J PERSISTANCE)
+**Depuis 25/11 23:52 - CRITIQUE:**
+- Colonne `date_cloture` MANQUANTE schéma SQL
+- 86 propositions RELEVE_BANCAIRE LCL T1-T3 2024 BLOQUÉES
+- Phases 1-4 workflow arrêt complet
+- **Action requise:** FIX BD IMMÉDIATE par Ulrik
 
-## ✅ VALIDATION COMPTABLE #26/11
-**Token HEAD-99147ACB validé:**
-- 104 écritures RELEVE_BANCAIRE insérées BD ✅
-- Intégration comptable réussie
-- ⚠️ Double-traitement détecté (propositions rétraitées après VALIDEE)
-- Correction: Ajouter check statut avant insertion
+## 📊 MODULE 2 - TRAITEMENT 26/11
+**PDF traité:** Elements Comptables 4T2024.pdf
+- **Propositions générées:** 22 RELEVE_BANCAIRE (15/10-03/01/2025)
+- **Période couverte:** Oct-Déc 2024 (LCL relevés #32-34)
+- **Statut:** En attente validation (blocage BD phases 5-9)
 
-## 🏗️ CONSOLIDATION ARCHITECTURE (26/11 14:36)
-**3 commits stables mergés:**
-- Opening balance: ALL accounts (LCL + INVESTIMUR + régularisation) ✅
-- Pre-closure: Détection exercices clos opérationnel
-- Rapprocheur: Colonnes corrigées ✅
+## ✅ SUCCÈS ANTÉRIEUR
+**Token HEAD-99147ACB (26/11 tôt):**
+- 104 écritures RELEVE_BANCAIRE insérées ✅
+- Double-traitement détecté → Fix: check statut avant insertion
 
-## 📊 ÉTAT SYSTÈME
-- Uptime: 51+ jours ✅
-- Réveil #203 nominal ✅
-- Module 1: 99.98% OCR ✅
-- Module 2: **⚠️ BD bloquée (phases 5-9 suspendues)**
+## 🏗️ ARCHITECTURE CONSOLIDÉE
+**3 commits stables mergés (26/11):**
+- Opening balance multi-comptes ✅
+- Pre-closure framework opérationnel
+- Rapprocheur colonnes corrigées ✅
+- Uptime: 51+ jours | Réveil #204 nominal ✅
 
-## 🔄 PHASE ATTENTE
-Dépendance directe: FIX BD `date_cloture` pour reprendre workflow phases 1-4
+## 🔄 DÉPENDANCES
+BD fix → Phases 1-4 débloquées → 86 propositions traitées → Workflow 9 phases réactivé
