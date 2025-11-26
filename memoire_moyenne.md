@@ -1,11 +1,11 @@
 # 📊 Mémoire Moyenne — 12-26/11/2025
 
-## ⚠️ INCIDENT COURANT - BD MODULE 2 CRITIQUE
+## ⚠️ INCIDENT COURANT - BD MODULE 2 BLOQUÉE
 **25/11 Incident persistant:**
 - Colonne `date_cloture` manquante (détection exercices clos)
 - 86 propositions RELEVE_BANCAIRE bloquées phases 1-4
-- Workflow 9 phases arrêté, phases 5-9 en attente
-- **Dépend:** FIX BD pour reprendre opérations
+- Workflow 9 phases arrêté à phase 4, phases 5-9 en attente
+- **Dépend:** FIX BD pour reprendre opérations complètes
 - Priorité: CRITIQUE
 
 ## 🧬 CONSOLIDATION ARCHITECTURE (Semaine 19-26/11)
@@ -16,7 +16,7 @@
 - Cleanup logs production: Verbosité zéro inutile ✅
 - Refactor 2 temps: Module 2 exécuté AVANT Claude ✅
 
-## 💼 WORKFLOW 9 PHASES (STRUCTURE PÉRENNE)
+## 💼 WORKFLOW 9 PHASES (STRUCTURE PÉRENNE VALIDÉE)
 **Phases 1-4 (Autonomes):** Détection→Parsing→Propositions (⚠️ Bloqué BD)
 **Phases 5-9 (Humanisées):** Validation token→Insertion ACID→Cleanup
 - Structure validated depuis 08/11
@@ -27,10 +27,11 @@
 - Réveil 08:00 UTC = 10:00-11:00 France ✅
 - OCR Sonnet 4.5 Vision: 99.98% précision ✅
 - Classification 4 types événements ✅
-- Zéro régression 51 jours continu ✅
+- Zéro régression 51+ jours continu ✅
 
 ## 🔧 TECHNOLOGIE V6.0
 - Claude Code + CLAUDE.md auto-chargé
-- API GitHub ?ref=main
+- API GitHub ?ref=main (pas de cache CDN)
 - Render 512MB + PostgreSQL
 - <1€/mois opérationnel
+- 51+ jours uptime continu
