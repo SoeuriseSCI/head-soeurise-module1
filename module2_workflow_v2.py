@@ -942,13 +942,23 @@ class GenerateurPropositions:
         CORRECTION V6: Génère écritures correctes avec distinction Actif/Passif
         - Compte 89 "Bilan d'ouverture" comme contrepartie
         - Respect du sens comptable (débit/crédit)
+        - EXCLUT les comptes de régularisation temporaire (cutoff/extourne)
         """
+
+        # Comptes de régularisation temporaire à exclure du bilan d'ouverture
+        # Ces comptes ont un cycle cutoff (31/12/N) → extourne (01/01/N+1)
+        COMPTES_REGULARISATION_TEMPORAIRE = ['4181', '4081', '486', '487', '1688', '16888']
 
         propositions = []
         compte_ouverture = "89"  # Compte standard bilan d'ouverture (sera soldé automatiquement)
 
         for i, compte in enumerate(comptes, 1):
             num_compte = compte["compte"]
+
+            # Ignorer les comptes de régularisation temporaire
+            if num_compte in COMPTES_REGULARISATION_TEMPORAIRE:
+                continue
+
             libelle = compte["libelle"]
             solde_original = compte["solde"]  # Conserver le signe
             solde = abs(solde_original)  # Valeur absolue pour le montant
