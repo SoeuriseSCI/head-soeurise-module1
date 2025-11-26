@@ -498,8 +498,8 @@ class ClotureExercice:
         soldes_cloture = self._calculer_soldes_cloture()
 
         # Préparer les écritures d'ouverture (classes 1-5 uniquement)
-        # IMPORTANT : Exclure les comptes de régularisation temporaire
-        COMPTES_REGULARISATION_TEMPORAIRE = ['4181', '4081', '486', '487', '1688', '16888']
+        # IMPORTANT : Reprendre TOUS les comptes de bilan (y compris régularisation temporaire)
+        # Les extournes seront passées séparément le 01/01 de l'exercice suivant
 
         ecritures_ouverture = []
         compteur = 1
@@ -510,10 +510,9 @@ class ClotureExercice:
             classe = data['classe']
             solde = data['solde']
 
-            # Ignorer compte 89, classes 6-7, comptes de régularisation temporaire, et soldes nuls
+            # Ignorer compte 89, classes 6-7 (gestion), et soldes nuls
             if (num_compte == '89' or
                 classe in [6, 7, 0] or
-                num_compte in COMPTES_REGULARISATION_TEMPORAIRE or
                 abs(solde) < Decimal('0.01')):
                 continue
 
