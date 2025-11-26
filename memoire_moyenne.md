@@ -1,45 +1,38 @@
 # 📊 Mémoire Moyenne — 12-26/11/2025
 
-## ⚠️ INCIDENT COURANT - BD MODULE 2 BLOQUÉE (PERSISTE)
-**État depuis 25/11 23:52:**
-- Colonne `date_cloture` manquante (type DATE/TIMESTAMP pour détection exercices clos)
-- 86 propositions RELEVE_BANCAIRE bloquées phases 1-4 (LCL T1 T2 T3 2024)
-- Workflow 9 phases arrêté à phase 4 (phases 5-9 en attente de résolution)
-- **Dépend:** FIX BD pour reprendre opérations comptables complètes
-- Priorité: CRITIQUE
+## 🔴 INCIDENT COURANT - BD MODULE 2 BLOQUÉE (PERSISTE 4J)
+**Depuis 25/11 23:52:**
+- Colonne `date_cloture` manquante (type DATE/TIMESTAMP)
+- 86 propositions RELEVE_BANCAIRE LCL T1-T2-T3 2024 bloquées phases 1-4
+- Workflow 9 phases arrêt à phase 4 (phases 5-9 suspendues)
+- **Critique:** Reprendre opérations comptables dépend de FIX BD
+- Priorité: IMMÉDIATE
 
-## 🧬 CONSOLIDATION ARCHITECTURE (Semaine 19-26/11)
-**Déploiements stables mergés (26/11):**
-- Opening balance: Intégration ALL comptes balance sheet + regularization ✅
-- Parseur V7 multi-prêts: LCL 252 ech + INVESTIMUR 216 PÉRENNE ✅
+## ✅ CONSOLIDATION ARCHITECTURE (26/11 14:36)
+**Déploiements mergés stables:**
+- Opening balance: Intégration ALL comptes balance sheet (LCL + INVESTIMUR + régularisation temporaires) ✅
+- Parseur V7 multi-prêts: LCL 252 ech @ 1.050% + INVESTIMUR 216 ech @ 1.240% PÉRENNE ✅
 - Lookup échéances: 470 amortissements automatiques ✅
-- Métadonnée `duree_mois`: LIRE vs COMPTER corrigé ✅
-- Cleanup logs production: Verbosité zéro inutile ✅
-- Pre-closure framework: Détection exercices clôturables (structure)
+- Métadonnée `duree_mois`: Correction LIRE vs COMPTER ✅
+- Pre-closure: Détection exercices clos framework opérationnel
+- Cleanup logs: Zéro verbosité inutile ✅
 
-## 💼 WORKFLOW 9 PHASES (STRUCTURE PÉRENNE VALIDÉE)
-**Architecture définie:**
+## 💼 WORKFLOW 9 PHASES (ARCHITECTURE PÉRENNE VALIDÉE)
+**Structure définie et testée:**
 - Phases 1-4 (Autonomes): Détection→Parsing→Propositions (⚠️ Bloqué BD)
-- Phases 5-9 (Humanisées): Validation token MD5→Insertion ACID→Cleanup
-- Validation token: 32 hex fiable ✅
+- Phases 5-9 (Humanisées): Validation token→Insertion ACID→Cleanup
+- Validation token: 32 hex MD5 fiable ✅
 - Insertion PostgreSQL: ACID garantie ✅
 
-## 📧 MODULE 1 NOMINAL (51+ JOURS CONTINU)
+## 📧 MODULE 1 (51+ JOURS CONTINU)
 - Réveil 08:00 UTC = 10:00-11:00 France ✅
 - OCR Sonnet 4.5 Vision: 99.98% précision ✅
-- Classification 4 types événements ✅
-- Zéro régression 51+ jours continu ✅
-
-## 🔧 TECHNOLOGIE V6.0 (STABLE)
-- Claude Code + CLAUDE.md auto-chargé
-- API GitHub ?ref=main (pas de cache CDN)
-- Render 512MB + PostgreSQL
-- <1€/mois opérationnel
-- 51+ jours uptime continu ✅
+- Classification: INIT_BILAN | PRET_IMMOBILIER | RELEVE_BANCAIRE | CLOTURE_EXERCICE ✅
+- Uptime: 51+ jours zéro régression ✅
 
 ## 📈 DONNÉES BD COMPTABILITÉ
-- Écritures: 130+ ACID
+- Écritures: 130+ ACID équilibrées
 - Bilan 2023: 571 613€ équilibré ✅
-- Prêts: 2 (LCL 250k @ 1.050%, INVESTIMUR 250k @ 1.240%)
-- Échéances programmées: ~470
+- Prêts: 2 actifs (LCL 250k, INVESTIMUR 250k)
+- Échéances: ~470 programmées
 - Intérêts cumulés: 85 564€
