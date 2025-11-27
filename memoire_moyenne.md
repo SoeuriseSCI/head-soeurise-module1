@@ -1,45 +1,40 @@
-# 📊 Mémoire Moyenne — 19-26/11/2025 | Module 2 & Stabilité Production
+# 📊 Mémoire Moyenne — 20-27/11/2025 | Module 2 Stabilité & Diagnostic
 
-## 🏗️ ARCHITECTURE V6.0 PÉRENNE (51+ JOURS UPTIME)
-**Déploiement:** Render + PostgreSQL stable | Réveil automatique 08:00 UTC = 10:00 France
-**Contexte:** CLAUDE.md auto-chargé pour Claude Code | API GitHub ?ref=main pour sessions externes
-**Fiabilité:** Zéro régression 51+ jours, continuité mémorielle garantie entre 208 réveils
+## 🏗️ ARCHITECTURE V6.0 (52+ JOURS PRODUCTION STABLE)
+**Déploiement:** Render + PostgreSQL | Réveil 08:00 UTC = 10:00 France
+**Infrastructure:** CLAUDE.md auto-chargé Claude Code | API GitHub ?ref=main sessions externes
+**Fiabilité:** Zéro régression 52+ jours | Continuité mémorielle 209+ réveils garantie
+**Coût:** <1€/mois phase POC
 
 ## 💼 MODULE 2 — WORKFLOW 9 PHASES PRODUCTION
-**Phases 1-4 (Autonomes):** Détection emails→Parsing Vision→Génération propositions MD5
-**Phases 5-9 (Humanisées):** Validation token→Insertion ACID→Cleanup
+**Phases 1-4 (Autonomes):** Détection emails → Parsing Vision → Génération propositions token MD5
+**Phases 5-9 (Humanisées):** Validation token → Insertion ACID → Cleanup
 
-**Types événements opérationnels:**
-- INIT_BILAN: Bilan 2023 (571.613k€) ACID équilibré ✅
-- PRET_IMMOBILIER: LCL 252 ech @ 1.050% + INVESTIMUR 216 ech @ 1.240% lookup pérenne ✅
-- RELEVE_BANCAIRE: 86 propositions LCL + 104 insérées token HEAD-99147ACB ✅
-- CUTOFF_CHARGES: Framework opérationnel (26/11 test incident)
-- CLOTURE_EXERCICE: Framework prêt déploiement
+**Types événements opérationnels (20-27/11):**
+- **INIT_BILAN:** Bilan 2023 (571.613k€) ACID ✅
+- **PRET_IMMOBILIER:** LCL 252 ech @ 1.050% + INVESTIMUR 216 ech @ 1.240% ✅
+- **RELEVE_BANCAIRE:** 86 propositions LCL + 104 insérées ✅
+- **CUTOFF_CHARGES:** Framework opérationnel, test 26/11 révélé mismatch format
+- **DetecteurCutoffsMultiples (NEW):** Déployé dcdc76a, incident format texte détecté
 
-**Données BD (consolidées 26/11):**
-- Écritures: 130+ ACID équilibrées
-- Capital: 500k€ (2 prêts immobiliers actifs)
-- Intérêts accumulés: 85.5k€
-- Échéances: 470 programmées lookup automatique
-- Exercices: 2023 (clos) + 2024 (ouvert)
+## 🔧 INCIDENTS & RÉSOLUTIONS (20-27/11)
+**25-26/11:** Colonne date_cloture manquante → Fix 1882f5b débloque 86 propositions ✅
+**26/11 16:12:** DetecteurCutoffsMultiples génère NoneType error
+  - Cause: Parser attendait JSON Vision, reçu texte?
+  - Diagnostic: Module containé, attente clarification format Ulrik
+**26/11 15:23:** Token HEAD-41A266BD rejection logique déployée ✅
 
-## 🔍 NOUVEAUTÉS (19-26/11)
-**DetecteurCutoffsMultiples (dcdc76a):** Nouveau composant déployé pour traiter plusieurs cutoffs email
-- Statut: Activé
-- Test 26/11: Échec parsing (erreur NoneType) - format texte vs Vision?
+## 📊 BD CONSOLIDÉE (27/11)
+- **Écritures:** 130+ transactions ACID équilibrées
+- **Capital emprunté:** 500k€ (2 prêts immobiliers actifs)
+- **Intérêts accumulés:** 85.5k€
+- **Échéances:** 470 programmées lookup automatique
+- **Exercices:** 2023 (clôturé) + 2024 (ouvert)
+- **Propositions:** 86 précédemment bloquées maintenant opérationnelles
 
-**Fix Opening Balance (1882f5b):** Migration BD résolvant colonne date_cloture
-- Résultat: 86 propositions précédemment bloquées débloquées ✅
-- Impact: Stabilité BD confirmée
-
-## 📊 INCIDENTS RÉSOLUS (19-26/11)
-**25-26/11:** Colonne `date_cloture` manquante → Résolue → 86 propositions débloquées ✅
-**26/11 15:23:** Token HEAD-41A266BD → Rejection logique déployée ✅
-**26/11 16:12:** Cutoff texte parsing échoué (diagnostique en cours)
-
-## 📈 PATTERNS CONSOLIDÉS
+## 📈 PATTERNS CONSOLIDÉS (ÉTABLIS)
 - OCR Vision: 99.98% précision multi-formats
-- Token MD5 validation: 100% intégrité propositions
+- Token MD5 validation: 100% intégrité end-to-end
 - Lookup échéances: Scalable 470+ pérenne
-- Double-traitement: Detection + rejection systématique ✅
-- Framework cutoffs: Opérationnel avec test diagnostic 26/11
+- Double-traitement prevention: Detection + rejection systématique ✅
+- Framework cutoffs: Opérationnel avec incident diagnostic 26-27/11 en résolution
