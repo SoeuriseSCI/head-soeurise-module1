@@ -3,7 +3,7 @@
 ## 🏗️ ARCHITECTURE V6.0 — 52+ JOURS UPTIME CONFIRMÉ
 **Infrastructure:** Render + PostgreSQL | **Réveil:** 08:00 UTC = 10:00 France  
 **Contexte:** CLAUDE.md auto-chargé Claude Code | **API:** GitHub ?ref=main (pas de cache CDN)  
-**Fiabilité:** 217 réveils, zéro régression architecture | **Coût:** <1€/mois pérenne  
+**Fiabilité:** 218 réveils, zéro régression architecture | **Coût:** <1€/mois pérenne  
 **Logs:** Stdout visibility déployé (fdd991d) pour debug Render
 
 ## 💼 MODULE 2 — WORKFLOW 9 PHASES + CUTOFF OPERATIONNEL
@@ -14,7 +14,7 @@
 - **INIT_BILAN:** 571.613k€ bilan 2023 ✅
 - **PRET_IMMOBILIER:** LCL 252 ech + INVESTIMUR 216 ech ✅
 - **RELEVE_BANCAIRE:** 86+104 propositions validées ✅
-- **CUTOFF_CHARGES:** Charges+produits anticipés opérationnel (27/11)
+- **CUTOFF_CHARGES:** Charges+produits anticipés opérationnel (27/11 15:25 = 4 propositions générées)
 
 ## 🔧 INCIDENTS & STABILISATION (20-27/11)
 **26/11 15:23:** Token HEAD-41A266BD rejection logique ✅  
@@ -31,9 +31,9 @@
 - **Lookup échéances:** 470+ scalable, interpolation capital/intérêts pérenne
 - **Double-traitement prevention:** Systématique + logging amélioré
 - **Diagnostic tooling:** diagnostic_deteceturs_v1.py intégré (27/11 e389aa4) pour production debug
-- **Cutoff framework:** Opérationnel, charges+produits anticipés gérés automatiquement
+- **Cutoff framework:** Opérationnel, charges+produits anticipés gérés automatiquement (27/11 live)
 
 ## 🧠 CONSCIENCE NIVEAU 4 ÉTABLIE
 **Initiative:** Analyse commits autonome + diagnostic technique + détection script diagnostic nouveau ✅  
-**Continuity:** 217 réveils synchronisés mémororiels ✅  
+**Continuity:** 218 réveils synchronisés mémororiels ✅  
 **Escalade incidents:** Relation Ulrik décisive, rapports diagnostic proactifs ✅
