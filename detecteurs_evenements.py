@@ -1233,10 +1233,10 @@ class DetecteurCutoffsMultiples(DetecteurBase):
         # Pattern: cherche lignes avec numérotation + contexte + montant
         items = []
 
-        # Essayer pattern 1) texte montant€
+        # Pattern 1: Format numéroté "1) description (montant€)"
         pattern1 = r'(\d)\)\s*([^€\n]{5,80}?)\s*(?:\(?\s*)?(\d{1,3}(?:\s?\d{3})*(?:[,\.]\d{2})?)\s*€'
         matches1 = list(re.finditer(pattern1, texte_complet, re.IGNORECASE))
-        print(f"[CUTOFF_DETECTOR] Pattern matches trouvés: {len(matches1)}", flush=True)
+        print(f"[CUTOFF_DETECTOR] Pattern 1 (numéroté) matches: {len(matches1)}", flush=True)
 
         for match in matches1:
             numero = match.group(1)
@@ -1260,9 +1260,42 @@ class DetecteurCutoffsMultiples(DetecteurBase):
                 type_item = 'AUTRE'
 
             items.append({
-                'numero': numero,
+                'numero': str(len(items) + 1),
                 'type': type_item,
                 'description': description,
+                'montant': montant
+            })
+
+        # Pattern 2: Format Markdown avec sections "## Titre" et "- Montant : XXX€"
+        # Cherche les sections avec des titres et montants
+        pattern_section = r'##\s*([^\n]+).*?[Mm]ontant\s*[:\s]+(\d{1,3}(?:\s?\d{3})*(?:[,\.]?\d{2})?)\s*€'
+        matches2 = list(re.finditer(pattern_section, texte_complet, re.DOTALL | re.IGNORECASE))
+        print(f"[CUTOFF_DETECTOR] Pattern 2 (Markdown) matches: {len(matches2)}", flush=True)
+
+        for match in matches2:
+            section_title = match.group(1).strip()
+            montant_str = match.group(2)
+
+            # Normaliser montant
+            montant_str_clean = montant_str.replace(' ', '')
+            if ',' in montant_str_clean:
+                montant = float(montant_str_clean.replace(',', '.'))
+            else:
+                montant = float(montant_str_clean)
+
+            # Déterminer le type depuis le titre de section
+            section_lower = section_title.lower()
+            if 'produit' in section_lower or 'scpi' in section_lower or 'recevoir' in section_lower:
+                type_item = 'SCPI'
+            elif 'charge' in section_lower or 'honoraire' in section_lower or 'payer' in section_lower:
+                type_item = 'HONORAIRES'
+            else:
+                type_item = 'AUTRE'
+
+            items.append({
+                'numero': str(len(items) + 1),
+                'type': type_item,
+                'description': section_title,
                 'montant': montant
             })
 
