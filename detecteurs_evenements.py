@@ -1205,6 +1205,11 @@ class DetecteurCutoffsMultiples(DetecteurBase):
         corps = evenement.get('email_body', '')
         texte_complet = f"{objet} {corps}"
 
+        # DEBUG: Afficher le contenu exact reçu
+        print(f"[CUTOFF_DETECTOR] Sujet: '{objet}'", flush=True)
+        print(f"[CUTOFF_DETECTOR] Corps: '{corps[:200]}'", flush=True)
+        print(f"[CUTOFF_DETECTOR] Texte complet longueur: {len(texte_complet)}", flush=True)
+
         # Déterminer l'exercice
         result = self.session.execute(
             text("""
@@ -1230,7 +1235,8 @@ class DetecteurCutoffsMultiples(DetecteurBase):
 
         # Essayer pattern 1) texte montant€
         pattern1 = r'(\d)\)\s*([^€\n]{5,80}?)\s*(?:\(?\s*)?(\d{1,3}(?:\s?\d{3})*(?:[,\.]\d{2})?)\s*€'
-        matches1 = re.finditer(pattern1, texte_complet, re.IGNORECASE)
+        matches1 = list(re.finditer(pattern1, texte_complet, re.IGNORECASE))
+        print(f"[CUTOFF_DETECTOR] Pattern matches trouvés: {len(matches1)}", flush=True)
 
         for match in matches1:
             numero = match.group(1)
@@ -1261,6 +1267,10 @@ class DetecteurCutoffsMultiples(DetecteurBase):
             })
 
         # Générer les écritures pour chaque item
+        print(f"[CUTOFF_DETECTOR] Items extraits: {len(items)}", flush=True)
+        for i, item in enumerate(items, 1):
+            print(f"[CUTOFF_DETECTOR] Item {i}: type={item['type']}, montant={item['montant']}€", flush=True)
+
         ecritures = []
 
         for item in items:
