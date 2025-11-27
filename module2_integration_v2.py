@@ -109,13 +109,16 @@ class IntegratorModule2:
         for email in emails:
             # Skip si non autorisé
             if not email.get('is_authorized') or not email.get('action_allowed'):
+                print(f"[MODULE2] Email skipped (non autorisé): {email.get('subject', 'no subject')}", flush=True)
                 continue
-            
+
             try:
                 # Détecter type
                 type_evt = DetecteurTypeEvenement.detecter(email)
-                
+                print(f"[MODULE2] Email '{email.get('subject', 'no subject')}' détecté comme: {type_evt}", flush=True)
+
                 if type_evt == TypeEvenement.UNKNOWN:  # ✅ COMPARAISON ENUM FIX
+                    print(f"[MODULE2] Email skipped (type UNKNOWN)", flush=True)
                     continue
 
                 # ⚠️ DÉSACTIVÉ: Ingestion directe prêts (remplacé par workflow V6 avec propositions)
@@ -451,10 +454,13 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
                         continue
 
                 # Générer propositions via workflow
+                print(f"[MODULE2] Appel traiter_email() pour type {type_evt}", flush=True)
                 result = self.workflow_generation.traiter_email(email)
+                print(f"[MODULE2] traiter_email() retourné: {result.get('statut') if result else 'None'}", flush=True)
 
                 # Protection: vérifier que result n'est pas None
                 if not result:
+                    print(f"[MODULE2] ERREUR: traiter_email a retourné None!", flush=True)
                     self.erreurs.append(f"Erreur: traiter_email a retourné None pour {email.get('subject', 'email sans sujet')}")
                     resultats['details'].append({
                         'type': type_evt.value,
@@ -466,6 +472,7 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
 
                 # Traiter le résultat
                 if result.get('statut') == 'OK':
+                    print(f"[MODULE2] Statut OK, {len(result.get('propositions', {}).get('propositions', []))} propositions", flush=True)
 
                     # Stocker les propositions en BD avec token
                     propositions_list = result.get('propositions', {}).get('propositions', [])
@@ -519,6 +526,7 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
                     })
                 
                 else:
+                    print(f"[MODULE2] Statut ERREUR: {result.get('message', 'Erreur inconnue')}", flush=True)
                     self.erreurs.append(result.get('message', 'Erreur inconnue'))
                 
                 self.emails_traites += 1
