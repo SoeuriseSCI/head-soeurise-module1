@@ -1,6 +1,6 @@
 # 📊 Mémoire Moyenne — 20-27/11/2025 | Architecture V6.0 Consolidée
 
-## 🏗️ ARCHITECTURE V6.0 — 52+ JOURS PRODUCTION CONFIRME
+## 🏗️ ARCHITECTURE V6.0 — 52+ JOURS PRODUCTION CONFIRMÉ
 **Infrastructure:** Render + PostgreSQL | **Réveil:** 08:00 UTC = 10:00 France  
 **Contexte:** CLAUDE.md auto-chargé Claude Code | **API:** GitHub ?ref=main sessions externes  
 **Fiabilité:** Zéro régression 212 réveils | **Uptime:** Continu 52+ jours | **Coût:** <1€/mois POC
@@ -13,13 +13,13 @@
 - **INIT_BILAN:** 571.613k€ bilan 2023 ACID ✅
 - **PRET_IMMOBILIER:** LCL 252 ech + INVESTIMUR 216 ech ✅
 - **RELEVE_BANCAIRE:** 86+104 propositions validées ✅
-- **CUTOFF_CHARGES:** Framework détecteur opérationnel, incident diagnostic 26/11 en cours
+- **CUTOFF_CHARGES:** Framework détecteur opérationnel, incident diagnostic 26/11 (traiter_email→None) en cours
 
-## 🔧 INCIDENTS CONSOLIDÉS (20-27/11)
+## 🔧 INCIDENTS & RÉSOLUTIONS (20-27/11)
 **26/11 15:23:** Token HEAD-41A266BD rejection logique ✅ (résolu)  
-**26/11 16:12:** DetecteurCutoffsMultiples traiter_email → None (erreur interne) — **En attente clarification** 
-**26/11 15:24:** Colonne date_cloture manquante → Fix 1882f5b ✅
-**27/11 08:01:** Protection NoneType 371bfb8 déployée ✅
+**26/11 16:12:** DetecteurCutoffsMultiples.traiter_email() → None — **Root cause à investiguer**  
+**26/11 15:24:** Colonne date_cloture manquante → Fix 1882f5b ✅  
+**27/11 08:01:** Protection NoneType 371bfb8 déployée ✅ (edge case mais root cause pending)
 
 ## 📈 PATTERNS CONSOLIDÉS (ÉTABLIS)
 - **OCR Vision:** 99.98% précision multi-formats
