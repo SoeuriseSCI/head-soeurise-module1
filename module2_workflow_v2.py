@@ -1391,42 +1391,52 @@ class WorkflowModule2V2:
                 if proposition:
                     # Convertir TOUTES les écritures en format module2
                     ecritures = proposition.get('ecritures', [])
-                    if ecritures:
-                        props = []
-                        for idx, ecriture in enumerate(ecritures, 1):
-                            props.append({
-                                "numero_ecriture": f"2024-{datetime.now().strftime('%m%d')}-CUT-{idx:03d}",
-                                "type": proposition['type_evenement'],
-                                "compte_debit": ecriture['compte_debit'],
-                                "compte_credit": ecriture['compte_credit'],
-                                "montant": ecriture['montant'],
-                                "libelle": ecriture['libelle_ecriture'],
-                                "date_ecriture": ecriture['date_ecriture'],
-                                "notes": ecriture.get('notes', '')
-                            })
-
-                        # Générer markdown avec TOUTES les écritures
-                        markdown = f"# Propositions Comptables - {proposition['type_evenement']}\n\n"
-                        markdown += f"**Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
-                        markdown += f"**Description:** {proposition['description']}\n\n"
-                        markdown += f"**Confiance:** {proposition['confiance'] * 100:.0f}%\n\n"
-                        markdown += "## Écritures\n\n"
-                        for p in props:
-                            markdown += f"- **{p['date_ecriture']}** : {p['libelle']}\n"
-                            markdown += f"  - Débit {p['compte_debit']} / Crédit {p['compte_credit']} : {p['montant']}€\n"
-
-                        # Ne pas générer token ici - laisser propositions_manager le faire avec timestamp
-                        # pour garantir l'unicité même si deux emails identiques
-
+                    if not ecritures:
+                        # Proposition sans écritures = erreur
                         return {
                             "type_detecte": TypeEvenement.CUTOFF,
-                            "type_specifique": proposition['type_evenement'],
-                            "statut": "OK",
-                            "markdown": markdown,
-                            "propositions": {"propositions": props, "type_evenement": proposition['type_evenement']},
-                            "token": None,  # Sera généré par propositions_manager avec timestamp
-                            "message": f"Cutoff détecté: {proposition['type_evenement']}"
+                            "statut": "ERREUR",
+                            "message": f"Proposition {proposition['type_evenement']} générée mais sans écritures",
+                            "markdown": "",
+                            "propositions": {},
+                            "token": ""
                         }
+
+                    props = []
+                    for idx, ecriture in enumerate(ecritures, 1):
+                        props.append({
+                            "numero_ecriture": f"2024-{datetime.now().strftime('%m%d')}-CUT-{idx:03d}",
+                            "type": proposition['type_evenement'],
+                            "compte_debit": ecriture['compte_debit'],
+                            "compte_credit": ecriture['compte_credit'],
+                            "montant": ecriture['montant'],
+                            "libelle": ecriture['libelle_ecriture'],
+                            "date_ecriture": ecriture['date_ecriture'],
+                            "notes": ecriture.get('notes', '')
+                        })
+
+                    # Générer markdown avec TOUTES les écritures
+                    markdown = f"# Propositions Comptables - {proposition['type_evenement']}\n\n"
+                    markdown += f"**Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
+                    markdown += f"**Description:** {proposition['description']}\n\n"
+                    markdown += f"**Confiance:** {proposition['confiance'] * 100:.0f}%\n\n"
+                    markdown += "## Écritures\n\n"
+                    for p in props:
+                        markdown += f"- **{p['date_ecriture']}** : {p['libelle']}\n"
+                        markdown += f"  - Débit {p['compte_debit']} / Crédit {p['compte_credit']} : {p['montant']}€\n"
+
+                    # Ne pas générer token ici - laisser propositions_manager le faire avec timestamp
+                    # pour garantir l'unicité même si deux emails identiques
+
+                    return {
+                        "type_detecte": TypeEvenement.CUTOFF,
+                        "type_specifique": proposition['type_evenement'],
+                        "statut": "OK",
+                        "markdown": markdown,
+                        "propositions": {"propositions": props, "type_evenement": proposition['type_evenement']},
+                        "token": None,  # Sera généré par propositions_manager avec timestamp
+                        "message": f"Cutoff détecté: {proposition['type_evenement']}"
+                    }
                 else:
                     return {
                         "type_detecte": TypeEvenement.CUTOFF,
