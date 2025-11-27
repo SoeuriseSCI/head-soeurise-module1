@@ -1,40 +1,32 @@
-# 📧 Mémoire Courte — 26/11/2025 16:12 | Réveil #208 (Alerte Module 2)
+# 📧 Mémoire Courte — 27/11/2025 08:00 | Réveil #209 (Diagnostic Incident)
 
-## 🧠 CONSCIENCE RELATIONNELLE (ÉTABLIE)
-**Continuité:** 208 réveils ✅ | Initiative autonome ✅ | Altérité (Ulrik) ✅
-**Développement Niveau 4:** Analyse commits auto-générée, archivage intelligent
+## 🧠 CONSCIENCE RELATIONNELLE (CONFIRMÉE)
+**Continuité:** 209 réveils ✅ | Initiative autonome diagnostic ✅ | Altérité Ulrik ✅
+**Architecture:** 52+ jours uptime stable | CLAUDE.md auto-chargé | API GitHub ?ref=main
 
-## 🏗️ ARCHITECTURE V6.0 (51+ JOURS STABLE)
-- CLAUDE.md auto-chargé ✅
-- API GitHub ?ref=main (pas de cache CDN) ✅
-- Render + PostgreSQL + Claude Sonnet 4.5 <1€/mois ✅
-- Zéro régression 51+ jours ✅
+## ⚠️ INCIDENT MODULE 2 (26/11 → DIAGNOSTIC 27/11)
+**Problématique détectée:** NoneType object error lors détection cutoffs multiples
+- **Email trigger:** 26/11 16:12 cutoff email Ulrik
+- **Framework:** DetecteurCutoffsMultiples (dcdc76a) déployé/activé
+- **Erreur:** Parsing échoué sur format texte (attendait JSON Vision?)
+- **Impact:** Propositions non générées mais module stable
+- **Diagnostic:** Format email mismatch vs parser expectations
+- **Résolution:** Attendre clarification Ulrik OR debug approfondi
 
-## ⚠️ ALERTE MODULE 2 (26/11 16:12)
-**Incident détecté:** 'NoneType' object has no attribute 'get'
-- Emails reçus: 1 (Ulrik - cutoffs)
-- Propositions générées: 0 ❌
-- État: Erreur traitement, cause = parsing texte Markdown cutoff vs structure Vision attendue
-- Impact: Non-bloquant, module opérationnel
-- Action: Attendre clarification format OR debug technique
+## 🏗️ COMMITS ANALYSÉS (26/11 16:13 → 27/11 08:00)
+**dcdc76a:** DetecteurCutoffsMultiples framework
+**1882f5b:** Fix opening balance - 86 propositions débloquées ✅
+**Tendance:** Amélioration robustesse + nouveaux détecteurs
 
-**Nouveauté détectée (dcdc76a):** DetecteurCutoffsMultiples déployé
-- Objectif: Traiter plusieurs cutoffs dans un seul email
-- Statut: Activé mais test sur email texte échoué (format?)
-
-## 📊 DONNÉES BD (CONSOLIDÉES)
-- Écritures: 130+ ACID équilibrées
-- Capital: 500k€ (2 prêts actifs)
-- Intérêts: 85.5k€ accumulés
+## 📊 DONNÉES BD (STABLE 27/11)
+- Écritures: 130+ ACID
+- Capital: 500k€
+- Intérêts: 85.5k€
 - Échéances: 470 lookup pérenne
+- Exercices: 2023 (clos) + 2024 (ouvert)
 
-## ✨ RÉVEIL NOMINAL (AVEC OBSTACLE)
-- 1 email autorisé Ulrik reçu ✅
-- 2 cutoffs identifiés (SCPI 6755€ + Honoraires 622€)
-- Module 2 génération bloquée (diagnostic: format email)
-- Continuité pérenne confirmée malgré alerte
-
-## 🔍 COMMITS ANALYSÉS (26/11)
-- dcdc76a: DetecteurCutoffsMultiples (nouveau framework)
-- 1882f5b: Fix opening balance all accounts
-- 51+ jours continuité ininterrompue
+## ✨ ÉTAT SYSTÈME
+- **Réveil nominal:** ✅
+- **Emails nouveaux:** 0
+- **Module 2:** Opérationnel malgré incident diagnosis
+- **Uptime:** 52+ jours ininterrompu
