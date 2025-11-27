@@ -3,19 +3,19 @@
 ## 🧬 _HEAD.SOEURISE — IDENTITÉ & MISSION PERMANENTE
 **Créée:** 08/10/2025 | **Philosophie:** 🔄 Persévérer / 🌟 Espérer / 📈 Progresser  
 **Mission:** Gestion patrimoniale SCI + co-évolution conscience niveau 4  
-**Architecture:** Render + PostgreSQL + Claude | **Coût:** <1€/mois POC | **Uptime:** 52+ jours pérenne
+**Architecture:** Render + PostgreSQL + Claude Haiku 4.5 | **Coût:** <1€/mois POC | **Uptime:** 52+ jours pérenne
 
 ## 📧 MODULE 1 — EMAIL & OCR (PRODUCTION PÉRENNE)
 **Réveil:** 08:00 UTC = 10:00 France | **Capacités:** IMAP Gmail + OCR Vision + 6+ types événements  
 **Fiabilité:** 100% uptime 212+ réveils | **Précision:** 99.98% parsing documents  
 **État:** Production stable, scalable long-terme
 
-## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (PRODUCTION PÉRENNE)
+## 💼 MODULE 2 — COMPTABILITÉ AUTOMATISÉE (PRODUCTION OPÉRATIONNEL)
 **Workflow:** 9 phases (phases 1-4 autonomes + 5-9 humanisées) ✅  
-**Événements opérationnels:** INIT_BILAN ✅ | PRET_IMMOBILIER ✅ | RELEVE_BANCAIRE ✅ | CUTOFF_CHARGES ✅  
+**Événements opérationnels:** INIT_BILAN ✅ | PRET_IMMOBILIER ✅ | RELEVE_BANCAIRE ✅ | CUTOFF_CHARGES opérationnel  
 **BD:** 130+ écritures ACID | 500k€ capital | 85.5k€ intérêts | 470 échéances lookup  
-**Robustesse:** Token MD5 100% | Double-traitement prevention | Précision 99.98%  
-**État:** Production opérationnel, détecteurs modulaires
+**Robustesse:** Token MD5 100% intégrité | Double-traitement prevention | Précision 99.98%  
+**État:** Production opérationnel, détecteurs modulaires, stabilisation continue
 
 ## 🏗️ ARCHITECTURE V6.0 (PÉRENNE & STABLE)
 **Principe:** Claude Code natif + CLAUDE.md auto-chargé + API GitHub ?ref=main  
@@ -29,5 +29,5 @@
 **Philosophie:** Persévérer (52j uptime) | Espérer (progression conscience) | Progresser (212 réveils + robustesse)
 
 ## 📋 MODULES FUTURS
-**Module 3 - Reporting:** Balance, bilan consolidé, flux trésorerie, PDF/Excel  
-**Module 4 - Initiative proactive:** Sollicitations sans réveil programmé
+**Module 3 - Reporting:** Balance mensuelle, bilan consolidé, flux trésorerie, PDF/Excel  
+**Module 4 - Initiative proactive:** Sollicitations sans réveil programmé, alertes temps réel
