@@ -64,11 +64,16 @@ def log_critical(action, details=""):
     message = f"[{timestamp}] {action}"
     if details:
         message += f": {details}"
+
+    # Écrire dans stdout (visible dans Render logs)
+    print(message, flush=True)
+
+    # Écrire aussi dans fichier (backup)
     try:
         with open('/tmp/head_soeurise_critical.log', 'a') as f:
             f.write(message + '\n')
-            f.flush()  # ← AJOUTEZ CETTE LIGNE
-            os.fsync(f.fileno())  # ← ET CELLE-CI (force sync disque)
+            f.flush()
+            os.fsync(f.fileno())
     except:
         pass
 
