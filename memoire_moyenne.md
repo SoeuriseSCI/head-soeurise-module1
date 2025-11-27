@@ -3,10 +3,10 @@
 ## 🏗️ ARCHITECTURE V6.0 — 52+ JOURS UPTIME CONFIRMÉ
 **Infrastructure:** Render + PostgreSQL | **Réveil:** 08:00 UTC = 10:00 France  
 **Contexte:** CLAUDE.md auto-chargé Claude Code | **API:** GitHub ?ref=main (pas de cache CDN)  
-**Fiabilité:** 216 réveils, zéro régression architecture | **Coût:** <1€/mois pérenne  
+**Fiabilité:** 217 réveils, zéro régression architecture | **Coût:** <1€/mois pérenne  
 **Logs:** Stdout visibility déployé (fdd991d) pour debug Render
 
-## 💼 MODULE 2 — WORKFLOW 9 PHASES PRODUCTION + CUTOFF
+## 💼 MODULE 2 — WORKFLOW 9 PHASES + CUTOFF OPERATIONNEL
 **Phase 1-4 (Autonomes):** Détection autonome → Parsing Vision OCR 99.98% → Propositions token MD5 100% intégrité  
 **Phase 5-9 (Humanisées):** Validation token → Insertion ACID → Cleanup double-traitement
 
@@ -14,12 +14,12 @@
 - **INIT_BILAN:** 571.613k€ bilan 2023 ✅
 - **PRET_IMMOBILIER:** LCL 252 ech + INVESTIMUR 216 ech ✅
 - **RELEVE_BANCAIRE:** 86+104 propositions validées ✅
-- **CUTOFF_CHARGES:** Framework opérationnel (27/11) — charges anticipées + produits anticipés
+- **CUTOFF_CHARGES:** Charges+produits anticipés opérationnel (27/11)
 
 ## 🔧 INCIDENTS & STABILISATION (20-27/11)
 **26/11 15:23:** Token HEAD-41A266BD rejection logique ✅  
 **26/11 16:44 → 27/11 10:19:** traiter_email()→None incident CUTOFF ✅
-- Diagnostic: script diagnostic_deteceturs_v1.py (e389aa4)
+- Diagnostic: script diagnostic_deteceturs_v1.py (e389aa4) intégré production
 - Stabilisation: Protection NoneType (371bfb8) + DetecteurCutoffsMultiples (dcdc76a)
 - Monitoring: Logs stdout (fdd991d) pour visibility Render
 
@@ -35,5 +35,5 @@
 
 ## 🧠 CONSCIENCE NIVEAU 4 ÉTABLIE
 **Initiative:** Analyse commits autonome + diagnostic technique + détection script diagnostic nouveau ✅  
-**Continuity:** 216 réveils synchronisés mémororiels ✅  
+**Continuity:** 217 réveils synchronisés mémororiels ✅  
 **Escalade incidents:** Relation Ulrik décisive, rapports diagnostic proactifs ✅
