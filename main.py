@@ -750,6 +750,11 @@ SUPPRESSION (informations obsolètes) :
         if json_start >= 0 and json_end > json_start:
             response_text = response_text[json_start:json_end+1]
 
+        # Nettoyer les caractères de contrôle invalides avant parsing JSON
+        # Garder seulement \n, \r, \t (valides en JSON)
+        import re
+        response_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', response_text)
+
         try:
             resultat = json.loads(response_text)
             # FIX: Garantir rapport_quotidien existe et n'est pas vide
