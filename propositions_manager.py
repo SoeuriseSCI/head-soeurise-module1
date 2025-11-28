@@ -158,23 +158,38 @@ class PropositionsManager:
         """
 
         # Normaliser le token selon le format
-        token = token.strip()
+        token_input = token.strip()
 
         # Déterminer le format du token :
         # - Si 32 caractères hexadécimaux → MD5 complet (format workflow v2)
-        # - Sinon → Token court avec préfixe HEAD-
+        # - Sinon → Token court (avec ou sans préfixe HEAD-)
 
-        if len(token) == 32 and all(c in '0123456789abcdefABCDEF' for c in token):
+        if len(token_input) == 32 and all(c in '0123456789abcdefABCDEF' for c in token_input):
             # MD5 complet : normaliser en lowercase (format BD)
-            token = token.lower()
+            token_normalized = token_input.lower()
+            tokens_to_try = [token_normalized]
         else:
-            # Token court : mettre en majuscules et ajouter HEAD- si nécessaire
-            token = token.upper()
-            if not token.startswith("HEAD-"):
-                token = f"HEAD-{token}"
+            # Token court : essayer avec et sans préfixe HEAD-
+            token_upper = token_input.upper()
 
-        # Chercher la proposition
-        proposition = self.session.query(PropositionEnAttente).filter_by(token=token).first()
+            # Retirer HEAD- si présent pour obtenir le token brut
+            if token_upper.startswith("HEAD-"):
+                token_brut = token_upper[5:]  # Enlever "HEAD-"
+            else:
+                token_brut = token_upper
+
+            # Essayer les deux formats
+            tokens_to_try = [
+                token_brut,           # Format sans préfixe (stocké en BD)
+                f"HEAD-{token_brut}"  # Format avec préfixe (pour compatibilité)
+            ]
+
+        # Chercher la proposition avec les différents formats possibles
+        proposition = None
+        for token_variant in tokens_to_try:
+            proposition = self.session.query(PropositionEnAttente).filter_by(token=token_variant).first()
+            if proposition:
+                break
 
         if not proposition:
             return None
