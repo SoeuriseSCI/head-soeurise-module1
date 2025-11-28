@@ -34,8 +34,9 @@ from sqlalchemy import text
 # Import rapprocheur cutoff
 from rapprocheur_cutoff import RapprocheurCutoff
 
-# Import calculateur intérêts courus (pour déclenchement automatique cutoff)
-from cutoff_extourne_interets import CalculateurInteretsCourus
+# NOTE: Import calculateur intérêts courus supprimé (27/11/2025)
+# Les intérêts courus sont maintenant fournis manuellement via DetecteurCutoffsMultiples
+# pour garantir cohérence avec montants expert-comptable
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -249,91 +250,9 @@ class DetecteurRemboursementPret(DetecteurBase):
 
         return (match_libelle or match_type) and match_debit
 
-    def _declencher_cutoff_interets_si_necessaire(self, date_operation) -> List[Dict]:
-        """
-        Déclenche automatiquement le calcul des intérêts courus de l'année N-1
-        lors du traitement de la première échéance de janvier N.
-
-        Args:
-            date_operation: Date de l'opération (datetime.date ou str)
-
-        Returns:
-            Liste d'écritures de cutoff + extourne (vide si déjà existant ou pas janvier)
-        """
-        from datetime import date
-
-        # Convertir en date si nécessaire
-        if isinstance(date_operation, str):
-            date_op = datetime.strptime(date_operation, '%Y-%m-%d').date()
-        else:
-            date_op = date_operation
-
-        # Vérifier si on est en janvier
-        if date_op.month != 1:
-            return []
-
-        annee_precedente = date_op.year - 1
-
-        # Vérifier si cutoff intérêts existe déjà pour l'année précédente
-        try:
-            result = self.session.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM ecritures_comptables
-                    WHERE type_ecriture = 'CUTOFF_INTERETS_COURUS'
-                      AND EXTRACT(YEAR FROM date_ecriture) = :annee
-                """),
-                {'annee': annee_precedente}
-            )
-            count = result.scalar()
-            if count > 0:
-                print(f"  ℹ️  Cutoff intérêts {annee_precedente} déjà existant, pas de création automatique")
-                return []
-        except Exception as e:
-            print(f"  ⚠️  Erreur vérification cutoff existant: {e}")
-            return []
-
-        # Trouver l'exercice de l'année précédente
-        try:
-            result = self.session.execute(
-                text("SELECT id FROM exercices_comptables WHERE annee = :annee"),
-                {'annee': annee_precedente}
-            )
-            row = result.fetchone()
-            if not row:
-                print(f"  ⚠️  Exercice {annee_precedente} non trouvé, impossible de créer cutoff intérêts")
-                return []
-            exercice_id = row[0]
-        except Exception as e:
-            print(f"  ⚠️  Erreur recherche exercice {annee_precedente}: {e}")
-            return []
-
-        # Calculer les intérêts courus
-        print(f"\n  🔔 DÉCLENCHEMENT AUTOMATIQUE: Calcul intérêts courus {annee_precedente}")
-        print(f"     (Première échéance de janvier {date_op.year} détectée)")
-        print()
-
-        try:
-            calculateur = CalculateurInteretsCourus(self.session)
-            date_cloture = date(annee_precedente, 12, 31)
-            propositions = calculateur.calculer_interets_courus_exercice(exercice_id, date_cloture)
-
-            # Extraire toutes les écritures de toutes les propositions
-            ecritures_cutoff = []
-            for prop in propositions:
-                ecritures_cutoff.extend(prop['ecritures'])
-
-            if ecritures_cutoff:
-                print(f"  ✅ {len(ecritures_cutoff)} écritures de cutoff intérêts créées automatiquement")
-                print()
-
-            return ecritures_cutoff
-
-        except Exception as e:
-            print(f"  ⚠️  Erreur calcul intérêts courus: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
+    # NOTE: Méthode _declencher_cutoff_interets_si_necessaire supprimée (27/11/2025)
+    # Les intérêts courus sont maintenant fournis manuellement via email
+    # pour garantir cohérence avec montants expert-comptable
 
     def generer_proposition(self, evenement: Dict) -> Dict:
         """
@@ -407,13 +326,9 @@ class DetecteurRemboursementPret(DetecteurBase):
                 }
             ]
 
-            # Déclenchement automatique cutoff intérêts si première échéance janvier
-            ecritures_cutoff = self._declencher_cutoff_interets_si_necessaire(date_op)
-            if ecritures_cutoff:
-                ecritures.extend(ecritures_cutoff)
-                description = f'Échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]} + cutoff intérêts courus automatique'
-            else:
-                description = f'Échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]} ({echeance["numero_pret"][:10]}...)'
+            # NOTE: Déclenchement automatique cutoff intérêts supprimé (27/11/2025)
+            # Les cutoffs intérêts courus sont maintenant fournis manuellement via email
+            description = f'Échéance #{echeance["numero_echeance"]} prêt {echeance["banque"]} ({echeance["numero_pret"][:10]}...)'
 
             return {
                 'type_evenement': 'REMBOURSEMENT_PRET',
@@ -1121,33 +1036,31 @@ class DetecteurAnnonceCutoffHonoraires(DetecteurBase):
 
 class DetecteurCutoffsMultiples(DetecteurBase):
     """
-    Détecte emails demandant PLUSIEURS cutoffs simultanés (SCPI + honoraires)
+    Détecte emails demandant UN OU PLUSIEURS cutoffs (SCPI, honoraires, intérêts)
 
     PRIORITÉ: Ce détecteur doit être testé AVANT les détecteurs individuels
 
     PRINCIPE:
-    - Un email peut demander plusieurs cutoffs en une seule fois
+    - Un email peut demander un ou plusieurs cutoffs en une seule fois
     - Génère UNE SEULE proposition avec TOUTES les écritures
     - Évite la confusion entre les montants
 
     CRITÈRES DE DÉTECTION:
     1. Email contient "cutoff" (ou variantes)
-    2. Email contient PLUSIEURS items numérotés (1), 2), etc.) ou listés
-    3. Chaque item a un type identifiable (SCPI, honoraires, etc.)
+    2. Email contient UN OU PLUSIEURS items (numérotés ou simples)
+    3. Chaque item a un type identifiable (SCPI, honoraires, intérêts)
     4. Chaque item a un montant
 
-    EXEMPLE:
-    Email: "Bonjour _Head, Peux-tu créer des cutoffs pour:
-            1) les honoraires comptables de clôture (622€)
-            2) les produits SCPI du 4e trimestre (6755€)"
+    EXEMPLES:
+    Email multiple: "Peux-tu créer des cutoffs pour:
+                     1) les honoraires (622€)
+                     2) les produits SCPI (6755€)"
 
-    Génère UNE proposition avec 4 écritures:
-    - Cutoff honoraires 31/12/N (622€)
-    - Extourne honoraires 01/01/N+1 (622€)
-    - Cutoff SCPI 31/12/N (6755€)
-    - Extourne SCPI 01/01/N+1 (6755€)
+    Email simple: "Peux-tu créer un cutoff pour:
+                   - les intérêts courus sur prêts (254€)"
 
     Date création: 26/11/2025
+    Mise à jour: 27/11/2025 - Support 1+ items (pas seulement 2+)
     """
 
     def detecter(self, evenement: Dict) -> bool:
@@ -1164,36 +1077,20 @@ class DetecteurCutoffsMultiples(DetecteurBase):
         if not any(mot in texte_complet for mot in ['cutoff', 'cut-off', 'cut off']):
             return False
 
-        # Vérifier présence de numérotation/liste (1), 2) ou 1. 2. ou - item1 - item2
+        # Vérifier présence d'au moins 1 montant
         import re
-        patterns_liste = [
-            r'\b[12]\)',           # 1) 2)
-            r'\b[12]\.',           # 1. 2.
-            r'\n\s*-.*\n\s*-',     # - item\n- item
-        ]
-
-        has_liste = any(re.search(pattern, texte_complet) for pattern in patterns_liste)
-        if not has_liste:
-            return False
-
-        # Vérifier présence d'au moins 2 montants différents
         pattern_montant = r'(\d{1,3}(?:\s?\d{3})*(?:[,\.]\d{2})?)\s*€'
         montants = re.findall(pattern_montant, texte_complet)
 
-        # Normaliser les montants pour comparaison
-        montants_normalises = set()
-        for m in montants:
-            m_clean = m.replace(' ', '').replace(',', '.').replace('.', '')
-            montants_normalises.add(m_clean)
-
-        if len(montants_normalises) < 2:
+        if len(montants) < 1:
             return False
 
-        # Vérifier présence de différents types de cutoffs
+        # Vérifier présence d'au moins UN type de cutoff reconnu
         has_scpi = any(mot in texte_complet for mot in ['scpi', 'epargne pierre', 'produit'])
         has_honoraires = any(mot in texte_complet for mot in ['honoraire', 'comptable', 'expert'])
+        has_interets = any(mot in texte_complet for mot in ['interet', 'intérêt', 'couru', 'pret', 'prêt', 'emprunt'])
 
-        return has_scpi and has_honoraires
+        return has_scpi or has_honoraires or has_interets
 
     def generer_proposition(self, evenement: Dict) -> Dict:
         """Génère UNE proposition avec TOUS les cutoffs demandés"""
@@ -1256,6 +1153,8 @@ class DetecteurCutoffsMultiples(DetecteurBase):
                 type_item = 'SCPI'
             elif 'honoraire' in desc_lower or 'comptable' in desc_lower:
                 type_item = 'HONORAIRES'
+            elif 'interet' in desc_lower or 'couru' in desc_lower or 'pret' in desc_lower or 'emprunt' in desc_lower:
+                type_item = 'INTERETS_COURUS'
             else:
                 type_item = 'AUTRE'
 
@@ -1289,6 +1188,8 @@ class DetecteurCutoffsMultiples(DetecteurBase):
                 type_item = 'SCPI'
             elif 'charge' in section_lower or 'honoraire' in section_lower or 'payer' in section_lower:
                 type_item = 'HONORAIRES'
+            elif 'interet' in section_lower or 'couru' in section_lower or 'pret' in section_lower or 'emprunt' in section_lower:
+                type_item = 'INTERETS_COURUS'
             else:
                 type_item = 'AUTRE'
 
@@ -1298,6 +1199,42 @@ class DetecteurCutoffsMultiples(DetecteurBase):
                 'description': section_title,
                 'montant': montant
             })
+
+        # Pattern 3: Format simple "cutoff pour XXX (montant€)" (sans numérotation)
+        # Pour emails simples avec un seul cutoff
+        if len(items) == 0:  # Seulement si aucun item trouvé par patterns précédents
+            pattern_simple = r'cutoff\s+pour\s+(?:les?\s+)?([^(€]{10,80}?)\s*\(?\s*(\d{1,3}(?:\s?\d{3})*(?:[,\.]\d{2})?)\s*€'
+            matches3 = list(re.finditer(pattern_simple, texte_complet, re.IGNORECASE))
+            print(f"[CUTOFF_DETECTOR] Pattern 3 (simple) matches: {len(matches3)}", flush=True)
+
+            for match in matches3:
+                description = match.group(1).strip()
+                montant_str = match.group(2)
+
+                # Normaliser montant
+                montant_str_clean = montant_str.replace(' ', '')
+                if ',' in montant_str_clean:
+                    montant = float(montant_str_clean.replace(',', '.'))
+                else:
+                    montant = float(montant_str_clean)
+
+                # Déterminer le type
+                desc_lower = description.lower()
+                if 'scpi' in desc_lower or 'produit' in desc_lower or 'epargne' in desc_lower:
+                    type_item = 'SCPI'
+                elif 'honoraire' in desc_lower or 'comptable' in desc_lower:
+                    type_item = 'HONORAIRES'
+                elif 'interet' in desc_lower or 'couru' in desc_lower or 'pret' in desc_lower or 'emprunt' in desc_lower:
+                    type_item = 'INTERETS_COURUS'
+                else:
+                    type_item = 'AUTRE'
+
+                items.append({
+                    'numero': str(len(items) + 1),
+                    'type': type_item,
+                    'description': description,
+                    'montant': montant
+                })
 
         # Générer les écritures pour chaque item
         print(f"[CUTOFF_DETECTOR] Items extraits: {len(items)}", flush=True)
@@ -1349,6 +1286,28 @@ class DetecteurCutoffsMultiples(DetecteurBase):
                     'montant': item['montant'],
                     'type_ecriture': 'EXTOURNE_CUTOFF_SCPI',
                     'notes': f'Contre-passation automatique du cutoff {annee}. Annule produit pour ré-enregistrement lors paiement réel.'
+                })
+
+            elif item['type'] == 'INTERETS_COURUS':
+                # Cutoff intérêts courus
+                ecritures.append({
+                    'date_ecriture': date_cutoff,
+                    'libelle_ecriture': f'Cutoff {annee} - Intérêts courus sur emprunts',
+                    'compte_debit': '661',
+                    'compte_credit': '1688',
+                    'montant': item['montant'],
+                    'type_ecriture': 'CUTOFF_INTERETS_COURUS',
+                    'notes': f'Cutoff fin exercice {annee} - Intérêts courus emprunts {item["montant"]}€ (montant fourni manuellement). Extourne automatique au 01/01/{annee_suivante}.'
+                })
+                # Extourne intérêts courus
+                ecritures.append({
+                    'date_ecriture': date_extourne,
+                    'libelle_ecriture': f'Extourne - Cutoff {annee} - Intérêts courus',
+                    'compte_debit': '1688',
+                    'compte_credit': '661',
+                    'montant': item['montant'],
+                    'type_ecriture': 'EXTOURNE_CUTOFF_INTERETS',
+                    'notes': f'Contre-passation automatique du cutoff {annee}. Annule charge pour ré-enregistrement lors échéances réelles.'
                 })
 
         # Construire description

@@ -298,27 +298,13 @@ class PreClotureExercice:
         self.ecritures_cutoff = []
         self.ecritures_extourne = []
 
-        # A. Intérêts courus (utiliser le module existant)
+        # A. Intérêts courus (DÉSACTIVÉ - fourni manuellement)
         print("\n  A. INTÉRÊTS COURUS (1688)")
         print("  " + "-" * 76)
-
-        from cutoff_extourne_interets import CalculateurInteretsCourus
-
-        calculateur = CalculateurInteretsCourus(self.session)
-        propositions_interets = calculateur.calculer_interets_courus_exercice(
-            self.exercice.id, self.date_cloture
-        )
-
-        if propositions_interets:
-            print(f"\n  ✅ {len(propositions_interets)} cutoff(s) intérêts généré(s)")
-            for prop in propositions_interets:
-                for ec in prop['ecritures']:
-                    if ec['date_ecriture'].year == self.annee:
-                        self.ecritures_cutoff.append(ec)
-                    else:
-                        self.ecritures_extourne.append(ec)
-        else:
-            print("  ℹ️  Aucun intérêt couru à provisionner")
+        print("  ⚠️  Calcul automatique DÉSACTIVÉ (27/11/2025)")
+        print("     Les intérêts courus sont fournis manuellement via email")
+        print("     pour garantir cohérence avec montants expert-comptable")
+        print("     → Utiliser DetecteurCutoffsMultiples avec email manuel")
 
         # B. Produits SCPI à recevoir (4181)
         # NOTE: Nécessite information du gérant - pour l'instant, placeholder
