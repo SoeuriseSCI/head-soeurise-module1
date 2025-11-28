@@ -1802,6 +1802,128 @@ class DetecteurHonorairesComptable(DetecteurBase):
         }
 
 
+class DetecteurClotureExercice(DetecteurBase):
+    """
+    Détecteur de clôture d'exercice avec PV d'AG.
+
+    EMAIL ATTENDU (Ulrik uniquement):
+    - Sujet: "CLOTURE EXERCICE YYYY"
+    - Corps: Référence à PV d'AG, date AG, résultat validé, affectation
+    - PJ: PV d'AG au format PDF
+
+    GÉNÈRE:
+    - Événement CLOTURE_EXERCICE avec résultat validé
+    - Proposition d'écriture d'affectation (120 → 110/119)
+    - Changement statut exercice: OUVERT → CLOTURE
+    """
+
+    def __init__(self, session: Session):
+        super().__init__(session)
+        self.type_evenement = 'CLOTURE_EXERCICE'
+
+    def detecter(self, data: Dict) -> bool:
+        """
+        Détecte un email de clôture d'exercice.
+
+        Critères:
+        1. email_subject contient "CLOTURE" ou "CLÔTURE" ET "EXERCICE"
+        2. email_body contient référence AG, PV, résultat
+        3. email_from = ulrik.c.s.be@gmail.com (sécurité)
+        """
+        subject = data.get('email_subject', '').upper()
+        body = data.get('email_body', '').upper()
+        sender = data.get('email_from', '').lower()
+
+        # Sécurité: Seul Ulrik peut clôturer un exercice
+        if sender != 'ulrik.c.s.be@gmail.com':
+            return False
+
+        # Vérifier sujet
+        if not (('CLOTURE' in subject or 'CLÔTURE' in subject) and 'EXERCICE' in subject):
+            return False
+
+        # Vérifier corps (au moins 2 critères sur 4)
+        criteres_body = [
+            'AG' in body or 'ASSEMBLÉE' in body or 'ASSEMBLEE' in body,
+            'PV' in body or 'PROCÈS-VERBAL' in body or 'PROCES-VERBAL' in body,
+            'RÉSULTAT' in body or 'RESULTAT' in body,
+            'AFFECTATION' in body or 'REPORT' in body
+        ]
+
+        if sum(criteres_body) < 2:
+            return False
+
+        return True
+
+    def generer_proposition(self, data: Dict) -> Dict:
+        """
+        Génère proposition de clôture d'exercice.
+
+        IMPORTANTE: Cette proposition NE GÉNÈRE PAS D'ÉCRITURES AUTOMATIQUES.
+        Elle sert à:
+        1. Marquer l'exercice comme CLOTURE
+        2. Enregistrer les métadonnées de l'AG (date, PV, résultat validé)
+        3. Proposer l'écriture d'affectation à valider séparément
+
+        L'écriture d'affectation sera créée sur N+1 après validation.
+        """
+        subject = data.get('email_subject', '')
+        body = data.get('email_body', '')
+
+        # Extraire l'année de l'exercice
+        import re
+        match_annee = re.search(r'20\d{2}', subject)
+        if not match_annee:
+            raise ValueError("Impossible d'extraire l'année de l'exercice du sujet")
+
+        annee_exercice = int(match_annee.group())
+
+        # Chercher l'exercice à clôturer
+        from models_module2 import ExerciceComptable
+        exercice = self.session.query(ExerciceComptable).filter_by(
+            annee=annee_exercice
+        ).first()
+
+        if not exercice:
+            raise ValueError(f"Exercice {annee_exercice} non trouvé en base")
+
+        if exercice.statut == 'CLOTURE':
+            raise ValueError(f"Exercice {annee_exercice} déjà clôturé")
+
+        # Extraire le résultat validé du corps
+        # Chercher pattern: "17.766" ou "17 766" ou "17766"
+        match_resultat = re.search(r'(\d+[\s.,]?\d{3})\s*€', body)
+        if match_resultat:
+            resultat_str = match_resultat.group(1).replace(' ', '').replace('.', '').replace(',', '.')
+            resultat_valide = float(resultat_str)
+        else:
+            # Fallback: utiliser le résultat calculé de l'exercice
+            resultat_valide = None
+
+        # Extraire date AG (pattern: DD/MM/YYYY ou YYYY-MM-DD)
+        match_date_ag = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', body)
+        date_ag = match_date_ag.group(1) if match_date_ag else None
+
+        return {
+            'type_proposition': 'CLOTURE_EXERCICE',
+            'exercice_annee': annee_exercice,
+            'exercice_id': exercice.id,
+            'date_ag': date_ag,
+            'resultat_valide': resultat_valide,
+            'ecritures': [],  # Aucune écriture automatique
+            'metadata': {
+                'email_subject': subject,
+                'email_date': data.get('email_date'),
+                'pj_presente': 'attachment' in data or 'PJ' in body.upper(),
+                'action': 'CLOTURE_EXERCICE',
+                'notes': f"Clôture exercice {annee_exercice} suite AG du {date_ag or 'date inconnue'}. "
+                         f"Résultat validé: {resultat_valide}€. "
+                         "Aucune écriture comptable générée automatiquement. "
+                         "L'affectation sera traitée manuellement ou via workflow dédié."
+            }
+        }
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # FACTORY DE DÉTECTEURS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1833,6 +1955,9 @@ class FactoryDetecteurs:
         - Ajout DetecteurApportAssocie
         """
         return [
+            # Détecteur de clôture (PRIORITÉ ABSOLUE - événement annuel critique)
+            DetecteurClotureExercice(session),  # EMAIL: Clôture exercice + PV AG (Ulrik only)
+
             # Détecteurs de charges récurrentes (priorité haute - patterns spécifiques)
             DetecteurAssurancePret(session),
             DetecteurRemboursementPret(session),  # Lookup table echeances_prets
