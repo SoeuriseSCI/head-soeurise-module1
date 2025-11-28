@@ -749,9 +749,9 @@ class OrchestratorValidations:
                 "type_evenement": type_evenement
             }
 
-        # PHASE 7: Validation integrite (skip pour CLOTURE_EXERCICE_DEFINITIF qui a une structure différente)
-        if type_evenement == 'CLOTURE_EXERCICE_DEFINITIF':
-            # Pour clôture définitive, on valide juste le token
+        # PHASE 7: Validation integrite (skip pour CLOTURE_EXERCICE qui a une structure différente)
+        if type_evenement == 'CLOTURE_EXERCICE':
+            # Pour clôture, on valide juste le token
             token_email_norm = token_email.strip().upper()
             token_stocke_norm = token_stocke.strip().upper()
 
@@ -824,11 +824,7 @@ class OrchestratorValidations:
                 propositions, email_original_id, email.get('email_id'), email.get('from')
             )
         elif type_evenement == 'CLOTURE_EXERCICE':
-            succes, msg, ids = self.processeur.inserer_propositions_cloture(
-                propositions, email_original_id, email.get('email_id'), email.get('from')
-            )
-        elif type_evenement == 'CLOTURE_EXERCICE_DEFINITIF':
-            # Traitement spécial pour clôture définitive (structure différente)
+            # Traitement spécial pour clôture (structure différente, exécute cloture_exercice.py)
             succes, msg, ids = self.processeur.inserer_cloture_definitive(
                 propositions, email_original_id, email.get('email_id'), email.get('from')
             )

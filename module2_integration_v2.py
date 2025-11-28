@@ -478,9 +478,9 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
                     # Format différent selon le type d'événement
                     propositions_data = result.get('propositions', {})
 
-                    # Pour les événements de type CLOTURE_EXERCICE_DEFINITIF, PRE_CLOTURE_EXERCICE
+                    # Pour les événements de type CLOTURE_EXERCICE, PRE_CLOTURE_EXERCICE
                     # Les propositions sont dans un format différent (rapport complet au lieu de liste)
-                    if type_evt in [TypeEvenement.CLOTURE_EXERCICE_DEFINITIF, TypeEvenement.PRE_CLOTURE_EXERCICE]:
+                    if type_evt in [TypeEvenement.CLOTURE_EXERCICE, TypeEvenement.PRE_CLOTURE_EXERCICE]:
                         # Pour clôture, stocker le rapport complet comme propositions
                         propositions_list = [propositions_data] if propositions_data else []
                         print(f"[MODULE2] Clôture détectée, rapport complet stocké", flush=True)

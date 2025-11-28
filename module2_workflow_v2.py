@@ -47,9 +47,8 @@ class TypeEvenement(Enum):
     """Types d'événements comptables détectables"""
     EVENEMENT_SIMPLE = "EVENEMENT_SIMPLE"
     INIT_BILAN_2023 = "INIT_BILAN_2023"
-    CLOTURE_EXERCICE = "CLOTURE_EXERCICE"
     PRE_CLOTURE_EXERCICE = "PRE_CLOTURE_EXERCICE"  # Pré-clôture (avant AG)
-    CLOTURE_EXERCICE_DEFINITIF = "CLOTURE_EXERCICE_DEFINITIF"  # Clôture définitive (après AG)
+    CLOTURE_EXERCICE = "CLOTURE_EXERCICE"  # Clôture définitive (après AG)
     PRET_IMMOBILIER = "PRET_IMMOBILIER"
     RELEVE_BANCAIRE = "RELEVE_BANCAIRE"
     CUTOFF = "CUTOFF"  # Cutoffs fin d'année (honoraires, SCPI, etc.)
@@ -210,24 +209,15 @@ class DetecteurTypeEvenement:
             return TypeEvenement.PRE_CLOTURE_EXERCICE
 
         # ═══════════════════════════════════════════════════════════════════════════
-        # Détecteur CLOTURE_EXERCICE_DEFINITIF (AVANT CLOTURE générique)
+        # Détecteur CLOTURE_EXERCICE (clôture définitive après AG)
         # Pattern objet: "CLOTURE EXERCICE YYYY" (sans PRE)
         # Pattern corps: "Action: CLOTURE" + "PV AG:"
         # ═══════════════════════════════════════════════════════════════════════════
         if re.search(r'^cloture\s+exercice\s+\d{4}', subject.strip(), re.IGNORECASE):
             # Vérifier que ce n'est pas PRE-CLOTURE
             if not re.search(r'pre[- ]?cloture', subject, re.IGNORECASE):
-                return TypeEvenement.CLOTURE_EXERCICE_DEFINITIF
+                return TypeEvenement.CLOTURE_EXERCICE
         if 'action: cloture' in body and 'pv ag:' in body:
-            return TypeEvenement.CLOTURE_EXERCICE_DEFINITIF
-
-        # Détecteur CLOTURE_EXERCICE (générique - anciens patterns)
-        if any(kw in body for kw in ['cloture', 'clôture', 'amortissement_credit', 'reevaluation', 'réévaluation']):
-            return TypeEvenement.CLOTURE_EXERCICE
-
-        if any(f['filename'].lower().endswith('.pdf') and any(kw in f['filename'].lower()
-               for kw in ['amortissement', 'credit', 'reevaluation', 'cloture'])
-               for f in attachments if 'filename' in f):
             return TypeEvenement.CLOTURE_EXERCICE
         
         # Détecteur INIT_BILAN_2023
@@ -1337,12 +1327,10 @@ class WorkflowModule2V2:
             return self._traiter_init_bilan_2023(email)
         elif type_evt == TypeEvenement.PRET_IMMOBILIER:
             return self._traiter_pret_immobilier(email)
-        elif type_evt == TypeEvenement.CLOTURE_EXERCICE:
-            return self._traiter_cloture_2023(email)
         elif type_evt == TypeEvenement.PRE_CLOTURE_EXERCICE:
             return self._traiter_pre_cloture_exercice(email)
-        elif type_evt == TypeEvenement.CLOTURE_EXERCICE_DEFINITIF:
-            return self._traiter_cloture_exercice_definitif(email)
+        elif type_evt == TypeEvenement.CLOTURE_EXERCICE:
+            return self._traiter_cloture_exercice(email)
         else:
             return {
                 "type_detecte": TypeEvenement.UNKNOWN,
@@ -1786,69 +1774,6 @@ class WorkflowModule2V2:
             print(f"[ERREUR] Extraction données prêt depuis MD: {e}")
             return None
 
-    def _traiter_cloture_2023(self, email: Dict) -> Dict:
-        """Traite clôture exercice 2023"""
-        try:
-            attachments = email.get('attachments', [])
-            pdf_files = [a for a in attachments if a.get('content_type') == 'application/pdf']
-            
-            if len(pdf_files) < 2:
-                return {
-                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
-                    "statut": "ERREUR",
-                    "message": f"Besoin au minimum 2 PDFs (crédit + SCPI), trouvé: {len(pdf_files)}",
-                    "markdown": "",
-                    "propositions": {},
-                    "token": ""
-                }
-            
-            # Parser amortissements et réévaluations
-            credit_data = {}
-            scpi_data = []
-            
-            for pdf in pdf_files:
-                filename = pdf.get('filename', '').lower()
-                filepath = pdf.get('filepath')
-                
-                if 'credit' in filename or 'amortissement' in filename:
-                    credit_data = self.parseur_credit.parse_from_pdf(filepath, 2023)
-                elif 'scpi' in filename or 'reevaluation' in filename:
-                    scpi_data = self.parseur_scpi.parse_from_pdf(filepath, 2023)
-            
-            if not credit_data and not scpi_data:
-                return {
-                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
-                    "statut": "ERREUR",
-                    "message": "Impossible d'extraire les données de clôture",
-                    "markdown": "",
-                    "propositions": {},
-                    "token": ""
-                }
-            
-            # Générer propositions
-            markdown, props, token = GenerateurPropositions.generer_propositions_cloture_2023(
-                credit_data, scpi_data
-            )
-            
-            return {
-                "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
-                "statut": "OK",
-                "markdown": markdown,
-                "propositions": props,
-                "token": token,
-                "message": f"Clôture 2023: {len(props.get('propositions', []))} propositions générées"
-            }
-        
-        except Exception as e:
-            return {
-                "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
-                "statut": "ERREUR",
-                "message": f"Erreur traitement clôture: {str(e)[:100]}",
-                "markdown": "",
-                "propositions": {},
-                "token": ""
-            }
-
     def _traiter_pre_cloture_exercice(self, email: Dict) -> Dict:
         """
         Traite une demande de PRÉ-CLÔTURE d'exercice.
@@ -1985,7 +1910,7 @@ Pour valider et exécuter cette pré-clôture, répondre par email avec :
                 "traceback": traceback.format_exc()
             }
 
-    def _traiter_cloture_exercice_definitif(self, email: Dict) -> Dict:
+    def _traiter_cloture_exercice(self, email: Dict) -> Dict:
         """
         Traite une demande de CLÔTURE DÉFINITIVE d'exercice.
 
@@ -2013,7 +1938,7 @@ Pour valider et exécuter cette pré-clôture, répondre par email avec :
 
             if not match:
                 return {
-                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
+                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                     "statut": "ERREUR",
                     "message": "Impossible d'extraire l'année de l'exercice",
                     "markdown": "",
@@ -2048,7 +1973,7 @@ Pour valider et exécuter cette pré-clôture, répondre par email avec :
 
                 if 'erreur' in rapport:
                     return {
-                        "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
+                        "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                         "statut": "ERREUR",
                         "message": f"Erreur clôture: {rapport['erreur']}",
                         "markdown": "",
@@ -2105,12 +2030,12 @@ Pour valider et exécuter cette clôture définitive, répondre par email avec :
                 rapport_serializable['_pv_ag'] = pv_ag
 
                 return {
-                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
+                    "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                     "statut": "PROPOSITION",
                     "markdown": markdown,
                     "propositions": rapport_serializable,
                     "token": token,
-                    "message": f"Proposition clôture définitive {annee} générée - EN ATTENTE VALIDATION"
+                    "message": f"Proposition clôture {annee} générée - EN ATTENTE VALIDATION"
                 }
 
             finally:
@@ -2119,9 +2044,9 @@ Pour valider et exécuter cette clôture définitive, répondre par email avec :
         except Exception as e:
             import traceback
             return {
-                "type_detecte": TypeEvenement.CLOTURE_EXERCICE_DEFINITIF,
+                "type_detecte": TypeEvenement.CLOTURE_EXERCICE,
                 "statut": "ERREUR",
-                "message": f"Erreur clôture définitive: {str(e)[:200]}",
+                "message": f"Erreur clôture: {str(e)[:200]}",
                 "markdown": "",
                 "propositions": {},
                 "token": "",
