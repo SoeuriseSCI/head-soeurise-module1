@@ -471,11 +471,25 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
                     continue
 
                 # Traiter le résultat
-                if result.get('statut') == 'OK':
-                    print(f"[MODULE2] Statut OK, {len(result.get('propositions', {}).get('propositions', []))} propositions", flush=True)
+                # Gérer à la fois statut 'OK' (événements simples) et 'PROPOSITION' (clôture, etc.)
+                if result.get('statut') in ['OK', 'PROPOSITION']:
+                    print(f"[MODULE2] Statut {result.get('statut')}, traitement propositions", flush=True)
+
+                    # Format différent selon le type d'événement
+                    propositions_data = result.get('propositions', {})
+
+                    # Pour les événements de type CLOTURE_EXERCICE_DEFINITIF, PRE_CLOTURE_EXERCICE
+                    # Les propositions sont dans un format différent (rapport complet au lieu de liste)
+                    if type_evt in [TypeEvenement.CLOTURE_EXERCICE_DEFINITIF, TypeEvenement.PRE_CLOTURE_EXERCICE]:
+                        # Pour clôture, stocker le rapport complet comme propositions
+                        propositions_list = [propositions_data] if propositions_data else []
+                        print(f"[MODULE2] Clôture détectée, rapport complet stocké", flush=True)
+                    else:
+                        # Pour événements simples, extraire la liste
+                        propositions_list = propositions_data.get('propositions', [])
+                        print(f"[MODULE2] {len(propositions_list)} propositions extraites", flush=True)
 
                     # Stocker les propositions en BD avec token
-                    propositions_list = result.get('propositions', {}).get('propositions', [])
                     token_stocke, prop_id = self.propositions_manager.stocker_proposition(
                         type_evenement=type_evt.value,
                         propositions=propositions_list,
@@ -487,14 +501,15 @@ _Head.Soeurise - {dt.now().strftime('%d/%m/%Y %H:%M')}
                     )
 
                     # Envoyer email à Ulrik avec propositions ✅ FIX: Passer email_to en premier
+                    nb_props = len(propositions_list) if isinstance(propositions_list, list) else 1
                     email_envoye = self.envoyeur.envoyer_propositions(
                         self.email_ulrik,  # ✅ email_to
                         type_evt.value,  # ✅ type_evt
                         result['markdown'],  # ✅ markdown
                         token_stocke,  # ✅ token (utiliser token_stocke au lieu de result['token'])
-                        subject_suffix=f"- {len(propositions_list)} proposition(s)"
+                        subject_suffix=f"- {nb_props} proposition(s)"
                     )
-                    
+
                     if email_envoye:
                         resultats['emails_envoyes'] += 1
                         self.propositions_generees += len(propositions_list)
