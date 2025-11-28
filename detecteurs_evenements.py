@@ -1857,21 +1857,26 @@ class DetecteurClotureExercice(DetecteurBase):
 
     def generer_proposition(self, data: Dict) -> Dict:
         """
-        Génère proposition de clôture d'exercice.
+        Génère proposition de clôture d'exercice avec affectation du résultat.
 
-        IMPORTANTE: Cette proposition NE GÉNÈRE PAS D'ÉCRITURES AUTOMATIQUES.
-        Elle sert à:
-        1. Marquer l'exercice comme CLOTURE
-        2. Enregistrer les métadonnées de l'AG (date, PV, résultat validé)
-        3. Proposer l'écriture d'affectation à valider séparément
+        WORKFLOW COMPLET:
+        1. Calculer le résultat comptable de l'exercice N
+        2. Récupérer le déficit reportable (compte 119)
+        3. Générer l'écriture d'affectation sur exercice N+1:
+           - Si bénéfice + déficit antérieur → Absorption partielle/totale
+           - Si bénéfice seul → Report à nouveau créditeur (110)
+           - Si perte → Report à nouveau débiteur (119)
+        4. Marquer exercice N comme CLOTURE après validation
 
-        L'écriture d'affectation sera créée sur N+1 après validation.
+        L'écriture d'affectation est créée sur N+1 (exercice suivant).
         """
         subject = data.get('email_subject', '')
         body = data.get('email_body', '')
 
         # Extraire l'année de l'exercice
         import re
+        from decimal import Decimal
+        from datetime import date
         match_annee = re.search(r'20\d{2}', subject)
         if not match_annee:
             raise ValueError("Impossible d'extraire l'année de l'exercice du sujet")
@@ -1879,7 +1884,7 @@ class DetecteurClotureExercice(DetecteurBase):
         annee_exercice = int(match_annee.group())
 
         # Chercher l'exercice à clôturer
-        from models_module2 import ExerciceComptable
+        from models_module2 import ExerciceComptable, EcritureComptable
         exercice = self.session.query(ExerciceComptable).filter_by(
             annee=annee_exercice
         ).first()
@@ -1890,36 +1895,142 @@ class DetecteurClotureExercice(DetecteurBase):
         if exercice.statut == 'CLOTURE':
             raise ValueError(f"Exercice {annee_exercice} déjà clôturé")
 
-        # Extraire le résultat validé du corps
-        # Chercher pattern: "17.766" ou "17 766" ou "17766"
+        # Chercher ou créer exercice N+1
+        exercice_suivant = self.session.query(ExerciceComptable).filter_by(
+            annee=annee_exercice + 1
+        ).first()
+
+        if not exercice_suivant:
+            raise ValueError(f"Exercice {annee_exercice + 1} n'existe pas. Créez-le d'abord.")
+
+        # Calculer le résultat comptable de l'exercice
+        ecritures = self.session.query(EcritureComptable).filter_by(
+            exercice_id=exercice.id
+        ).all()
+
+        total_charges = Decimal('0')
+        total_produits = Decimal('0')
+        deficit_reportable = Decimal('0')
+
+        for e in ecritures:
+            montant = Decimal(str(e.montant))
+            compte_debit = e.compte_debit
+            compte_credit = e.compte_credit
+
+            # Charges (classe 6) = débit
+            if compte_debit and compte_debit[0] == '6':
+                total_charges += montant
+
+            # Produits (classe 7) = crédit
+            if compte_credit and compte_credit[0] == '7':
+                total_produits += montant
+
+            # Déficit reportable (119) = solde débiteur
+            if compte_debit == '119':
+                deficit_reportable += montant
+            if compte_credit == '119':
+                deficit_reportable -= montant
+
+        resultat_comptable = total_produits - total_charges
+
+        # Extraire le résultat validé du corps (optionnel, sinon on utilise le calculé)
         match_resultat = re.search(r'(\d+[\s.,]?\d{3})\s*€', body)
         if match_resultat:
             resultat_str = match_resultat.group(1).replace(' ', '').replace('.', '').replace(',', '.')
-            resultat_valide = float(resultat_str)
+            resultat_valide = Decimal(resultat_str)
         else:
-            # Fallback: utiliser le résultat calculé de l'exercice
-            resultat_valide = None
+            resultat_valide = resultat_comptable
 
         # Extraire date AG (pattern: DD/MM/YYYY ou YYYY-MM-DD)
         match_date_ag = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', body)
-        date_ag = match_date_ag.group(1) if match_date_ag else None
+        date_ag_str = match_date_ag.group(1) if match_date_ag else None
+
+        # Générer l'écriture d'affectation (sur exercice N+1)
+        ecritures = []
+        date_affectation = date(annee_exercice + 1, 1, 1)
+
+        if resultat_valide > 0:
+            # BÉNÉFICE
+            if deficit_reportable > 0:
+                # Il y a un déficit antérieur à absorber
+                absorption = min(deficit_reportable, resultat_valide)
+                reste = resultat_valide - absorption
+
+                if absorption > 0:
+                    # Absorption partielle ou totale du déficit
+                    ecritures.append({
+                        'date_ecriture': date_affectation,
+                        'libelle_ecriture': f"Affectation résultat {annee_exercice} - Absorption déficit antérieur",
+                        'compte_debit': '120',  # Résultat de l'exercice
+                        'compte_credit': '119',  # Report à nouveau débiteur
+                        'montant': float(absorption),
+                        'type_ecriture': 'AFFECTATION_RESULTAT',
+                        'notes': f"Absorption de {absorption}€ sur déficit reportable de {deficit_reportable}€"
+                    })
+
+                if reste > 0:
+                    # Solde en report à nouveau créditeur
+                    ecritures.append({
+                        'date_ecriture': date_affectation,
+                        'libelle_ecriture': f"Affectation résultat {annee_exercice} - Report à nouveau (excédent)",
+                        'compte_debit': '120',
+                        'compte_credit': '110',  # Report à nouveau créditeur
+                        'montant': float(reste),
+                        'type_ecriture': 'AFFECTATION_RESULTAT',
+                        'notes': f"Excédent après absorption déficit"
+                    })
+            else:
+                # Pas de déficit antérieur, tout en report à nouveau créditeur
+                ecritures.append({
+                    'date_ecriture': date_affectation,
+                    'libelle_ecriture': f"Affectation résultat {annee_exercice} - Report à nouveau",
+                    'compte_debit': '120',
+                    'compte_credit': '110',
+                    'montant': float(resultat_valide),
+                    'type_ecriture': 'AFFECTATION_RESULTAT',
+                    'notes': f"Report intégral du bénéfice"
+                })
+
+        elif resultat_valide < 0:
+            # PERTE
+            ecritures.append({
+                'date_ecriture': date_affectation,
+                'libelle_ecriture': f"Affectation résultat {annee_exercice} - Report à nouveau (perte)",
+                'compte_debit': '119',  # Report à nouveau débiteur
+                'compte_credit': '129',  # Résultat de l'exercice (perte)
+                'montant': float(abs(resultat_valide)),
+                'type_ecriture': 'AFFECTATION_RESULTAT',
+                'notes': f"Report perte de l'exercice"
+            })
+
+        # Construire les notes de proposition
+        notes = f"Clôture exercice {annee_exercice} suite AG du {date_ag_str or 'date inconnue'}.\n"
+        notes += f"Résultat comptable: {resultat_comptable}€\n"
+        notes += f"Résultat validé AG: {resultat_valide}€\n"
+        notes += f"Déficit reportable antérieur: {deficit_reportable}€\n"
+        notes += f"Écritures d'affectation: {len(ecritures)} (sur exercice {annee_exercice + 1})\n"
+
+        if deficit_reportable > 0 and resultat_valide > 0:
+            absorption = min(deficit_reportable, resultat_valide)
+            nouveau_deficit = deficit_reportable - absorption
+            notes += f"Nouveau déficit reportable: {nouveau_deficit}€"
 
         return {
             'type_proposition': 'CLOTURE_EXERCICE',
             'exercice_annee': annee_exercice,
             'exercice_id': exercice.id,
-            'date_ag': date_ag,
-            'resultat_valide': resultat_valide,
-            'ecritures': [],  # Aucune écriture automatique
+            'exercice_suivant_id': exercice_suivant.id,
+            'date_ag': date_ag_str,
+            'resultat_comptable': float(resultat_comptable),
+            'resultat_valide': float(resultat_valide),
+            'deficit_reportable': float(deficit_reportable),
+            'ecritures': ecritures,
             'metadata': {
                 'email_subject': subject,
                 'email_date': data.get('email_date'),
                 'pj_presente': 'attachment' in data or 'PJ' in body.upper(),
                 'action': 'CLOTURE_EXERCICE',
-                'notes': f"Clôture exercice {annee_exercice} suite AG du {date_ag or 'date inconnue'}. "
-                         f"Résultat validé: {resultat_valide}€. "
-                         "Aucune écriture comptable générée automatiquement. "
-                         "L'affectation sera traitée manuellement ou via workflow dédié."
+                'notes': notes
             }
         }
 
