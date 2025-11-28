@@ -500,14 +500,61 @@ class PreClotureExercice:
             if classe == 0 or abs(solde) < 0.01:
                 continue
 
-            if classe in [2, 3, 4, 5]:  # Classes d'actif
+            # Classe 1 : Passif
+            if classe == 1:
+                if solde != 0:
+                    # Compte 119 (RAN débiteur) = perte antérieure
+                    # Solde débiteur (positif) → DIMINUE le passif
+                    if num_compte == '119':
+                        passif[num_compte] = {
+                            'libelle': data['libelle'],
+                            'montant': float(-abs(solde))  # Négatif au passif
+                        }
+                    else:
+                        passif[num_compte] = {
+                            'libelle': data['libelle'],
+                            'montant': float(abs(solde))
+                        }
+            # Classe 2 : Immobilisations (actif, mais certains comptes correcteurs)
+            elif classe == 2:
+                if solde != 0:
+                    if num_compte.startswith('29'):  # Amortissements (correcteur d'actif)
+                        actif[num_compte] = {
+                            'libelle': data['libelle'],
+                            'montant': float(solde)  # Négatif
+                        }
+                    else:
+                        actif[num_compte] = {
+                            'libelle': data['libelle'],
+                            'montant': float(solde)
+                        }
+            # Classe 3 : Stocks (actif)
+            elif classe == 3:
                 if solde != 0:
                     actif[num_compte] = {
                         'libelle': data['libelle'],
                         'montant': float(solde)
                     }
-            elif classe == 1:  # Passif
-                if solde != 0:
+            # Classe 4 : Tiers (actif OU passif selon le solde)
+            elif classe == 4:
+                if solde > 0.01:  # Solde débiteur → ACTIF
+                    actif[num_compte] = {
+                        'libelle': data['libelle'],
+                        'montant': float(solde)
+                    }
+                elif solde < -0.01:  # Solde créditeur → PASSIF
+                    passif[num_compte] = {
+                        'libelle': data['libelle'],
+                        'montant': float(abs(solde))
+                    }
+            # Classe 5 : Financier (actif si positif, passif si négatif)
+            elif classe == 5:
+                if solde > 0.01:
+                    actif[num_compte] = {
+                        'libelle': data['libelle'],
+                        'montant': float(solde)
+                    }
+                elif solde < -0.01:
                     passif[num_compte] = {
                         'libelle': data['libelle'],
                         'montant': float(abs(solde))
@@ -520,8 +567,8 @@ class PreClotureExercice:
                 'montant': float(self.resultat_net)
             }
 
-        total_actif = sum(abs(data['montant']) for data in actif.values())
-        total_passif = sum(abs(data['montant']) for data in passif.values())
+        total_actif = sum(data['montant'] for data in actif.values())
+        total_passif = sum(data['montant'] for data in passif.values())
 
         print(f"\n  📊 BILAN PROVISOIRE AU 31/12/{self.annee}")
         print(f"     Total ACTIF  : {total_actif:,.2f}€")
