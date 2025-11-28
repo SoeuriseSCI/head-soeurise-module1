@@ -838,9 +838,13 @@ class OrchestratorValidations:
         type_evenement = proposition_data['type_evenement']
         token_stocke = proposition_data['token']
 
-        # Pour CLOTURE_EXERCICE, propositions est le rapport complet (dict, pas liste)
+        # Pour CLOTURE_EXERCICE, propositions est une liste avec 1 élément (le rapport complet)
+        # Il faut extraire le premier élément pour obtenir le dict rapport
         if type_evenement == 'CLOTURE_EXERCICE':
-            rapport_cloture = propositions  # Le rapport est directement dans propositions
+            if isinstance(propositions, list) and len(propositions) > 0:
+                rapport_cloture = propositions[0]  # Extraire le rapport du wrapper liste
+            else:
+                rapport_cloture = propositions  # Fallback si pas une liste
         else:
             rapport_cloture = None
 
