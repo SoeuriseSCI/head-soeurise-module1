@@ -580,9 +580,12 @@ class ProcesseurInsertion:
                 return False, "Année exercice manquante dans rapport", []
 
             # Extraire données financières du rapport
-            fiscalite = rapport_cloture.get('fiscalite', {})
-            resultat_net = fiscalite.get('resultat_net', 0)
-            deficit_reportable = fiscalite.get('deficit_reportable_2023', 0)
+            # Le resultat_net est directement à la racine du rapport (pas dans fiscalite)
+            resultat_net = rapport_cloture.get('resultat_net', 0)
+
+            # Le déficit reportable peut être dans affectation ou fiscalite
+            affectation = rapport_cloture.get('affectation', {})
+            deficit_reportable = affectation.get('deficit_reportable_avant', 0)
 
             # Vérifier exercice N
             exercice_n = self.session.query(ExerciceComptable).filter_by(annee=annee).first()
@@ -835,10 +838,9 @@ class OrchestratorValidations:
         type_evenement = proposition_data['type_evenement']
         token_stocke = proposition_data['token']
 
-        # Pour CLOTURE_EXERCICE, propositions est une liste avec 1 élément (le rapport complet)
-        # Il faut extraire le premier élément pour obtenir le dict rapport
-        if type_evenement == 'CLOTURE_EXERCICE' and isinstance(propositions, list) and len(propositions) > 0:
-            rapport_cloture = propositions[0]  # Extraire le rapport du wrapper liste
+        # Pour CLOTURE_EXERCICE, propositions est le rapport complet (dict, pas liste)
+        if type_evenement == 'CLOTURE_EXERCICE':
+            rapport_cloture = propositions  # Le rapport est directement dans propositions
         else:
             rapport_cloture = None
 
