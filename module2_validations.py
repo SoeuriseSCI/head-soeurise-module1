@@ -200,9 +200,15 @@ class ValidateurIntegriteJSON:
         """
 
         # 1. Vérifier que le token reçu correspond au token stocké
-        # Normaliser les deux tokens pour comparaison
+        # Normaliser les deux tokens pour comparaison (enlever préfixe HEAD- si présent)
         token_email_norm = token_email.strip().upper()
         token_stocke_norm = token_stocke.strip().upper()
+
+        # Retirer HEAD- si présent pour la comparaison
+        if token_email_norm.startswith("HEAD-"):
+            token_email_norm = token_email_norm[5:]  # Enlever "HEAD-"
+        if token_stocke_norm.startswith("HEAD-"):
+            token_stocke_norm = token_stocke_norm[5:]  # Enlever "HEAD-"
 
         if token_email_norm != token_stocke_norm:
             return False, f"Token invalide (tampering detecte?) - Attendu: {token_stocke}, Reçu: {token_email}"
