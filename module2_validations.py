@@ -557,10 +557,7 @@ class ProcesseurInsertion:
         """
         Insère clôture définitive d'exercice
 
-        Exécute le script cloture_exercice.py en mode EXECUTION pour:
-        - Insérer écritures d'affectation du résultat
-        - Marquer l'exercice comme CLOTURE
-        - Créer bilan d'ouverture exercice N+1
+        Crée directement les écritures d'affectation et marque l'exercice comme CLOTURE.
 
         Args:
             rapport_cloture: Rapport de pre-cloture avec métadonnées
@@ -572,40 +569,141 @@ class ProcesseurInsertion:
             (success, message, [ecriture_ids])
         """
         try:
-            # Extraire métadonnées
+            from datetime import date
+            from models_module2 import ExerciceComptable, EcritureComptable
+
+            # Extraire métadonnées du rapport
             annee = rapport_cloture.get('_annee')
             pv_ag = rapport_cloture.get('_pv_ag', 'PV AG non spécifié')
 
             if not annee:
                 return False, "Année exercice manquante dans rapport", []
 
-            # Importer le module de clôture
-            from cloture_exercice import ClotureExercice
-            from models_module2 import get_session
-            import os
+            # Extraire données financières du rapport
+            fiscalite = rapport_cloture.get('fiscalite', {})
+            resultat_net = fiscalite.get('resultat_net', 0)
+            deficit_reportable = fiscalite.get('deficit_reportable_2023', 0)
 
-            session_cloture = get_session(os.environ['DATABASE_URL'])
+            if resultat_net == 0:
+                return False, "Résultat net = 0, aucune affectation nécessaire", []
 
-            try:
-                # Exécuter la clôture en mode EXECUTION (execute=True)
-                cloture = ClotureExercice(session_cloture, annee, pv_ag)
-                rapport = cloture.executer_cloture(execute=True)
+            # Vérifier exercice N
+            exercice_n = self.session.query(ExerciceComptable).filter_by(annee=annee).first()
+            if not exercice_n:
+                return False, f"Exercice {annee} non trouvé", []
 
-                if 'erreur' in rapport:
-                    return False, f"Erreur clôture: {rapport['erreur']}", []
+            # Vérifier/créer exercice N+1
+            exercice_n1 = self.session.query(ExerciceComptable).filter_by(annee=annee + 1).first()
+            if not exercice_n1:
+                exercice_n1 = ExerciceComptable(
+                    annee=annee + 1,
+                    date_debut=date(annee + 1, 1, 1),
+                    date_fin=date(annee + 1, 12, 31),
+                    statut='OUVERT',
+                    description=f'Exercice comptable {annee + 1}'
+                )
+                self.session.add(exercice_n1)
+                self.session.flush()
 
-                # Récupérer les IDs des écritures créées
-                ecriture_ids = rapport.get('affectation', {}).get('ecriture_ids', [])
+            # Créer écritures d'affectation sur exercice N+1
+            ecriture_ids = []
+            date_affectation = date(annee + 1, 1, 1)
 
-                message = f"Exercice {annee} clôturé avec succès - {len(ecriture_ids)} écriture(s) d'affectation"
-                return True, message, ecriture_ids
+            if resultat_net > 0 and deficit_reportable > 0:
+                # Absorption du déficit (partielle ou totale)
+                absorption = min(deficit_reportable, resultat_net)
 
-            finally:
-                session_cloture.close()
+                ecriture = EcritureComptable(
+                    exercice_id=exercice_n1.id,
+                    numero_ecriture=f'{annee + 1}-0101-AFF-001',
+                    date_ecriture=date_affectation,
+                    libelle_ecriture=f'Affectation résultat {annee} - Absorption déficit antérieur ({pv_ag})',
+                    type_ecriture='AFFECTATION_RESULTAT',
+                    compte_debit='120',
+                    compte_credit='119',
+                    montant=Decimal(str(absorption)),
+                    source_email_id=evt_original_id,
+                    source_email_from=email_validation_from,
+                    validee_at=datetime.now(),
+                    notes=f'Validée par {email_validation_from} via email {evt_validation_id}'
+                )
+                self.session.add(ecriture)
+                self.session.flush()
+                ecriture_ids.append(ecriture.id)
+
+                # Si reste après absorption → report à nouveau créditeur
+                reste = resultat_net - absorption
+                if reste > 0:
+                    ecriture2 = EcritureComptable(
+                        exercice_id=exercice_n1.id,
+                        numero_ecriture=f'{annee + 1}-0101-AFF-002',
+                        date_ecriture=date_affectation,
+                        libelle_ecriture=f'Affectation résultat {annee} - Report à nouveau excédent ({pv_ag})',
+                        type_ecriture='AFFECTATION_RESULTAT',
+                        compte_debit='120',
+                        compte_credit='110',
+                        montant=Decimal(str(reste)),
+                        source_email_id=evt_original_id,
+                        source_email_from=email_validation_from,
+                        validee_at=datetime.now(),
+                        notes=f'Validée par {email_validation_from} via email {evt_validation_id}'
+                    )
+                    self.session.add(ecriture2)
+                    self.session.flush()
+                    ecriture_ids.append(ecriture2.id)
+
+            elif resultat_net > 0:
+                # Bénéfice sans déficit → report à nouveau créditeur
+                ecriture = EcritureComptable(
+                    exercice_id=exercice_n1.id,
+                    numero_ecriture=f'{annee + 1}-0101-AFF-001',
+                    date_ecriture=date_affectation,
+                    libelle_ecriture=f'Affectation résultat {annee} - Report à nouveau ({pv_ag})',
+                    type_ecriture='AFFECTATION_RESULTAT',
+                    compte_debit='120',
+                    compte_credit='110',
+                    montant=Decimal(str(resultat_net)),
+                    source_email_id=evt_original_id,
+                    source_email_from=email_validation_from,
+                    validee_at=datetime.now(),
+                    notes=f'Validée par {email_validation_from} via email {evt_validation_id}'
+                )
+                self.session.add(ecriture)
+                self.session.flush()
+                ecriture_ids.append(ecriture.id)
+
+            else:  # resultat_net < 0
+                # Perte → report à nouveau débiteur
+                ecriture = EcritureComptable(
+                    exercice_id=exercice_n1.id,
+                    numero_ecriture=f'{annee + 1}-0101-AFF-001',
+                    date_ecriture=date_affectation,
+                    libelle_ecriture=f'Affectation résultat {annee} - Report à nouveau (perte) ({pv_ag})',
+                    type_ecriture='AFFECTATION_RESULTAT',
+                    compte_debit='119',
+                    compte_credit='129',
+                    montant=Decimal(str(abs(resultat_net))),
+                    source_email_id=evt_original_id,
+                    source_email_from=email_validation_from,
+                    validee_at=datetime.now(),
+                    notes=f'Validée par {email_validation_from} via email {evt_validation_id}'
+                )
+                self.session.add(ecriture)
+                self.session.flush()
+                ecriture_ids.append(ecriture.id)
+
+            # Marquer exercice N comme CLOTURE
+            if exercice_n.statut != 'CLOTURE':
+                exercice_n.statut = 'CLOTURE'
+
+            self.session.commit()
+
+            message = f"Exercice {annee} clôturé - {len(ecriture_ids)} écriture(s) d'affectation créée(s)"
+            return True, message, ecriture_ids
 
         except Exception as e:
             self.session.rollback()
-            return False, f"Erreur clôture définitive: {str(e)[:200]}", []
+            return False, f"Erreur clôture: {str(e)[:200]}", []
 
 
 # ORCHESTRATOR VALIDATIONS
