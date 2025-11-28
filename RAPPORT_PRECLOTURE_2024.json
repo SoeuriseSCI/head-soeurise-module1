@@ -1,0 +1,103 @@
+{
+  "date_generation": "2025-11-28T18:43:59.921018",
+  "exercice": 2024,
+  "date_cloture": "31/12/2024",
+  "bilan": {
+    "actif": {
+      "271": {
+        "libelle": "Titres immobilisés (autres que TIAP)",
+        "montant": 500032.0
+      },
+      "273": {
+        "libelle": "Titres immobilisés",
+        "montant": 25760.63
+      },
+      "290": {
+        "libelle": "Provision SCPI",
+        "montant": -50003.0
+      },
+      "4181": {
+        "libelle": "Produits à recevoir",
+        "montant": 6755.0
+      },
+      "512": {
+        "libelle": "Banque",
+        "montant": 2320.35
+      }
+    },
+    "passif": {
+      "101": {
+        "libelle": "Capital social",
+        "montant": 1000.0
+      },
+      "119": {
+        "libelle": "Report à nouveau (solde débiteur)",
+        "montant": -36148.0
+      },
+      "120": {
+        "libelle": "Résultat de l'exercice",
+        "montant": 17766.29
+      },
+      "164": {
+        "libelle": "Emprunts auprès des établissements de crédit",
+        "montant": 486250.69
+      },
+      "1688": {
+        "libelle": "Intérêts courus",
+        "montant": 254.0
+      },
+      "4081": {
+        "libelle": "Fournisseurs - Factures non parvenues",
+        "montant": 622.0
+      },
+      "455": {
+        "libelle": "Associés - Comptes courants",
+        "montant": 15120.0
+      }
+    },
+    "total_actif": 484864.98,
+    "total_passif": 484864.98,
+    "equilibre": true
+  },
+  "compte_resultat": {
+    "charges": {
+      "616": {
+        "libelle": "Primes d'assurance",
+        "montant": 1053.69
+      },
+      "6226": {
+        "libelle": "Honoraires",
+        "montant": 1495.4
+      },
+      "627": {
+        "libelle": "Services bancaires et assimilés",
+        "montant": 469.81
+      },
+      "661": {
+        "libelle": "Charges d'intérêts",
+        "montant": 5610.73
+      }
+    },
+    "produits": {
+      "761": {
+        "libelle": "Produits de participations",
+        "montant": 26395.92
+      }
+    },
+    "total_charges": 8629.63,
+    "total_produits": 26395.92,
+    "resultat_brut": 17766.29
+  },
+  "fiscalite": {
+    "resultat_brut": 17766.29,
+    "deficit_reportable_2023": 36148.0,
+    "base_imposable": 0.0,
+    "is": 0.0,
+    "resultat_net": 17766.29
+  },
+  "affectation_proposee": {
+    "resultat_net": 17766.29,
+    "absorption_deficit": 17766.29,
+    "nouveau_deficit_reportable": 18381.71
+  }
+}
