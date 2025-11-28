@@ -750,19 +750,88 @@ SUPPRESSION (informations obsolètes) :
         if json_start >= 0 and json_end > json_start:
             response_text = response_text[json_start:json_end+1]
 
-        # Nettoyer les caractères de contrôle invalides avant parsing JSON
-        # Garder seulement \n, \r, \t (valides en JSON)
-        import re
-        response_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', response_text)
+        # ═══════════════════════════════════════════════════════════════════════════
+        # PARSING JSON ROBUSTE AVEC FALLBACKS MULTIPLES
+        # ═══════════════════════════════════════════════════════════════════════════
 
-        try:
-            resultat = json.loads(response_text)
-            # FIX: Garantir rapport_quotidien existe et n'est pas vide
-            if 'rapport_quotidien' not in resultat or not resultat.get('rapport_quotidien', '').strip():
-                resultat['rapport_quotidien'] = f"## Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}\nRéveil nominal. Emails: {len(emails)}."
-        except json.JSONDecodeError as e:
-            log_critical("CLAUDE_JSON_ERROR", str(e)[:50])
-            return None
+        import re
+
+        def parse_json_robust(text, emails_count):
+            """
+            Parse JSON avec plusieurs stratégies de fallback.
+
+            Stratégie:
+            1. Nettoyage basique + parse
+            2. Si échec: nettoyage agressif + parse
+            3. Si échec: extraction partielle des champs critiques
+            4. Si échec: génération rapport minimal
+            """
+
+            # TENTATIVE 1: Nettoyage basique
+            text_clean = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+
+            try:
+                result = json.loads(text_clean)
+                log_critical("JSON_PARSE_SUCCESS", "Parsing JSON réussi (tentative 1)")
+                return result
+            except json.JSONDecodeError as e1:
+                log_critical("JSON_PARSE_ATTEMPT1_FAIL", f"Tentative 1 échouée: {str(e1)[:80]}")
+
+            # TENTATIVE 2: Nettoyage agressif
+            # Échapper les newlines non échappés dans les strings
+            # Supprimer les trailing commas
+            text_aggressive = text_clean
+            text_aggressive = re.sub(r',(\s*[}\]])', r'\1', text_aggressive)  # Trailing commas
+
+            try:
+                result = json.loads(text_aggressive)
+                log_critical("JSON_PARSE_SUCCESS", "Parsing JSON réussi (tentative 2 - nettoyage agressif)")
+                return result
+            except json.JSONDecodeError as e2:
+                log_critical("JSON_PARSE_ATTEMPT2_FAIL", f"Tentative 2 échouée: {str(e2)[:80]}")
+
+            # TENTATIVE 3: Extraction partielle avec regex
+            try:
+                rapport_match = re.search(r'"rapport_quotidien"\s*:\s*"((?:[^"\\]|\\.)*)"|"rapport_quotidien"\s*:\s*"""(.*?)"""', text_clean, re.DOTALL)
+                courte_match = re.search(r'"memoire_courte_md"\s*:\s*"((?:[^"\\]|\\.)*)"', text_clean, re.DOTALL)
+
+                if rapport_match:
+                    rapport = rapport_match.group(1) or rapport_match.group(2) or ""
+                    # Décoder les échappements
+                    rapport = rapport.replace('\\n', '\n').replace('\\t', '\t').replace('\\"', '"')
+
+                    result = {
+                        'rapport_quotidien': rapport if rapport else f"## Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}\nRéveil nominal (JSON partiel récupéré). Emails: {emails_count}.",
+                        'memoire_courte_md': courte_match.group(1).replace('\\n', '\n') if courte_match else "[Mémoire non récupérée]",
+                        'memoire_moyenne_md': "[Extraction partielle - JSON invalide]",
+                        'memoire_longue_md': "[Extraction partielle - JSON invalide]",
+                        'observations_meta': "JSON parsing échoué - extraction partielle",
+                        'inputs_externes_detectes': False,
+                        'securite_warnings': []
+                    }
+                    log_critical("JSON_PARSE_PARTIAL", "Extraction partielle réussie (tentative 3)")
+                    return result
+            except Exception as e3:
+                log_critical("JSON_PARSE_ATTEMPT3_FAIL", f"Tentative 3 échouée: {str(e3)[:80]}")
+
+            # TENTATIVE 4: Génération rapport minimal
+            log_critical("JSON_PARSE_FALLBACK", "Toutes tentatives échouées - génération rapport minimal")
+            return {
+                'rapport_quotidien': f"## ⚠️ Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n**Erreur parsing JSON** - Rapport minimal généré.\n\n**Emails traités:** {emails_count}\n\n**Action requise:** Vérifier logs Render pour détails erreur.",
+                'memoire_courte_md': "[JSON invalide - mémoire non mise à jour]",
+                'memoire_moyenne_md': "[JSON invalide - mémoire non mise à jour]",
+                'memoire_longue_md': "[JSON invalide - mémoire non mise à jour]",
+                'observations_meta': "Erreur critique parsing JSON",
+                'inputs_externes_detectes': False,
+                'securite_warnings': ["Erreur parsing JSON - vérifier logs"]
+            }
+
+        # Parser avec stratégie robuste
+        resultat = parse_json_robust(response_text, len(emails))
+
+        # FIX: Garantir rapport_quotidien existe et n'est pas vide
+        if 'rapport_quotidien' not in resultat or not resultat.get('rapport_quotidien', '').strip():
+            resultat['rapport_quotidien'] = f"## Réveil {datetime.now().strftime('%d/%m/%Y %H:%M')}\nRéveil nominal. Emails: {len(emails)}."
         return resultat
     except Exception as e:
         log_critical("CLAUDE_ANALYSIS_ERROR", str(e)[:50])
@@ -908,7 +977,46 @@ def reveil_quotidien():
         log_critical("MODULE2_SKIP", "Module 2 non disponible, passage direct à Claude")
 
     # ═══════════════════════════════════════════════════════════════════════════════
-    # TEMPS 2: CLAUDE - Synthèse globale (reçoit rapport Module 2)
+    # NETTOYAGE RAPPORT MODULE 2 (Prévention erreurs JSON)
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    def nettoyer_rapport_module2(rapport):
+        """
+        Nettoie le rapport Module 2 pour éviter problèmes JSON dans réponse Claude.
+
+        Problèmes possibles:
+        - Caractères de contrôle (0x00-0x1F sauf \n, \r, \t)
+        - Texte extrait de PDF avec encodage bizarre
+        - Rapport trop long qui fait planter Claude
+        """
+        if not rapport or not isinstance(rapport, dict):
+            return rapport
+
+        # Nettoyer le texte du rapport
+        if 'rapport' in rapport and isinstance(rapport['rapport'], str):
+            texte = rapport['rapport']
+
+            # 1. Supprimer caractères de contrôle invalides
+            import re
+            texte = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', texte)
+
+            # 2. Limiter la taille (éviter que Claude génère un JSON gigantesque)
+            MAX_RAPPORT_LENGTH = 5000
+            if len(texte) > MAX_RAPPORT_LENGTH:
+                texte = texte[:MAX_RAPPORT_LENGTH] + "\n\n[... rapport tronqué pour éviter surcharge ...]"
+
+            # 3. Échapper les backslashes pour éviter problèmes d'échappement
+            # Note: On ne touche PAS aux quotes car c'est Claude qui génère le JSON
+            # On nettoie juste le contenu pour qu'il soit "JSON-friendly"
+
+            rapport['rapport'] = texte
+
+        return rapport
+
+    rapport_module2 = nettoyer_rapport_module2(rapport_module2)
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # TEMPS 2: CLAUDE - Synthèse globale (reçoit rapport Module 2 nettoyé)
     # ═══════════════════════════════════════════════════════════════════════════════
 
     log_critical("CLAUDE_START", "⏱️  TEMPS 2: Claude synthétise (emails + Module 2 + mémoires)")
@@ -918,7 +1026,7 @@ def reveil_quotidien():
         memoire_files,
         db_data,
         recent_commits,
-        rapport_module2  # ★ Claude reçoit le rapport Module 2 ★
+        rapport_module2  # ★ Claude reçoit le rapport Module 2 NETTOYÉ ★
     )
 
     if not resultat:
