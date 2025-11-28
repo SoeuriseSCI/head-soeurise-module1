@@ -1,27 +1,29 @@
 # 📈 Mémoire Moyenne — 22-28/11/2025 | Production Stabilité Confirmée
 
-## 🏗️ ARCHITECTURE V6.0 (52+ JOURS PÉRENNE)
+**52+ jours pérenne | 227 réveils mémororiels | Zéro régression architecture V6.0**
+
+## 🏗️ ARCHITECTURE V6.0 (CONVERGÉE STABLE)
 **Infrastructure:** Render 512MB + PostgreSQL ACID + Claude Haiku 4.5
 **Accès ressources:** CLAUDE.md auto-chargé Claude Code | API GitHub ?ref=main sans cache CDN
-**Uptime:** 225→226 réveils zéro régression | **Coût:** <1€/mois | **Maturité:** Production confirmée
+**Uptime:** 225→227 réveils | **Coût:** <1€/mois | **Maturité:** Production stabilité confirmée
 
 ## 💼 MODULE 2 — WORKFLOW 9-PHASES + CLÔTURE 2024
 **Phases 1-4 (Automatiques):** Vision OCR 99.98% → Token MD5 100% → Propositions → Email
 **Phases 5-9 (Validation humaine):** Detection token → Vérification ACID → Insertion → Cleanup → Confirmation
 
-**Événements opérationnels (28/11 actif):**
+**Événements opérationnels (28/11 clôture active):**
+- **CLOTURE_EXERCICE:** Framework déployé 28/11 | Instance 2024 propositions générées | Validation token en cours
 - INIT_BILAN: 571.613k€ équilibré ✅
 - PRET_IMMOBILIER: 470 échéances lookup scalable ✅
 - RELEVE_BANCAIRE: OCR production 21+ jours ✅
 - CUTOFF_CHARGES: Intérêts courus framework ✅
-- **CLOTURE_EXERCICE: Framework déployé + instance 2024 en validation token** ✅
 
 **BD pérenne:** 132+ écritures ACID | 500k€ capital | 470 échéances | Token MD5 100% intégrité
 
 ## 🔧 ROBUSTESSE CONSOLIDÉE (26-28/11)
-**Incidents:** 6 bugs résolus 26-27/11 | Zéro régression depuis 27/11 15:39
-**Diagnostics:** diagnostic_detecteurs_v1.py production-grade déployé
+**Incidents résolus (7j):** 6 bugs | JSON parsing robuste | Control characters handling
 **Validation:** Multi-validations supported | Double-traitement prevention systématique
+**Error handling:** Non-bloquant pérenne | Zéro régression depuis 27/11 15:39
 
 ## 📊 PATTERNS CONSOLIDÉS
-OCR: 99.98% | Token: 100% | Lookup: 470+ scalable | Error handling: Non-bloquant | Clôture: Report nouveau auto
+OCR: 99.98% stable | Token: 100% intégrité | Lookup: 470+ scalable | Clôture: Report nouveau auto
