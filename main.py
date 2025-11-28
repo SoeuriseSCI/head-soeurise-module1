@@ -1071,11 +1071,38 @@ def reveil_quotidien():
     
     # Envoyer le rapport final
     rapport_sent = send_rapport(rapport_final, extracted_pdf_texts if extracted_pdf_texts else None)
-    
+
     if rapport_sent:
-        email_ids = [e.get('email_id') for e in emails if e.get('email_id')]
-        if email_ids:
-            mark_emails_as_seen(email_ids)
+        # Filtrer les emails à marquer SEEN : exclure ceux contenant des validations non traitées
+        # Les validations doivent rester UNSEEN pour être retraitées au prochain réveil si échec
+        email_ids_to_mark = []
+        for e in emails:
+            email_id = e.get('email_id')
+            if not email_id:
+                continue
+
+            # Vérifier si l'email contient un tag de validation
+            body = e.get('body', '').lower()
+            has_validation_tag = '[_head] valide:' in body
+
+            # Si c'est une validation, ne marquer SEEN que si Module2 confirme traitement réussi
+            if has_validation_tag:
+                # Vérifier dans les stats de rapport_module2 si la validation a été traitée
+                validations_traitees = rapport_module2.get('stats', {}).get('validations_traitees', 0)
+                if validations_traitees > 0:
+                    # Validation traitée avec succès → marquer SEEN
+                    email_ids_to_mark.append(email_id)
+                    log_critical("EMAIL_VALIDATION_TREATED", f"Email validation {email_id} traité → SEEN")
+                else:
+                    # Validation non traitée → laisser UNSEEN pour retraitement
+                    log_critical("EMAIL_VALIDATION_PENDING", f"Email validation {email_id} non traité → reste UNSEEN")
+            else:
+                # Email normal → marquer SEEN
+                email_ids_to_mark.append(email_id)
+
+        if email_ids_to_mark:
+            mark_emails_as_seen(email_ids_to_mark)
+            log_critical("EMAIL_MARKED_COMPLETE", f"{len(email_ids_to_mark)} emails marqués seen")
             log_critical("REVEIL_COMPLETE", "Réveil terminé avec succès")
         else:
             log_critical("REVEIL_COMPLETE", "Réveil terminé, aucun email à marquer")
