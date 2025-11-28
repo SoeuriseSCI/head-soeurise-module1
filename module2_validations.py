@@ -584,9 +584,6 @@ class ProcesseurInsertion:
             resultat_net = fiscalite.get('resultat_net', 0)
             deficit_reportable = fiscalite.get('deficit_reportable_2023', 0)
 
-            if resultat_net == 0:
-                return False, "Résultat net = 0, aucune affectation nécessaire", []
-
             # Vérifier exercice N
             exercice_n = self.session.query(ExerciceComptable).filter_by(annee=annee).first()
             if not exercice_n:
@@ -672,7 +669,7 @@ class ProcesseurInsertion:
                 self.session.flush()
                 ecriture_ids.append(ecriture.id)
 
-            else:  # resultat_net < 0
+            elif resultat_net < 0:
                 # Perte → report à nouveau débiteur
                 ecriture = EcritureComptable(
                     exercice_id=exercice_n1.id,
@@ -951,8 +948,7 @@ class OrchestratorValidations:
                 self.session.execute(text("""
                     UPDATE propositions_en_attente
                     SET statut = 'ERREUR',
-                        notes = :erreur,
-                        updated_at = NOW()
+                        notes = :erreur
                     WHERE token = :token
                 """), {'token': token_email, 'erreur': f"Erreur insertion: {msg}"})
                 self.session.commit()
