@@ -549,6 +549,64 @@ class ProcesseurInsertion:
             self.session.rollback()
             return False, f"Erreur insertion prêts: {str(e)[:100]}", []
 
+    def inserer_cloture_definitive(self,
+                                   rapport_cloture: Dict,
+                                   evt_original_id: str,
+                                   evt_validation_id: str,
+                                   email_validation_from: str) -> Tuple[bool, str, List[int]]:
+        """
+        Insère clôture définitive d'exercice
+
+        Exécute le script cloture_exercice.py en mode EXECUTION pour:
+        - Insérer écritures d'affectation du résultat
+        - Marquer l'exercice comme CLOTURE
+        - Créer bilan d'ouverture exercice N+1
+
+        Args:
+            rapport_cloture: Rapport de pre-cloture avec métadonnées
+            evt_original_id: ID email original
+            evt_validation_id: ID email validation
+            email_validation_from: Email valideur
+
+        Returns:
+            (success, message, [ecriture_ids])
+        """
+        try:
+            # Extraire métadonnées
+            annee = rapport_cloture.get('_annee')
+            pv_ag = rapport_cloture.get('_pv_ag', 'PV AG non spécifié')
+
+            if not annee:
+                return False, "Année exercice manquante dans rapport", []
+
+            # Importer le module de clôture
+            from cloture_exercice import ClotureExercice
+            from models_module2 import get_session
+            import os
+
+            session_cloture = get_session(os.environ['DATABASE_URL'])
+
+            try:
+                # Exécuter la clôture en mode EXECUTION (execute=True)
+                cloture = ClotureExercice(session_cloture, annee, pv_ag)
+                rapport = cloture.executer_cloture(execute=True)
+
+                if 'erreur' in rapport:
+                    return False, f"Erreur clôture: {rapport['erreur']}", []
+
+                # Récupérer les IDs des écritures créées
+                ecriture_ids = rapport.get('affectation', {}).get('ecriture_ids', [])
+
+                message = f"Exercice {annee} clôturé avec succès - {len(ecriture_ids)} écriture(s) d'affectation"
+                return True, message, ecriture_ids
+
+            finally:
+                session_cloture.close()
+
+        except Exception as e:
+            self.session.rollback()
+            return False, f"Erreur clôture définitive: {str(e)[:200]}", []
+
 
 # ORCHESTRATOR VALIDATIONS
 
@@ -691,8 +749,27 @@ class OrchestratorValidations:
                 "type_evenement": type_evenement
             }
 
-        # PHASE 7: Validation integrite (passer aussi le token stocké)
-        valide, msg_erreur = self.validateur.valider_propositions(propositions, token_email, token_stocke)
+        # PHASE 7: Validation integrite (skip pour CLOTURE_EXERCICE_DEFINITIF qui a une structure différente)
+        if type_evenement == 'CLOTURE_EXERCICE_DEFINITIF':
+            # Pour clôture définitive, on valide juste le token
+            token_email_norm = token_email.strip().upper()
+            token_stocke_norm = token_stocke.strip().upper()
+
+            # Retirer HEAD- si présent
+            if token_email_norm.startswith("HEAD-"):
+                token_email_norm = token_email_norm[5:]
+            if token_stocke_norm.startswith("HEAD-"):
+                token_stocke_norm = token_stocke_norm[5:]
+
+            if token_email_norm != token_stocke_norm:
+                valide = False
+                msg_erreur = f"Token invalide - Attendu: {token_stocke}, Reçu: {token_email}"
+            else:
+                valide = True
+                msg_erreur = ""
+        else:
+            # Validation standard pour les autres types
+            valide, msg_erreur = self.validateur.valider_propositions(propositions, token_email, token_stocke)
 
         if not valide:
             # Creer EvenementComptable rejete
@@ -748,6 +825,11 @@ class OrchestratorValidations:
             )
         elif type_evenement == 'CLOTURE_EXERCICE':
             succes, msg, ids = self.processeur.inserer_propositions_cloture(
+                propositions, email_original_id, email.get('email_id'), email.get('from')
+            )
+        elif type_evenement == 'CLOTURE_EXERCICE_DEFINITIF':
+            # Traitement spécial pour clôture définitive (structure différente)
+            succes, msg, ids = self.processeur.inserer_cloture_definitive(
                 propositions, email_original_id, email.get('email_id'), email.get('from')
             )
         elif type_evenement == 'PRET_IMMOBILIER':
