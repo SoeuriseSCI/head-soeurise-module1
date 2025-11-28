@@ -740,6 +740,13 @@ class OrchestratorValidations:
         type_evenement = proposition_data['type_evenement']
         token_stocke = proposition_data['token']
 
+        # Pour CLOTURE_EXERCICE, propositions est une liste avec 1 élément (le rapport complet)
+        # Il faut extraire le premier élément pour obtenir le dict rapport
+        if type_evenement == 'CLOTURE_EXERCICE' and isinstance(propositions, list) and len(propositions) > 0:
+            rapport_cloture = propositions[0]  # Extraire le rapport du wrapper liste
+        else:
+            rapport_cloture = None
+
         if not propositions:
             return {
                 "validation_detectee": True,
@@ -826,7 +833,7 @@ class OrchestratorValidations:
         elif type_evenement == 'CLOTURE_EXERCICE':
             # Traitement spécial pour clôture (structure différente, exécute cloture_exercice.py)
             succes, msg, ids = self.processeur.inserer_cloture_definitive(
-                propositions, email_original_id, email.get('email_id'), email.get('from')
+                rapport_cloture, email_original_id, email.get('email_id'), email.get('from')
             )
         elif type_evenement == 'PRET_IMMOBILIER':
             succes, msg, ids = self.processeur.inserer_propositions_pret(
