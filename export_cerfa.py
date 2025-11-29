@@ -104,6 +104,11 @@ MAPPING_2033A_ACTIF = {
         "case": "AH",
         "comptes": []
     },
+    "provisions_depreciation_immobilisations": {
+        "case": "AH2",  # Déduction de l'actif immobilisé
+        "comptes": ["290"],
+        "signe": -1  # Montant négatif (déduction)
+    },
     "total_actif_immobilise": {
         "case": "AI",
         "comptes": []  # Calculé
@@ -208,7 +213,7 @@ MAPPING_2033A_PASSIF = {
     # PROVISIONS
     "provisions_risques_charges": {
         "case": "BK",
-        "comptes": ["290"]
+        "comptes": []  # 290 déplacé à l'actif (déduction immobilisations)
     },
 
     # DETTES
@@ -501,15 +506,19 @@ def calculer_soldes(session, exercice_id):
 
 
 def remplir_cases(mapping, soldes, type_bilan="actif"):
-    """Remplit les cases Cerfa à partir des soldes"""
+    """Remplit les cases Cerfa à partir des soldes
+
+    IMPORTANT : Arrondi à l'euro (pratique comptable standard pour Cerfa)
+    """
     cases = {}
 
     for nom, config in mapping.items():
         case = config["case"]
         comptes = config["comptes"]
+        signe_forcé = config.get("signe", 1)  # Par défaut +1, peut être -1 pour déductions
 
         if not comptes:
-            cases[case] = {"nom": nom, "montant": Decimal('0'), "comptes": []}
+            cases[case] = {"nom": nom, "montant": 0, "comptes": []}
             continue
 
         montant_total = Decimal('0')
@@ -525,6 +534,13 @@ def remplir_cases(mapping, soldes, type_bilan="actif"):
                     if type_bilan == "passif":
                         solde = -solde
 
+                    # Pour l'actif, le solde reste tel quel (débiteur = positif)
+                    # SAUF si signe_forcé = -1 (comptes correcteurs d'actif)
+                    # Dans ce cas, on garde le solde brut (créditeur négatif)
+                    elif type_bilan == "actif" and signe_forcé == -1:
+                        # Ne pas inverser : solde créditeur reste négatif
+                        pass
+
                     # Pour les charges, le solde débiteur est positif
                     # Pour les produits, inverser (créditeur = positif)
                     if type_bilan == "produit":
@@ -532,11 +548,14 @@ def remplir_cases(mapping, soldes, type_bilan="actif"):
 
                     if abs(solde) >= Decimal('0.01'):
                         montant_total += solde
-                        comptes_utilises.append({"compte": compte, "solde": float(solde)})
+                        comptes_utilises.append({"compte": compte, "solde": int(round(solde))})
+
+        # ARRONDI À L'EURO pour déclarations fiscales
+        montant_arrondi = int(round(montant_total))
 
         cases[case] = {
             "nom": nom,
-            "montant": float(montant_total),
+            "montant": montant_arrondi,
             "comptes": comptes_utilises
         }
 
@@ -548,34 +567,34 @@ def generer_2033a(soldes, resultat_exercice):
     actif = remplir_cases(MAPPING_2033A_ACTIF, soldes, "actif")
     passif = remplir_cases(MAPPING_2033A_PASSIF, soldes, "passif")
 
-    # Calculer les totaux ACTIF
+    # Calculer les totaux ACTIF (y compris provisions en déduction)
     actif_immobilise = sum(
-        float(actif[c]["montant"]) for c in ["AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH"]
+        float(actif[c]["montant"]) for c in ["AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AH2"]
     )
-    actif["AI"]["montant"] = actif_immobilise
+    actif["AI"]["montant"] = int(round(actif_immobilise))
 
     actif_circulant = sum(
         float(actif[c]["montant"]) for c in ["AJ", "AK", "AL", "AM", "AN", "AO", "AP", "AQ", "AR"]
     )
-    actif["AS"]["montant"] = actif_circulant
+    actif["AS"]["montant"] = int(round(actif_circulant))
 
-    actif["AT"]["montant"] = actif_immobilise + actif_circulant
+    actif["AT"]["montant"] = int(round(actif_immobilise + actif_circulant))
 
-    # Ajouter le résultat au passif
-    passif["BG"]["montant"] = resultat_exercice
+    # Ajouter le résultat au passif (arrondi à l'euro)
+    passif["BG"]["montant"] = int(round(resultat_exercice))
 
-    # Calculer les totaux PASSIF
+    # Calculer les totaux PASSIF (arrondi à l'euro)
     capitaux_propres = sum(
         float(passif[c]["montant"]) for c in ["BA", "BB", "BC", "BD", "BE", "BF", "BG", "BH", "BI"]
     )
-    passif["BJ"]["montant"] = capitaux_propres
+    passif["BJ"]["montant"] = int(round(capitaux_propres))
 
     total_dettes = sum(
         float(passif[c]["montant"]) for c in ["BL", "BM", "BN", "BO", "BP", "BQ", "BR", "BS"]
     )
-    passif["BT"]["montant"] = total_dettes
+    passif["BT"]["montant"] = int(round(total_dettes))
 
-    passif["BU"]["montant"] = capitaux_propres + float(passif["BK"]["montant"]) + total_dettes
+    passif["BU"]["montant"] = int(round(capitaux_propres + float(passif["BK"]["montant"]) + total_dettes))
 
     return {"actif": actif, "passif": passif}
 
@@ -684,20 +703,21 @@ def generer_2065(resultat_comptable, deficit_reportable, annee):
         else:
             is_du = Decimal('42500') * Decimal('0.15') + (resultat_fiscal_imposable - Decimal('42500')) * Decimal('0.25')
 
+    # ARRONDI À L'EURO pour toutes les valeurs fiscales
     return {
         "exercice": {
             "annee": annee,
             "date_debut": f"01/01/{annee}",
             "date_fin": f"31/12/{annee}"
         },
-        "resultat_comptable": float(resultat_comptable),
-        "deficit_reportable_utilise": float(min(deficit_reportable, resultat_comptable)) if resultat_comptable > 0 else 0,
-        "resultat_fiscal": float(max(resultat_fiscal, Decimal('0'))),
-        "is_taux_reduit_15": float(min(resultat_fiscal_imposable, Decimal('42500')) * Decimal('0.15')) if resultat_fiscal_imposable > 0 else 0,
-        "is_taux_normal_25": float((resultat_fiscal_imposable - Decimal('42500')) * Decimal('0.25')) if resultat_fiscal_imposable > 42500 else 0,
-        "is_total": float(is_du),
-        "resultat_net_apres_is": float(resultat_comptable - is_du),
-        "nouveau_deficit_reportable": float(nouveau_deficit)
+        "resultat_comptable": int(round(resultat_comptable)),
+        "deficit_reportable_utilise": int(round(min(deficit_reportable, resultat_comptable))) if resultat_comptable > 0 else 0,
+        "resultat_fiscal": int(round(max(resultat_fiscal, Decimal('0')))),
+        "is_taux_reduit_15": int(round(min(resultat_fiscal_imposable, Decimal('42500')) * Decimal('0.15'))) if resultat_fiscal_imposable > 0 else 0,
+        "is_taux_normal_25": int(round((resultat_fiscal_imposable - Decimal('42500')) * Decimal('0.25'))) if resultat_fiscal_imposable > 42500 else 0,
+        "is_total": int(round(is_du)),
+        "resultat_net_apres_is": int(round(resultat_comptable - is_du)),
+        "nouveau_deficit_reportable": int(round(nouveau_deficit))
     }
 
 
