@@ -79,14 +79,17 @@ def get_styles():
 
 
 def format_montant(montant):
-    """Formate un montant en euros"""
+    """Formate un montant en euros (entier, sans centimes)"""
     if montant is None:
         return "-"
     try:
         val = float(montant)
         if val == 0:
             return "-"
-        return f"{val:,.2f} €".replace(",", " ").replace(".", ",")
+        # Arrondi à l'euro, pas de centimes
+        val_arrondie = int(round(val))
+        # Format avec espaces comme séparateurs de milliers
+        return f"{val_arrondie:,} €".replace(",", " ")
     except:
         return str(montant)
 
@@ -117,7 +120,7 @@ def generer_page_2065(data, styles):
         ["Forme juridique", societe.get("forme_juridique", "")],
         ["SIRET", societe.get("siret", "")],
         ["Adresse", f"{societe.get('adresse', '')} {societe.get('code_postal', '')} {societe.get('ville', '')}"],
-        ["Activité", societe.get("activite", "")[:60] + "..." if len(societe.get("activite", "")) > 60 else societe.get("activite", "")],
+        ["Activité", societe.get("activite", "")],  # Texte complet, pas de troncature
         ["Régime fiscal", societe.get("regime_fiscal", "")],
     ]
 
@@ -217,7 +220,8 @@ def generer_page_2033a(data, styles):
         ["AB", "Terrains", format_montant(actif.get("AB", {}).get("montant"))],
         ["AC", "Constructions", format_montant(actif.get("AC", {}).get("montant"))],
         ["AG", "Participations et titres immobilisés", format_montant(actif.get("AG", {}).get("montant"))],
-        ["AI", "TOTAL ACTIF IMMOBILISÉ", format_montant(actif.get("AI", {}).get("montant"))],
+        ["AH2", "Provisions pour dépréciation (en déduction)", format_montant(actif.get("AH2", {}).get("montant"))],
+        ["AI", "TOTAL ACTIF IMMOBILISÉ NET", format_montant(actif.get("AI", {}).get("montant"))],
         ["", "ACTIF CIRCULANT", ""],
         ["AN", "Créances clients et comptes rattachés", format_montant(actif.get("AN", {}).get("montant"))],
         ["AP", "Valeurs mobilières de placement", format_montant(actif.get("AP", {}).get("montant"))],
@@ -230,17 +234,19 @@ def generer_page_2033a(data, styles):
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5282')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#e2e8f0')),
-        ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#e2e8f0')),
-        ('BACKGROUND', (0, 5), (-1, 5), colors.HexColor('#bee3f8')),
-        ('BACKGROUND', (0, 10), (-1, 10), colors.HexColor('#bee3f8')),
-        ('BACKGROUND', (0, 11), (-1, 11), colors.HexColor('#c6f6d5')),
+        ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#e2e8f0')),  # ACTIF IMMOBILISÉ
+        ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#fee2e2')),  # Provisions (rouge léger)
+        ('BACKGROUND', (0, 7), (-1, 7), colors.HexColor('#e2e8f0')),  # ACTIF CIRCULANT
+        ('BACKGROUND', (0, 8), (-1, 8), colors.HexColor('#bee3f8')),  # TOTAL ACTIF IMMOBILISÉ
+        ('BACKGROUND', (0, 11), (-1, 11), colors.HexColor('#bee3f8')),  # TOTAL ACTIF CIRCULANT
+        ('BACKGROUND', (0, 12), (-1, 12), colors.HexColor('#c6f6d5')),  # TOTAL GÉNÉRAL
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
-        ('FONTNAME', (0, 5), (-1, 5), 'Helvetica-Bold'),
-        ('FONTNAME', (0, 6), (-1, 6), 'Helvetica-Bold'),
-        ('FONTNAME', (0, 10), (-1, 10), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 6), (-1, 6), 'Helvetica-Bold'),  # Provisions en gras
+        ('FONTNAME', (0, 7), (-1, 7), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 8), (-1, 8), 'Helvetica-Bold'),
         ('FONTNAME', (0, 11), (-1, 11), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 12), (-1, 12), 'Helvetica-Bold'),
         ('ALIGN', (0, 0), (0, -1), 'CENTER'),
         ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
