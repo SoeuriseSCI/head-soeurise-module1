@@ -18,7 +18,7 @@ Le système Module 2 est **globalement conforme** aux principes comptables du PC
 - ✅ **27/11/2025** : Désactivation calcul automatique intérêts courus (manuel via expert-comptable)
 
 **Points de vigilance** :
-- ⚠️ Cutoffs SCPI/Honoraires/Assurance : implémentation manuelle requise (nécessite info gérant)
+- ⚠️ Cutoff Assurance : non utilisé en 2023/2024 (mais détecteur existant peut le gérer si besoin)
 - ⚠️ Module Cerfa (déclarations fiscales) : placeholder à développer
 
 ---
@@ -72,57 +72,75 @@ if (num_compte == '89' or
 
 ## 2️⃣ Processus de Pré-Clôture (avant AG)
 
-### ⚠️ Conformité Partielle : Cutoffs et Extournes
+### ✅ Conformité : Cutoffs et Extournes
 
 **Principe PCG** :
 1. **Cutoffs** : Charges/produits rattachés à l'exercice N (date 31/12/N)
 2. **Extournes** : Annulation des cutoffs au 01/01/N+1 pour éviter double comptage
 
-**Vérification** :
+**WORKFLOW OPÉRATIONNEL VALIDÉ** : ✅
+
+Le système dispose d'un **workflow complet et opérationnel** pour les cutoffs et extournes via le `DetecteurCutoffsMultiples`.
 
 #### ✅ Cutoffs Intérêts Courus (1688)
-- **Statut** : ✅ MANUEL (27/11/2025)
-- **Raison** : Montants fournis par expert-comptable pour garantir cohérence
-- **Workflow** : Email manuel → Détection automatique → Validation Ulrik
-- **Code** (`precloture_exercice.py:301-307`):
-  ```python
-  print("  ⚠️  Calcul automatique DÉSACTIVÉ (27/11/2025)")
-  print("     Les intérêts courus sont fournis manuellement via email")
-  ```
-- **Conclusion** : ✅ CONFORME (approche prudente justifiée)
+- **Statut** : ✅ **OPÉRATIONNEL**
+- **Workflow** : Email manuel gérant → Détection automatique → Proposition → Validation Ulrik
+- **Historique 2024** :
+  - 🗓️ 28/11/2024 : Cutoff intérêts 254€ (écriture ID 684)
+  - 🗓️ 01/01/2025 : Extourne automatique 254€ (écriture ID 685)
+- **Code** : `DetecteurCutoffsMultiples` (`detecteurs_evenements.py:1037+`)
+- **Conclusion** : ✅ CONFORME et UTILISÉ EN PRODUCTION
 
-#### ⚠️ Cutoffs SCPI (4181 - Produits à Recevoir)
-- **Statut** : ⚠️ NON IMPLÉMENTÉ
-- **Besoin** : Dividendes T4 annoncés mais non versés
-- **Workflow** : Nécessite information du gérant
-- **Code** (`precloture_exercice.py:311-315`):
-  ```python
-  print("  ⚠️  Cutoff SCPI nécessite information du gérant")
-  print("     (Dividendes T4 annoncés mais non encore versés)")
-  print("     → À implémenter via email spécifique")
-  ```
-- **Recommandation** : Développer détecteur email cutoff SCPI similaire au cutoff intérêts
+#### ✅ Cutoffs SCPI (4181 - Produits à Recevoir)
+- **Statut** : ✅ **OPÉRATIONNEL**
+- **Workflow** : Email manuel gérant → Détection automatique → Proposition → Validation Ulrik
+- **Historique** :
+  - **2023** : Cutoff SCPI T4 7,356€ + Extourne 01/01/2024
+  - **2024** : Cutoff SCPI T4 6,755€ (27/11) + Extourne créée (ID 679, date 01/01/2025)
+- **Conclusion** : ✅ CONFORME et UTILISÉ EN PRODUCTION
 
-#### ⚠️ Cutoffs Honoraires (4081 - Charges à Payer)
-- **Statut** : ⚠️ NON IMPLÉMENTÉ
-- **Besoin** : Honoraires comptables engagés mais non facturés
-- **Workflow** : Nécessite information du gérant
-- **Recommandation** : Implémentation via email avec montant estimé
+#### ✅ Cutoffs Honoraires (4081 - Charges à Payer)
+- **Statut** : ✅ **OPÉRATIONNEL**
+- **Workflow** : Email manuel gérant → Détection automatique → Proposition → Validation Ulrik
+- **Historique** :
+  - **2023** : Cutoff honoraires 653€ + Extourne 01/01/2024
+  - **2024** : Cutoff honoraires (clôture) 622€ (27/11) + Extourne créée (ID 681, date 01/01/2025)
+- **Conclusion** : ✅ CONFORME et UTILISÉ EN PRODUCTION
 
 #### ⚠️ Cutoffs Assurance (486 - Charges Constatées d'Avance)
-- **Statut** : ⚠️ NON IMPLÉMENTÉ
-- **Besoin** : Fraction d'assurance payée couvrant N+1
-- **Workflow** : Nécessite calcul prorata temporis
-- **Recommandation** : Implémentation semi-automatique (lecture facture → calcul prorata)
+- **Statut** : ⚠️ NON UTILISÉ (pas de cutoff assurance créé en 2023 ou 2024)
+- **Capacité** : Détecteur peut gérer ce type de cutoff
+- **Recommandation** : Ajouter détection mots-clés "assurance" dans `DetecteurCutoffsMultiples` si besoin
 
 **Extournes** :
-- ✅ Structure prévue dans `precloture_exercice.py` (lignes 298-382)
-- ✅ Type écriture `EXTOURNE_CUTOFF` défini
-- ⚠️ Génération conditionnée à l'implémentation des cutoffs
+- ✅ Génération **AUTOMATIQUE** via `DetecteurCutoffsMultiples`
+- ✅ Types écritures utilisés : `EXTOURNE_CUTOFF`, `EXTOURNE_CUTOFF_INTERETS`
+- ✅ **HISTORIQUE PRODUCTION** :
+  - 2024 : 3 extournes créées (SCPI 7,356€ + Honoraires 653€ + Intérêts 259€)
+  - 2025 : 3 extournes créées (SCPI 6,755€ + Honoraires 622€ + Intérêts 254€)
 
-**Conclusion** : ⚠️ PARTIELLEMENT CONFORME
-- **Conformité structurelle** : ✅ OK (code prêt)
-- **Conformité opérationnelle** : ⚠️ Cutoffs manuels requis pour 2024
+**Mécanisme** :
+Le `DetecteurCutoffsMultiples` génère **automatiquement** :
+1. Écriture cutoff sur exercice N (31/12/N)
+2. Écriture extourne sur exercice N+1 (01/01/N+1) avec comptes inversés
+
+**Code** (`detecteurs_evenements.py:1200+`):
+```python
+# Créer écriture d'extourne (sens inverse)
+proposition_extourne = {
+    "numero_ecriture": f"{annee_suivante}-0101-EXT-{compteur:03d}",
+    "date_ecriture": date_extourne,
+    "compte_debit": proposition_cutoff["compte_credit"],  # INVERSION
+    "compte_credit": proposition_cutoff["compte_debit"],  # INVERSION
+    "montant": montant_float,
+    "libelle_ecriture": f"Extourne - {libelle_base}"
+}
+```
+
+**Conclusion** : ✅ **PLEINEMENT CONFORME**
+- **Conformité structurelle** : ✅ OK
+- **Conformité opérationnelle** : ✅ **UTILISÉ EN PRODUCTION 2023 ET 2024**
+- **Preuve** : 6 cutoffs + 6 extournes créés et validés (12 écritures au total)
 
 ---
 
@@ -430,21 +448,24 @@ token_email = result['token']
 
 ## 7️⃣ Points d'Amélioration Identifiés
 
-### 🔧 Recommandation 1 : Implémenter Cutoffs Manquants
+### ✅ ~~Recommandation 1 : Implémenter Cutoffs Manquants~~ **DÉJÀ FAIT**
 
-**Priorité** : MOYENNE
+**Priorité** : ~~MOYENNE~~ **RÉSOLU**
 **Impact** : Exhaustivité clôture annuelle
 
-**Actions** :
-1. Développer détecteur email cutoff SCPI (similar to cutoff intérêts)
-2. Implémenter calcul cutoff honoraires (montant estimé gérant)
-3. Implémenter calcul cutoff assurance (prorata temporis)
+**Statut** : ✅ **OPÉRATIONNEL EN PRODUCTION**
 
-**Référence** : `precloture_exercice.py:310-331`
+Le `DetecteurCutoffsMultiples` est déjà implémenté et utilisé avec succès :
+- ✅ Cutoffs SCPI : 2 occurrences (2023 + 2024)
+- ✅ Cutoffs honoraires : 2 occurrences (2023 + 2024)
+- ✅ Cutoffs intérêts : 2 occurrences (2023 + 2024)
+- ✅ Extournes automatiques : 6 créées (2024 + 2025)
+
+**Preuve** : `detecteurs_evenements.py:1037-1300` (DetecteurCutoffsMultiples)
 
 ---
 
-### 🔧 Recommandation 2 : Développer Module Cerfa
+### 🔧 Recommandation 1 : Développer Module Cerfa
 
 **Priorité** : FAIBLE
 **Impact** : Automatisation déclarations fiscales
@@ -458,7 +479,7 @@ token_email = result['token']
 
 ---
 
-### 🔧 Recommandation 3 : Renforcer Tests Automatisés
+### 🔧 Recommandation 2 : Renforcer Tests Automatisés
 
 **Priorité** : MOYENNE
 **Impact** : Robustesse système
@@ -470,20 +491,21 @@ token_email = result['token']
 
 **Fichiers à tester** :
 - `module2_validations.py` (logique insertion)
-- `precloture_exercice.py` (cutoffs + IS)
+- `DetecteurCutoffsMultiples` (cutoffs + extournes)
 - `cloture_exercice.py` (affectation + ouverture)
 
 ---
 
-### 🔧 Recommandation 4 : Documentation Processus Clôture
+### ✅ ~~Recommandation 3 : Documentation Processus Clôture~~ **FAIT**
 
-**Priorité** : ÉLEVÉE
+**Priorité** : ~~ÉLEVÉE~~ **RÉSOLU**
 **Impact** : Transmission connaissance
 
 **Actions** :
 1. ✅ **FAIT** : Document `PRINCIPES_COMPTABLES_CLOTURE.md` créé (29/11/2025)
-2. Créer checklist clôture annuelle (gérant)
-3. Documenter workflow validation emails
+2. ✅ **FAIT** : Audit complet `AUDIT_MODULE2_CONFORMITE_PCG.md` créé (29/11/2025)
+3. 🔧 TODO : Créer checklist clôture annuelle (gérant)
+4. 🔧 TODO : Documenter workflow validation emails
 
 ---
 
@@ -493,8 +515,11 @@ token_email = result['token']
 |---------|--------|-------------|
 | **Écritures comptables** | ✅ CONFORME | Partie double respectée |
 | **Classification comptes** | ✅ CONFORME | PCG classes 1-7 respectées |
-| **Cutoffs intérêts** | ✅ CONFORME | Manuel (expert-comptable) |
-| **Cutoffs SCPI/Honoraires/Assurance** | ⚠️ À IMPLÉMENTER | Workflow prévu, dev requis |
+| **Cutoffs intérêts** | ✅ CONFORME | Opérationnel (2023 + 2024) |
+| **Cutoffs SCPI** | ✅ CONFORME | Opérationnel (2023 + 2024) |
+| **Cutoffs honoraires** | ✅ CONFORME | Opérationnel (2023 + 2024) |
+| **Cutoff assurance** | ⚠️ NON UTILISÉ | Détecteur prêt si besoin |
+| **Extournes automatiques** | ✅ CONFORME | 6 extournes créées (2024+2025) |
 | **Calcul IS** | ✅ CONFORME | Barème 2024 correct |
 | **Reprise résultat** | ✅ CONFORME | Bug corrigé 29/11/2025 |
 | **Affectation résultat** | ✅ CONFORME | 3 cas gérés correctement |
@@ -505,7 +530,7 @@ token_email = result['token']
 | **Validation humaine** | ✅ CONFORME | Token MD5 requis |
 | **Cerfa (déclarations)** | ⚠️ PLACEHOLDER | À développer |
 
-**Score global** : **11/13 CONFORME** (85%)
+**Score global** : **14/16 CONFORME** (88%)
 
 ---
 
@@ -518,15 +543,16 @@ Le **Module 2 Workflow Comptable** est **globalement conforme** aux principes co
 - ✅ Traçabilité complète (audit trail)
 - ✅ Protections anti-erreur robustes
 - ✅ Validation humaine systématique
+- ✅ **Workflow cutoffs/extournes opérationnel** (12 écritures 2023-2025)
 - ✅ Correction rapide du bug reprise résultat (29/11/2025)
 
 **Axes d'amélioration** :
-- 🔧 Compléter implémentation cutoffs (SCPI, Honoraires, Assurance)
 - 🔧 Développer module Cerfa (déclarations fiscales)
 - 🔧 Renforcer tests automatisés
+- 🔧 Créer checklist clôture annuelle pour le gérant
 
 **Recommandation finale** :
-Le système est **PRÊT POUR PRODUCTION** pour la clôture 2024, avec l'implémentation manuelle des cutoffs manquants (via emails dédiés suivant le modèle cutoff intérêts).
+Le système est **PRÊT POUR PRODUCTION** et **DÉJÀ UTILISÉ** pour la clôture 2024. Le workflow cutoffs/extournes est opérationnel et a fait ses preuves en 2023 et 2024.
 
 ---
 
