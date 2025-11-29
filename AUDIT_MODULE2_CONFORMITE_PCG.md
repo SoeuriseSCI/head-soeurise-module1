@@ -19,7 +19,6 @@ Le système Module 2 est **globalement conforme** aux principes comptables du PC
 
 **Points de vigilance** :
 - ⚠️ Cutoff Assurance : non utilisé en 2023/2024 (mais détecteur existant peut le gérer si besoin)
-- ⚠️ Module Cerfa (déclarations fiscales) : placeholder à développer
 
 ---
 
@@ -465,17 +464,24 @@ Le `DetecteurCutoffsMultiples` est déjà implémenté et utilisé avec succès 
 
 ---
 
-### 🔧 Recommandation 1 : Développer Module Cerfa
+### ✅ ~~Recommandation 1 : Développer Module Cerfa~~ **FAIT**
 
-**Priorité** : FAIBLE
+**Priorité** : ~~FAIBLE~~ **RÉSOLU**
 **Impact** : Automatisation déclarations fiscales
 
-**Actions** :
-1. Générer formulaire 2065 (Déclaration IS)
-2. Générer formulaire 2033-A à 2033-G (Liasse fiscale)
-3. Export PDF avec données préremplies
+**Statut** : ✅ **OPÉRATIONNEL**
 
-**Référence** : `cloture_exercice.py:617-661`
+Le module Cerfa est développé et intégré au workflow de clôture :
+- ✅ `export_cerfa.py` : Génération données JSON (2065, 2033-A, 2033-B, 2033-F)
+- ✅ `generer_cerfa_pdf.py` : Génération PDF pré-remplis
+- ✅ Intégration dans `cloture_exercice.py:617-727` (étape 6)
+- ✅ **Tests réussis** : Cerfa 2024 généré (29/11/2025)
+
+**Utilisation** :
+- Mode standalone : `python export_cerfa.py 2024 && python generer_cerfa_pdf.py cerfa_2024_*.json`
+- Mode intégré : `python cloture_exercice.py --exercice 2024 --pv-ag "PV AG..." --execute`
+
+**Preuve** : Fichiers `cerfa_2024_20251129_181136.json` et `.pdf` générés avec succès
 
 ---
 
@@ -528,9 +534,9 @@ Le `DetecteurCutoffsMultiples` est déjà implémenté et utilisé avec succès 
 | **Audit trail** | ✅ CONFORME | Traçabilité complète |
 | **Protections anti-erreur** | ✅ CONFORME | Anti-doublon + rollback |
 | **Validation humaine** | ✅ CONFORME | Token MD5 requis |
-| **Cerfa (déclarations)** | ⚠️ PLACEHOLDER | À développer |
+| **Cerfa (déclarations)** | ✅ CONFORME | Opérationnel (2065+2033) |
 
-**Score global** : **14/16 CONFORME** (88%)
+**Score global** : **15/16 CONFORME** (94%)
 
 ---
 
@@ -547,12 +553,12 @@ Le **Module 2 Workflow Comptable** est **globalement conforme** aux principes co
 - ✅ Correction rapide du bug reprise résultat (29/11/2025)
 
 **Axes d'amélioration** :
-- 🔧 Développer module Cerfa (déclarations fiscales)
 - 🔧 Renforcer tests automatisés
 - 🔧 Créer checklist clôture annuelle pour le gérant
+- 🔧 Ajouter détection cutoff assurance si besoin futur
 
 **Recommandation finale** :
-Le système est **PRÊT POUR PRODUCTION** et **DÉJÀ UTILISÉ** pour la clôture 2024. Le workflow cutoffs/extournes est opérationnel et a fait ses preuves en 2023 et 2024.
+Le système est **PRÊT POUR PRODUCTION** et **DÉJÀ UTILISÉ** pour la clôture 2024. Le workflow cutoffs/extournes est opérationnel (2023+2024), et le module Cerfa génère automatiquement les déclarations fiscales.
 
 ---
 

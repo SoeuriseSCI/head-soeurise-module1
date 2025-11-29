@@ -1,0 +1,576 @@
+{
+  "meta": {
+    "date_generation": "2025-11-29T18:11:36.480055",
+    "exercice": 2024,
+    "societe": {
+      "denomination": "SOEURISE",
+      "forme_juridique": "Société civile",
+      "siret": "91057486200010",
+      "siren": "910574862",
+      "rcs": "Paris",
+      "adresse": "8 rue Déodat De Séverac",
+      "code_postal": "75017",
+      "ville": "Paris",
+      "date_immatriculation": "21/02/2022",
+      "date_cloture": "31/12",
+      "regime_fiscal": "IS",
+      "regime_imposition": "RSI",
+      "activite": "Détention de droits sociaux de sociétés ayant à leur actif des biens ou droits immobiliers",
+      "code_ape": "6820B",
+      "gerant": {
+        "nom": "BERGSTEN",
+        "prenom": "Ulrik",
+        "date_naissance": "23/09/1957",
+        "lieu_naissance": "Gammelstad (SUEDE)",
+        "nationalite": "Suédoise",
+        "adresse": "8 rue Déodat De Séverac 75017 Paris"
+      },
+      "associes": [
+        {
+          "nom": "Emma BERGSTEN",
+          "parts": 49,
+          "pourcentage": 49,
+          "adresse": "3 rue Michal 75013 Paris"
+        },
+        {
+          "nom": "Pauline BERGSTEN",
+          "parts": 49,
+          "pourcentage": 49,
+          "adresse": "Vifilsgata 4 105 Reykjavik (Islande)"
+        },
+        {
+          "nom": "Ulrik BERGSTEN",
+          "parts": 2,
+          "pourcentage": 2,
+          "adresse": "8 rue Déodat De Séverac 75017 Paris"
+        }
+      ]
+    }
+  },
+  "formulaires": {
+    "2065": {
+      "exercice": {
+        "annee": 2024,
+        "date_debut": "01/01/2024",
+        "date_fin": "31/12/2024"
+      },
+      "resultat_comptable": 17766.29,
+      "deficit_reportable_utilise": 17766.29,
+      "resultat_fiscal": 0.0,
+      "is_taux_reduit_15": 0,
+      "is_taux_normal_25": 0,
+      "is_total": 0.0,
+      "resultat_net_apres_is": 17766.29,
+      "nouveau_deficit_reportable": 18381.71
+    },
+    "2033-A": {
+      "actif": {
+        "AA": {
+          "nom": "immobilisations_incorporelles",
+          "montant": "0",
+          "comptes": []
+        },
+        "AB": {
+          "nom": "terrains",
+          "montant": 0.0,
+          "comptes": []
+        },
+        "AC": {
+          "nom": "constructions",
+          "montant": 0.0,
+          "comptes": []
+        },
+        "AD": {
+          "nom": "installations_techniques",
+          "montant": "0",
+          "comptes": []
+        },
+        "AE": {
+          "nom": "autres_immobilisations_corporelles",
+          "montant": "0",
+          "comptes": []
+        },
+        "AF": {
+          "nom": "immobilisations_en_cours",
+          "montant": "0",
+          "comptes": []
+        },
+        "AG": {
+          "nom": "participations",
+          "montant": 525792.63,
+          "comptes": [
+            {
+              "compte": "271",
+              "solde": 500032.0
+            },
+            {
+              "compte": "273",
+              "solde": 25760.63
+            }
+          ]
+        },
+        "AH": {
+          "nom": "autres_immobilisations_financieres",
+          "montant": "0",
+          "comptes": []
+        },
+        "AI": {
+          "nom": "total_actif_immobilise",
+          "montant": 525792.63,
+          "comptes": []
+        },
+        "AJ": {
+          "nom": "stocks_matieres_premieres",
+          "montant": "0",
+          "comptes": []
+        },
+        "AK": {
+          "nom": "stocks_encours_production",
+          "montant": "0",
+          "comptes": []
+        },
+        "AL": {
+          "nom": "stocks_produits",
+          "montant": "0",
+          "comptes": []
+        },
+        "AM": {
+          "nom": "avances_acomptes_verses",
+          "montant": "0",
+          "comptes": []
+        },
+        "AN": {
+          "nom": "creances_clients",
+          "montant": 6755.0,
+          "comptes": [
+            {
+              "compte": "4181",
+              "solde": 6755.0
+            }
+          ]
+        },
+        "AO": {
+          "nom": "autres_creances",
+          "montant": "0",
+          "comptes": []
+        },
+        "AP": {
+          "nom": "valeurs_mobilieres_placement",
+          "montant": 0.0,
+          "comptes": []
+        },
+        "AQ": {
+          "nom": "disponibilites",
+          "montant": 2320.35,
+          "comptes": [
+            {
+              "compte": "512",
+              "solde": 2320.35
+            }
+          ]
+        },
+        "AR": {
+          "nom": "charges_constatees_avance",
+          "montant": "0",
+          "comptes": []
+        },
+        "AS": {
+          "nom": "total_actif_circulant",
+          "montant": 9075.35,
+          "comptes": []
+        },
+        "AT": {
+          "nom": "total_actif",
+          "montant": 534867.98,
+          "comptes": []
+        }
+      },
+      "passif": {
+        "BA": {
+          "nom": "capital_social",
+          "montant": 1000.0,
+          "comptes": [
+            {
+              "compte": "101",
+              "solde": 1000.0
+            }
+          ]
+        },
+        "BB": {
+          "nom": "primes_emission",
+          "montant": "0",
+          "comptes": []
+        },
+        "BC": {
+          "nom": "reserves_legale",
+          "montant": 0.0,
+          "comptes": []
+        },
+        "BD": {
+          "nom": "reserves_reglementees",
+          "montant": "0",
+          "comptes": []
+        },
+        "BE": {
+          "nom": "autres_reserves",
+          "montant": "0",
+          "comptes": []
+        },
+        "BF": {
+          "nom": "report_a_nouveau",
+          "montant": -36148.0,
+          "comptes": [
+            {
+              "compte": "119",
+              "solde": -36148.0
+            }
+          ]
+        },
+        "BG": {
+          "nom": "resultat_exercice",
+          "montant": 17766.29,
+          "comptes": []
+        },
+        "BH": {
+          "nom": "subventions_investissement",
+          "montant": "0",
+          "comptes": []
+        },
+        "BI": {
+          "nom": "provisions_reglementees",
+          "montant": "0",
+          "comptes": []
+        },
+        "BJ": {
+          "nom": "total_capitaux_propres",
+          "montant": -17381.71,
+          "comptes": []
+        },
+        "BK": {
+          "nom": "provisions_risques_charges",
+          "montant": 50003.0,
+          "comptes": [
+            {
+              "compte": "290",
+              "solde": 50003.0
+            }
+          ]
+        },
+        "BL": {
+          "nom": "emprunts_etablissements_credit",
+          "montant": 486504.69,
+          "comptes": [
+            {
+              "compte": "164",
+              "solde": 486250.69
+            },
+            {
+              "compte": "1688",
+              "solde": 254.0
+            }
+          ]
+        },
+        "BM": {
+          "nom": "emprunts_dettes_financieres_diverses",
+          "montant": "0",
+          "comptes": []
+        },
+        "BN": {
+          "nom": "avances_acomptes_recus",
+          "montant": "0",
+          "comptes": []
+        },
+        "BO": {
+          "nom": "dettes_fournisseurs",
+          "montant": 622.0,
+          "comptes": [
+            {
+              "compte": "4081",
+              "solde": 622.0
+            }
+          ]
+        },
+        "BP": {
+          "nom": "dettes_fiscales_sociales",
+          "montant": 0.0,
+          "comptes": []
+        },
+        "BQ": {
+          "nom": "dettes_immobilisations",
+          "montant": "0",
+          "comptes": []
+        },
+        "BR": {
+          "nom": "autres_dettes",
+          "montant": 15120.0,
+          "comptes": [
+            {
+              "compte": "455",
+              "solde": 15120.0
+            }
+          ]
+        },
+        "BS": {
+          "nom": "produits_constates_avance",
+          "montant": "0",
+          "comptes": []
+        },
+        "BT": {
+          "nom": "total_dettes",
+          "montant": 502246.69,
+          "comptes": []
+        },
+        "BU": {
+          "nom": "total_passif",
+          "montant": 534867.98,
+          "comptes": []
+        }
+      }
+    },
+    "2033-B": {
+      "FA": {
+        "nom": "ventes_marchandises",
+        "montant": "0",
+        "comptes": []
+      },
+      "FB": {
+        "nom": "production_vendue_biens",
+        "montant": 0.0,
+        "comptes": []
+      },
+      "FC": {
+        "nom": "production_vendue_services",
+        "montant": 0.0,
+        "comptes": []
+      },
+      "FD": {
+        "nom": "production_stockee",
+        "montant": "0",
+        "comptes": []
+      },
+      "FE": {
+        "nom": "production_immobilisee",
+        "montant": "0",
+        "comptes": []
+      },
+      "FF": {
+        "nom": "subventions_exploitation",
+        "montant": "0",
+        "comptes": []
+      },
+      "FG": {
+        "nom": "autres_produits",
+        "montant": 0.0,
+        "comptes": []
+      },
+      "FH": {
+        "nom": "total_produits_exploitation",
+        "montant": 0.0,
+        "comptes": []
+      },
+      "FI": {
+        "nom": "achats_marchandises",
+        "montant": "0",
+        "comptes": []
+      },
+      "FJ": {
+        "nom": "variation_stock_marchandises",
+        "montant": "0",
+        "comptes": []
+      },
+      "FK": {
+        "nom": "achats_matieres_premieres",
+        "montant": 0.0,
+        "comptes": []
+      },
+      "FL": {
+        "nom": "variation_stock_matieres",
+        "montant": "0",
+        "comptes": []
+      },
+      "FM": {
+        "nom": "autres_achats_charges_externes",
+        "montant": 3018.9,
+        "comptes": [
+          {
+            "compte": "616",
+            "solde": 1053.69
+          },
+          {
+            "compte": "6226",
+            "solde": 1495.4
+          },
+          {
+            "compte": "627",
+            "solde": 469.81
+          }
+        ]
+      },
+      "FN": {
+        "nom": "impots_taxes",
+        "montant": 0.0,
+        "comptes": []
+      },
+      "FO": {
+        "nom": "salaires_traitements",
+        "montant": "0",
+        "comptes": []
+      },
+      "FP": {
+        "nom": "charges_sociales",
+        "montant": "0",
+        "comptes": []
+      },
+      "FQ": {
+        "nom": "dotations_amortissements_immobilisations",
+        "montant": 0.0,
+        "comptes": []
+      },
+      "FR": {
+        "nom": "dotations_provisions_actif_circulant",
+        "montant": "0",
+        "comptes": []
+      },
+      "FS": {
+        "nom": "dotations_provisions_risques",
+        "montant": "0",
+        "comptes": []
+      },
+      "FT": {
+        "nom": "autres_charges",
+        "montant": "0",
+        "comptes": []
+      },
+      "GA": {
+        "nom": "produits_financiers_participations",
+        "montant": 26395.92,
+        "comptes": [
+          {
+            "compte": "761",
+            "solde": 26395.92
+          }
+        ]
+      },
+      "GB": {
+        "nom": "produits_autres_valeurs_mobilieres",
+        "montant": 0.0,
+        "comptes": []
+      },
+      "GC": {
+        "nom": "autres_interets_produits",
+        "montant": 0.0,
+        "comptes": []
+      },
+      "GD": {
+        "nom": "reprises_provisions_financieres",
+        "montant": "0",
+        "comptes": []
+      },
+      "GE": {
+        "nom": "differences_change_positives",
+        "montant": "0",
+        "comptes": []
+      },
+      "GF": {
+        "nom": "produits_nets_cessions_vmp",
+        "montant": "0",
+        "comptes": []
+      },
+      "GH": {
+        "nom": "dotations_provisions_financieres",
+        "montant": "0",
+        "comptes": []
+      },
+      "GI": {
+        "nom": "interets_charges",
+        "montant": 5610.73,
+        "comptes": [
+          {
+            "compte": "661",
+            "solde": 5610.73
+          }
+        ]
+      },
+      "GJ": {
+        "nom": "differences_change_negatives",
+        "montant": "0",
+        "comptes": []
+      },
+      "GK": {
+        "nom": "charges_nettes_cessions_vmp",
+        "montant": "0",
+        "comptes": []
+      },
+      "FU": {
+        "nom": "total_charges_exploitation",
+        "montant": 3018.9,
+        "comptes": []
+      },
+      "FV": {
+        "nom": "resultat_exploitation",
+        "montant": -3018.9,
+        "comptes": []
+      },
+      "GG": {
+        "nom": "total_produits_financiers",
+        "montant": 26395.92,
+        "comptes": []
+      },
+      "GL": {
+        "nom": "total_charges_financieres",
+        "montant": 5610.73,
+        "comptes": []
+      },
+      "GM": {
+        "nom": "resultat_financier",
+        "montant": 20785.19,
+        "comptes": []
+      },
+      "GN": {
+        "nom": "resultat_courant_avant_impots",
+        "montant": 17766.29,
+        "comptes": []
+      },
+      "HL": {
+        "nom": "benefice_ou_perte",
+        "montant": 17766.29,
+        "comptes": []
+      }
+    },
+    "2033-F": {
+      "capital_social": 1000.0,
+      "nombre_parts": 100,
+      "valeur_nominale": 10.0,
+      "associes": [
+        {
+          "nom": "Emma BERGSTEN",
+          "parts": 49,
+          "pourcentage": 49,
+          "adresse": "3 rue Michal 75013 Paris"
+        },
+        {
+          "nom": "Pauline BERGSTEN",
+          "parts": 49,
+          "pourcentage": 49,
+          "adresse": "Vifilsgata 4 105 Reykjavik (Islande)"
+        },
+        {
+          "nom": "Ulrik BERGSTEN",
+          "parts": 2,
+          "pourcentage": 2,
+          "adresse": "8 rue Déodat De Séverac 75017 Paris"
+        }
+      ]
+    }
+  },
+  "resume": {
+    "total_actif": 534867.98,
+    "total_passif": 534867.98,
+    "resultat_comptable": 17766.29,
+    "deficit_reportable": 36148.0,
+    "resultat_fiscal": 0.0,
+    "is_a_payer": 0.0,
+    "resultat_net": 17766.29,
+    "nouveau_deficit_reportable": 18381.71
+  }
+}

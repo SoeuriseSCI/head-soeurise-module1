@@ -614,32 +614,28 @@ class ClotureExercice:
             ]
         }
 
-    def etape6_generer_cerfa(self) -> Dict:
+    def etape6_generer_cerfa(self, execute: bool = False) -> Dict:
         """
         ÉTAPE 6: Générer les Cerfa (déclarations fiscales).
 
-        PLACEHOLDER - À implémenter selon les besoins spécifiques.
-
-        Cerfa potentiels pour une SCI à l'IS :
+        Génère les formulaires fiscaux pour une SCI à l'IS :
         - Formulaire 2065 : Déclaration IS
-        - Formulaire 2033 : Bilan simplifié
-        - Formulaire 2050-2059 : Liasse fiscale
+        - Formulaire 2033-A : Bilan simplifié
+        - Formulaire 2033-B : Compte de résultat
+        - Formulaire 2033-F : Composition du capital
+
+        Args:
+            execute: Si True, génère réellement les fichiers JSON et PDF
 
         Returns:
-            Informations sur les Cerfa à produire
+            Informations sur les Cerfa générés
         """
         print("\n" + "=" * 80)
         print("ÉTAPE 6 : GÉNÉRATION CERFA (DÉCLARATIONS FISCALES)")
         print("=" * 80)
 
-        print("\n  ⚠️  PLACEHOLDER - Module Cerfa à développer")
-        print("\n  📋 Déclarations fiscales SCI à l'IS :")
-        print("     - Formulaire 2065 : Déclaration de résultat IS")
-        print("     - Formulaire 2033-A à 2033-G : Liasse fiscale simplifiée")
-        print("     - Relevé de frais généraux (si applicable)")
-
         cerfa_info = {
-            'status': 'A_DEVELOPPER',
+            'status': 'SIMULATION',
             'formulaires_requis': [
                 {
                     'numero': '2065',
@@ -647,16 +643,86 @@ class ClotureExercice:
                     'date_limite': f"15/05/{self.annee + 1}"
                 },
                 {
-                    'numero': '2033',
-                    'nom': 'Liasse fiscale simplifiée',
+                    'numero': '2033-A',
+                    'nom': 'Bilan simplifié',
+                    'date_limite': f"15/05/{self.annee + 1}"
+                },
+                {
+                    'numero': '2033-B',
+                    'nom': 'Compte de résultat simplifié',
+                    'date_limite': f"15/05/{self.annee + 1}"
+                },
+                {
+                    'numero': '2033-F',
+                    'nom': 'Composition du capital',
                     'date_limite': f"15/05/{self.annee + 1}"
                 }
             ],
-            'note': "Module Cerfa à implémenter - génération PDF automatique"
+            'fichiers_generes': []
         }
+
+        if execute:
+            try:
+                import subprocess
+                import os
+
+                print("\n  📋 Génération des formulaires Cerfa...")
+
+                # Générer le JSON avec export_cerfa.py
+                result = subprocess.run(
+                    ['python3', 'export_cerfa.py', str(self.annee)],
+                    capture_output=True,
+                    text=True,
+                    cwd=os.path.dirname(os.path.abspath(__file__))
+                )
+
+                if result.returncode == 0:
+                    # Extraire le nom du fichier JSON généré
+                    for line in result.stdout.split('\n'):
+                        if 'Export sauvegardé' in line:
+                            json_file = line.split(':')[-1].strip()
+                            cerfa_info['fichiers_generes'].append(json_file)
+                            print(f"     ✅ Données Cerfa générées : {json_file}")
+
+                            # Générer le PDF avec generer_cerfa_pdf.py
+                            result_pdf = subprocess.run(
+                                ['python3', 'generer_cerfa_pdf.py', json_file],
+                                capture_output=True,
+                                text=True,
+                                cwd=os.path.dirname(os.path.abspath(__file__))
+                            )
+
+                            if result_pdf.returncode == 0:
+                                pdf_file = json_file.replace('.json', '.pdf')
+                                cerfa_info['fichiers_generes'].append(pdf_file)
+                                print(f"     ✅ PDF Cerfa généré : {pdf_file}")
+                                cerfa_info['status'] = 'GENERE'
+                            else:
+                                print(f"     ⚠️  Erreur génération PDF : {result_pdf.stderr[:100]}")
+                                cerfa_info['status'] = 'ERREUR_PDF'
+                            break
+                else:
+                    print(f"     ❌ Erreur génération données : {result.stderr[:100]}")
+                    cerfa_info['status'] = 'ERREUR_JSON'
+
+            except Exception as e:
+                print(f"     ❌ Erreur lors de la génération Cerfa : {e}")
+                cerfa_info['status'] = 'ERREUR'
+        else:
+            print("\n  🔍 Mode simulation - Cerfa non générés")
+            print("     Utilisez --execute pour générer réellement les fichiers")
+
+        print("\n  📋 Déclarations fiscales SCI à l'IS :")
+        print("     - Formulaire 2065 : Déclaration de résultat IS")
+        print("     - Formulaire 2033-A à 2033-G : Liasse fiscale simplifiée")
 
         print(f"\n  📅 Date limite déclaration IS : 15/05/{self.annee + 1}")
         print("     (2ème jour ouvré suivant le 1er mai)")
+
+        if cerfa_info['fichiers_generes']:
+            print(f"\n  📂 Fichiers générés :")
+            for fichier in cerfa_info['fichiers_generes']:
+                print(f"     - {fichier}")
 
         return cerfa_info
 
@@ -686,7 +752,7 @@ class ClotureExercice:
         self.etape3_geler_exercice(execute)
         bilan_ouverture = self.etape4_bilan_ouverture_suivant(execute)
         extournes = self.etape5_verifier_extournes()
-        cerfa = self.etape6_generer_cerfa()
+        cerfa = self.etape6_generer_cerfa(execute)
 
         # Construire le rapport
         rapport = {
