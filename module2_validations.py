@@ -609,6 +609,29 @@ class ProcesseurInsertion:
             ecriture_ids = []
             date_affectation = date(annee + 1, 1, 1)
 
+            # ÉTAPE 1 : Reprise du résultat N dans le bilan d'ouverture N+1
+            # Cette écriture intègre le résultat de l'exercice N au bilan d'ouverture N+1
+            # via le compte 89 (contrepartie bilan ouverture)
+            if resultat_net != 0:
+                ecriture_reprise = EcritureComptable(
+                    exercice_id=exercice_n1.id,
+                    numero_ecriture=f'{annee + 1}-0101-OUV-RES',
+                    date_ecriture=date_affectation,
+                    libelle_ecriture=f'Bilan d\'ouverture {annee + 1} - Résultat exercice {annee}',
+                    type_ecriture='BILAN_OUVERTURE',
+                    compte_debit='89' if resultat_net > 0 else '120',
+                    compte_credit='120' if resultat_net > 0 else '89',
+                    montant=Decimal(str(abs(resultat_net))),
+                    source_email_id=evt_original_id,
+                    source_email_from=email_validation_from,
+                    validee_at=datetime.now(),
+                    notes=f'Reprise résultat {annee} dans bilan ouverture {annee + 1}'
+                )
+                self.session.add(ecriture_reprise)
+                self.session.flush()
+                ecriture_ids.append(ecriture_reprise.id)
+
+            # ÉTAPE 2 : Affectation du résultat
             if resultat_net > 0 and deficit_reportable > 0:
                 # Absorption du déficit (partielle ou totale)
                 absorption = min(deficit_reportable, resultat_net)
